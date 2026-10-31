@@ -1,0 +1,25 @@
+# Build output
+bin/
+obj/
+*.user
+.vs/
+TestResults/
+
+# Third-party tools are downloaded, not committed. The README links to them.
+tools/
+
+# Game art and game code must never be committed. These can only appear here by accident.
+*.resS
+*.assets
+*.bundle
+Assembly-CSharp*.dll
+UnityEngine*.dll
+ExportedProject/
+
+# If the region project template is opened where it stands, instead of copied
+unity/RegionProjectTemplate/Assets/
+unity/RegionProjectTemplate/Library/
+unity/RegionProjectTemplate/Temp/
+unity/RegionProjectTemplate/Logs/
+unity/RegionProjectTemplate/Build/
+unity/RegionProjectTemplate/UserSettings/

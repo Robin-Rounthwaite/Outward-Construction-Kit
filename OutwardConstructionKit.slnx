@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/OCK.Runtime/OCK.Runtime.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/OCK.Runtime.Tests/OCK.Runtime.Tests.csproj" />
+  </Folder>
+</Solution>

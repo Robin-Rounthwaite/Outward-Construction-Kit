@@ -1,0 +1,4 @@
+{
+  "name": "OutwardConstructionKit.Editor",
+  "includePlatforms": ["Editor"]
+}

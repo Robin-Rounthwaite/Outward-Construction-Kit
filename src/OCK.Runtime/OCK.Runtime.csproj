@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>OutwardConstructionKit</AssemblyName>
+    <RootNamespace>OutwardConstructionKit.Runtime</RootNamespace>
+    <LangVersion>7.3</LangVersion>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <PluginDir>$(ProfileDir)\BepInEx\plugins\catalysten-Outward_Construction_Kit</PluginDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="0Harmony"><HintPath>$(ProfileDir)\BepInEx\core\0Harmony.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="BepInEx"><HintPath>$(ProfileDir)\BepInEx\core\BepInEx.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="Assembly-CSharp"><HintPath>$(OutwardManaged)\Assembly-CSharp.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="Assembly-CSharp-firstpass"><HintPath>$(OutwardManaged)\Assembly-CSharp-firstpass.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="Photon3Unity3D"><HintPath>$(OutwardManaged)\Photon3Unity3D.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="Rewired_Core"><HintPath>$(OutwardManaged)\Rewired_Core.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(OutwardManaged)\UnityEngine.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(OutwardManaged)\UnityEngine.CoreModule.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="UnityEngine.PhysicsModule"><HintPath>$(OutwardManaged)\UnityEngine.PhysicsModule.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="UnityEngine.AIModule"><HintPath>$(OutwardManaged)\UnityEngine.AIModule.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="UnityEngine.TerrainModule"><HintPath>$(OutwardManaged)\UnityEngine.TerrainModule.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="UnityEngine.TerrainPhysicsModule"><HintPath>$(OutwardManaged)\UnityEngine.TerrainPhysicsModule.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="UnityEngine.AssetBundleModule"><HintPath>$(OutwardManaged)\UnityEngine.AssetBundleModule.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(OutwardManaged)\UnityEngine.InputLegacyModule.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="UnityEngine.UI"><HintPath>$(OutwardManaged)\UnityEngine.UI.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="UnityEngine.UIModule"><HintPath>$(OutwardManaged)\UnityEngine.UIModule.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="UnityEngine.AnimationModule"><HintPath>$(OutwardManaged)\UnityEngine.AnimationModule.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="UnityEngine.AudioModule"><HintPath>$(OutwardManaged)\UnityEngine.AudioModule.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="UnityEngine.TextRenderingModule"><HintPath>$(OutwardManaged)\UnityEngine.TextRenderingModule.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="UnityEngine.IMGUIModule"><HintPath>$(OutwardManaged)\UnityEngine.IMGUIModule.dll</HintPath><Private>False</Private></Reference>  </ItemGroup>
+  <!-- After every build, copy the mod into the r2modman test profile so you can launch straight away. -->
+  <Target Name="DeployToProfile" AfterTargets="Build" Condition="'$(SkipDeploy)' != 'true'">
+    <MakeDir Directories="$(PluginDir)" />
+    <Copy SourceFiles="$(TargetPath);$(TargetDir)$(TargetName).pdb" DestinationFolder="$(PluginDir)" SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="Kit runtime copied to $(PluginDir)" />
+  </Target>
+</Project>

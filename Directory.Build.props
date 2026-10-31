@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <!-- Where the game and the r2modman test profile live. Change these if you move things. -->
+    <OutwardManaged>T:\SteamLibrary\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data\Managed</OutwardManaged>
+    <ProfileDir>$(APPDATA)\r2modmanPlus-local\OutwardDe\profiles\modding-experiments</ProfileDir>
+  </PropertyGroup>
+</Project>

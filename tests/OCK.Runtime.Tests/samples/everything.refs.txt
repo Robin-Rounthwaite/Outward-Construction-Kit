@@ -1,0 +1,13 @@
+# One of every kind of line the exporter writes.
+region | sample_region | Sample Region
+game | ABC123
+environment | Monsoon
+door | CierzoNewTerrain | 1.5,-2,3 | 90
+enemy | ChersoneseNewTerrain | AISquadManagerStructure/SquadReserve/Squad Hyena 2AI/Hound (1) | 0,0,20 | 45.5
+prop | ChersoneseNewTerrain | Interactions/Rock (1)/mdl_rock | 15,0,-15 | 0,30,0 | mdl_rock:1
+prop | Monsoon | Environment/Assets/Props/mdl_statue | 0,12,45 | 90
+ground | Monsoon | Ground_Grass | tex_grass | tex_grass_n
+ground | Monsoon | Ground_Dirt | tex_dirt |
+water | Monsoon | -35,-1.5,0 | 40,1,30 | 15
+water | ChersoneseNewTerrain | 35,-1.5,0 | 40,1,40 | 0
+returndoor | -6,0,6 | 135

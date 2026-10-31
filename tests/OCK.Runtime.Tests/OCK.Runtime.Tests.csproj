@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <IsTestProject>true</IsTestProject>
+    <LangVersion>7.3</LangVersion>
+    <RootNamespace>OutwardConstructionKit.Tests</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.5.0" />
+    <!-- Tells the tests where to find the game's assemblies, which aren't copied into this folder. -->
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>OutwardManaged</_Parameter1>
+      <_Parameter2>$(OutwardManaged)</_Parameter2>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>BepInExCore</_Parameter1>
+      <_Parameter2>$(ProfileDir)\BepInEx\core</_Parameter2>
+    </AssemblyAttribute>
+    <ProjectReference Include="..\..\src\OCK.Runtime\OCK.Runtime.csproj" AdditionalProperties="SkipDeploy=true" />
+    <Reference Include="BepInEx"><HintPath>$(ProfileDir)\BepInEx\core\BepInEx.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(OutwardManaged)\UnityEngine.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(OutwardManaged)\UnityEngine.CoreModule.dll</HintPath><Private>False</Private></Reference>
+    <None Include="samples\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

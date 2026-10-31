@@ -1,0 +1,8 @@
+{
+  "name": "com.outwardconstructionkit.editor",
+  "version": "0.3.0",
+  "displayName": "Outward Construction Kit",
+  "description": "Browse vanilla Outward props, place them in a scene, and export a region the game can load.",
+  "unity": "2020.3",
+  "license": "MIT"
+}
