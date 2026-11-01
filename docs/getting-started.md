@@ -15,7 +15,7 @@ The version must match the game's exactly, because bundles built with any other 
 ## 2. Install the mod
 
 1. Install [r2modman](https://thunderstore.io/package/ebkr/r2modman/), choose Outward: Definitive Edition, and create a profile. This is the profile you'll test your regions in.
-2. In that profile, install [Outward_Construction_Kit](https://thunderstore.io/c/outward/p/Catalysten/Outward_Construction_Kit/) from the **Online** tab.
+2. In that profile, install [Outward_Construction_Kit](https://thunderstore.io/c/outward/p/Cat_and_Community/Outward_Construction_Kit/) from the **Online** tab.
 3. Click **Start modded** once, to check the game starts. Always start it this way, or with the kit's **Launch Game** button later: Steam's own Play button starts the game without mods.
 
 ## 3. Open the starter project
