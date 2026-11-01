@@ -29,6 +29,7 @@ namespace OutwardConstructionKit.Runtime
         private static GameObject s_holder;
         private static int s_nextViewId = VIEW_ID_BASE;
         private static Vector2 s_enableDistances = new Vector2(-1f, -1f);
+        private static readonly Vector2 s_usualEnableDistances = new Vector2(150f, 50f);
 
         private static string KeyFor(RegionManifest.EnemyReference reference)
         {
@@ -88,17 +89,19 @@ namespace OutwardConstructionKit.Runtime
             waiting.SetActive(false);
             SceneManager.MoveGameObjectToScene(waiting, scene);
 
-            // Each enemy reads these as it wakes, so they have to be set first.
-            parent.GetComponent<AISquadManager>().AIEnableDistances = s_enableDistances;
+            // Each enemy reads these as it wakes, so they have to be set first. A donor scene gives its own, and
+            // enemies from the cache use the distances every vanilla scene read so far has set.
+            parent.GetComponent<AISquadManager>().AIEnableDistances = s_enableDistances.x > 0f || s_enableDistances.y > 0f ? s_enableDistances : s_usualEnableDistances;
             if (region.Manifest.enemies.Count > 0)
-                KitLog($"Enemies wake within {s_enableDistances} of a player.", false);
+                KitLog($"Enemies wake within {parent.GetComponent<AISquadManager>().AIEnableDistances} of a player.", false);
 
             int index = 0;
             foreach (RegionManifest.EnemyReference reference in region.Manifest.enemies)
             {
                 index++;
-                GameObject template;
-                if (!s_templates.TryGetValue(KeyFor(reference), out template))
+                GameObject cached = AssetCache.Load(reference.scene, reference.path);
+                GameObject template = cached != null ? TemplateFromCache(cached) : null;
+                if (template == null && !s_templates.TryGetValue(KeyFor(reference), out template))
                     continue;
 
                 // One bad enemy mustn't stop the rest of the scene setup, or the loading screen never closes.
@@ -110,12 +113,15 @@ namespace OutwardConstructionKit.Runtime
                 {
                     KitLog($"Couldn't place enemy '{template.name}': {e}", true);
                 }
+
+                if (cached != null)
+                    Object.Destroy(template);
             }
             Object.Destroy(waiting);
         }
 
-        // For an enemy from an extracted bundle, which unlike a donor scene's has never woken, so its AI needs no repair.
-        internal static void PlaceExtracted(Scene scene, GameObject prefab, Region region, Vector3 position, int index, Transform parent)
+        // Unlike a clone from a donor scene, a cached enemy has never woken, so its AI needs no repair.
+        private static GameObject TemplateFromCache(GameObject cached)
         {
             if (s_holder == null)
             {
@@ -124,17 +130,11 @@ namespace OutwardConstructionKit.Runtime
                 Object.DontDestroyOnLoad(s_holder);
             }
 
-            GameObject template = Object.Instantiate(prefab, s_holder.transform);
-            template.name = prefab.name;
+            GameObject template = Object.Instantiate(cached, s_holder.transform);
+            template.name = cached.name;
             template.SetActive(true); // stays asleep under the holder
             RemoveDonorTies(template);
-
-            var waiting = new GameObject("OCK_EnemiesWaking");
-            waiting.SetActive(false);
-            SceneManager.MoveGameObjectToScene(waiting, scene);
-            PlaceOne(template, new RegionManifest.EnemyReference { position = position }, region, index, waiting.transform, parent);
-            Object.Destroy(waiting);
-            Object.Destroy(template);
+            return template;
         }
 
         private static void PlaceOne(GameObject template, RegionManifest.EnemyReference reference, Region region, int index, Transform waiting, Transform parent)

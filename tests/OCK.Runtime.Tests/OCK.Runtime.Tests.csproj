@@ -9,6 +9,7 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
     <PackageReference Include="NUnit" Version="3.14.0" />
     <PackageReference Include="NUnit3TestAdapter" Version="4.5.0" />
+    <PackageReference Include="AssetsTools.NET" Version="3.0.4" />
     <!-- Tells the tests where to find the game's assemblies, which aren't copied into this folder. -->
     <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
       <_Parameter1>OutwardManaged</_Parameter1>

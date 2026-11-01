@@ -73,9 +73,11 @@ namespace OutwardConstructionKit.Runtime
         public string environmentDonor;
         public List<PropReference> props = new List<PropReference>();
 
-        public IEnumerable<string> DonorScenes()
+        /// <summary>The scenes that have to load for this region. A reference already cached needs no scene of its own.</summary>
+        public IEnumerable<string> DonorScenes(System.Func<string, string, bool> isCached = null)
         {
-            return new[] { environmentDonor }.Concat(props.Select(p => p.scene)).Concat(enemies.Select(e => e.scene))
+            System.Func<string, string, bool> cached = isCached ?? ((scene, path) => false);
+            return new[] { environmentDonor }.Concat(props.Where(p => !cached(p.scene, p.path)).Select(p => p.scene)).Concat(enemies.Where(e => !cached(e.scene, e.path)).Select(e => e.scene))
                 .Concat(groundLayers.Select(g => g.scene)).Concat(water.Select(w => w.scene)).Where(s => !string.IsNullOrEmpty(s)).Distinct();
         }
 
@@ -146,15 +148,21 @@ namespace OutwardConstructionKit.Runtime
         // Only a warning: an update needn't break anything, and each prop is checked individually anyway.
         private void CheckGameBuild()
         {
-            string file = Path.Combine(Application.dataPath, "globalgamemanagers");
-            if (string.IsNullOrEmpty(gameFingerprint) || gameFingerprint == "unknown" || !File.Exists(file))
+            string current = GameFingerprint();
+            if (string.IsNullOrEmpty(gameFingerprint) || gameFingerprint == "unknown" || current == "unknown")
                 return;
+            if (current != gameFingerprint)
+                KitPlugin.Log.LogWarning("This region was made for a different build of the game. If props are missing or wrong, it needs re-exporting.");
+        }
+
+        /// <summary>Identifies the running game's build. The exporter computes the same value.</summary>
+        public static string GameFingerprint()
+        {
+            string file = Path.Combine(Application.dataPath, "globalgamemanagers");
+            if (!File.Exists(file))
+                return "unknown";
             using (var sha = System.Security.Cryptography.SHA1.Create())
-            {
-                string current = System.BitConverter.ToString(sha.ComputeHash(File.ReadAllBytes(file))).Replace("-", "");
-                if (current != gameFingerprint)
-                    KitPlugin.Log.LogWarning("This region was made for a different build of the game. If props are missing or wrong, it needs re-exporting.");
-            }
+                return System.BitConverter.ToString(sha.ComputeHash(File.ReadAllBytes(file))).Replace("-", "");
         }
 
         private static bool TryParseRotation(string text, out Vector3 rotation)

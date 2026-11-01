@@ -55,14 +55,7 @@ namespace OutwardConstructionKit.Runtime
                     continue;
                 }
 
-                if (s_holder == null)
-                {
-                    s_holder = new GameObject("OCK_PropDonor");
-                    s_holder.SetActive(false);
-                    Object.DontDestroyOnLoad(s_holder);
-                }
-
-                GameObject template = Object.Instantiate(source.gameObject, s_holder.transform);
+                GameObject template = Object.Instantiate(source.gameObject, Holder().transform);
                 template.name = source.name;
                 template.transform.localScale = source.lossyScale;
                 template.SetActive(true); // stays asleep under the holder
@@ -96,8 +89,14 @@ namespace OutwardConstructionKit.Runtime
             foreach (RegionManifest.PropReference reference in region.Manifest.props)
             {
                 Template template;
-                if (!s_templates.TryGetValue(KeyFor(reference), out template))
+                GameObject cached = AssetCache.Load(reference.scene, reference.path);
+                if (cached != null)
+                    template = TemplateFromCache(cached, reference);
+                else if (!s_templates.TryGetValue(KeyFor(reference), out template))
                     continue; // already reported when the donor scene was read
+
+                if (template.Object == null)
+                    continue;
 
                 // One bad prop mustn't stop the rest of the scene setup, or the loading screen never closes.
                 try
@@ -109,8 +108,40 @@ namespace OutwardConstructionKit.Runtime
                 {
                     KitPlugin.Log.LogError($"Couldn't place '{template.Object.name}': {e}");
                 }
+
+                if (cached != null)
+                    Object.Destroy(template.Object);
             }
             return placed;
+        }
+
+        private static GameObject Holder()
+        {
+            if (s_holder == null)
+            {
+                s_holder = new GameObject("OCK_PropDonor");
+                s_holder.SetActive(false);
+                Object.DontDestroyOnLoad(s_holder);
+            }
+            return s_holder;
+        }
+
+        // A cached prop is as it was in its level, so it gets the same treatment as one cloned from a donor scene.
+        private static Template TemplateFromCache(GameObject cached, RegionManifest.PropReference reference)
+        {
+            string found = DescribeForCheck(cached.transform);
+            if (!string.IsNullOrEmpty(reference.check) && reference.check != found)
+            {
+                KitPlugin.Log.LogError($"'{reference.path}' in {reference.scene} isn't the expected prop (expected {reference.check}, found {found}), so it's left out of the region.");
+                return new Template();
+            }
+
+            GameObject template = Object.Instantiate(cached, Holder().transform);
+            template.name = cached.name;
+            template.SetActive(true); // stays asleep under the holder
+            foreach (MonoBehaviour script in template.GetComponentsInChildren<MonoBehaviour>(true).Reverse())
+                Object.DestroyImmediate(script);
+            return new Template { Object = template, SourcePosition = cached.transform.position, SourceRotation = cached.transform.rotation };
         }
 
         internal static GameObject PlaceCopy(Scene scene, GameObject source, Vector3 sourcePosition, Quaternion sourceRotation, Vector3 position, Vector3 rotation)

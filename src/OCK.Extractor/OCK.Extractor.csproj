@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>OutwardConstructionKit.Extractor</AssemblyName>
+    <RootNamespace>OutwardConstructionKit.Extractor</RootNamespace>
+    <LangVersion>7.3</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="*.cs" />
+    <EmbeddedResource Include="template\ock_template" LogicalName="ock_template" />
+    <PackageReference Include="AssetsTools.NET" Version="3.0.4" />
+    <PackageReference Include="AssetsTools.NET.MonoCecil" Version="3.0.4" />
+  </ItemGroup>
+</Project>

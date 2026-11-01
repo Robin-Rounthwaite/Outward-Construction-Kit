@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/OCK.Extractor/OCK.Extractor.csproj" />
     <Project Path="src/OCK.Runtime/OCK.Runtime.csproj" />
   </Folder>
   <Folder Name="/tests/">

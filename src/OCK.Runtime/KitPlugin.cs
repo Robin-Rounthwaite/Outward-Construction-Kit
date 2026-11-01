@@ -29,7 +29,7 @@ namespace OutwardConstructionKit.Runtime
         internal ConfigEntry<bool> ProbeScenes;
         internal ConfigEntry<bool> MemoryReport;
         internal ConfigEntry<bool> SelfCheck;
-        internal ConfigEntry<KeyboardShortcut> ExtractTestKey;
+        internal ConfigEntry<bool> UseCache;
 
         private readonly Dictionary<Region, GameObject> m_doors = new Dictionary<Region, GameObject>();
         private int m_selected;
@@ -51,10 +51,18 @@ namespace OutwardConstructionKit.Runtime
             SelfCheck = Config.Bind("Dev", "SelfCheck", false,
                 "After entering a region, log [CHECK] lines saying whether its props, enemies, ground, water and doors came out right.");
 
-            ExtractTestKey = Config.Bind("Dev", "ExtractTestKey", new KeyboardShortcut(KeyCode.F7, KeyCode.LeftControl),
-                "Press this in game to place the extracted-assets test prop, if its bundle is installed.");
+            UseCache = Config.Bind("Dev", "UseCache", true,
+                "Load props and enemies from a cache built from your game files, instead of loading the scenes they came from.");
 
             Region.LoadAll(Config);
+            try
+            {
+                AssetCache.BuildMissing();
+            }
+            catch (System.Exception e)
+            {
+                Logger.LogError("Couldn't build the asset cache, so regions will use donor scenes: " + e);
+            }
 
             var harmony = new Harmony(GUID);
             harmony.PatchAll(typeof(AreaManagerAwakePatch));
@@ -64,6 +72,8 @@ namespace OutwardConstructionKit.Runtime
 
             SceneManager.sceneLoaded += OnSceneLoaded;
             StartCoroutine(BuildWhenLoaded());
+            if (AutoTest.Begin(this))
+                Logger.LogMessage("[AUTOTEST] Started, from a request file.");
 
             Logger.LogMessage($"{NAME} {VERSION} loaded. {NextRegionKey.Value} chooses a region, and {PlaceDoorKey.Value} places its door.");
         }
@@ -80,8 +90,6 @@ namespace OutwardConstructionKit.Runtime
                 PlaceDoorInFrontOfPlayer();
             if (NextRegionKey.Value.IsDown())
                 SelectNextRegion();
-            if (ExtractTestKey.Value.IsDown())
-                ExtractTest.PlaceInFrontOfPlayer();
         }
 
         // Runs before the loader spawns the player, which is the last moment the spawn list can change.
@@ -91,12 +99,13 @@ namespace OutwardConstructionKit.Runtime
                 return;
             // Vanilla travel shows what an ordinary level load costs, to compare with what donor scenes keep.
             Logger.LogMessage($"Scene {scene.name} loaded, process memory {SceneExtractor.PrivateMemory() / (1024 * 1024)} MB.");
-            ExtractTest.TryLoad(); // the first scene is the main menu, before any donor has loaded
             try
             {
                 Region here = Region.ForScene(scene.name);
                 if (here != null)
                     here.PrepareScene(scene);
+                else
+                    AssetCache.ReleaseAll();
                 foreach (Region region in Region.All)
                     if (region.EntranceScene == scene.name && region != here)
                         AddReturnSpawn(region, scene);

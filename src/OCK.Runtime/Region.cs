@@ -49,7 +49,7 @@ namespace OutwardConstructionKit.Runtime
 
         public static IEnumerable<string> AllDonorScenes()
         {
-            return All.SelectMany(r => r.Manifest.DonorScenes()).Distinct();
+            return All.SelectMany(r => r.Manifest.DonorScenes(AssetCache.Has)).Distinct();
         }
 
         public static void LoadAll(ConfigFile config)
@@ -210,7 +210,6 @@ namespace OutwardConstructionKit.Runtime
             Transform aiRoot = AddAIManagers(scene);
             EnvironmentDonor.Place(scene, Manifest.environmentDonor);
             EnemyDonor.Place(scene, this, aiRoot);
-            ExtractTest.PlaceEnemy(scene, this, aiRoot);
 
             foreach (string missing in SceneProbe.MissingRequired())
                 KitPlugin.Log.LogWarning("Region scene has no " + missing + ".");
