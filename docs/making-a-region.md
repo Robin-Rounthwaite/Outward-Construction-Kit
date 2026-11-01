@@ -1,9 +1,7 @@
 # Making a region
 
-Keep the Unity project and your rips off OneDrive. It locks Unity's working files, which breaks bundle builds, and rips hold game art that shouldn't sync anywhere.
-
-1. Copy `unity/RegionProjectTemplate` somewhere off OneDrive, and in its `Packages/manifest.json` point the `com.outwardconstructionkit.editor` entry at this repository's package, as `file:<full path>/unity/com.outwardconstructionkit.editor`. Open the copy in Unity 2020.3.26f1. The version must match the game's exactly, and the template's settings matter: Color Space must be Linear like the game's, because Unity compiles that into every shader a bundle carries, and shaders keep only the variants the game's scenes use (exponential squared fog and no lightmaps), which keeps exports quick.
-2. Run **Construction Kit > Paths**. It offers the game and mod profiles it can find on your PC, by reading only, for you to check and confirm. With a mod manager, pick the profile you test with.
+1. Set up the starter project by following [Getting started](getting-started.md).
+2. Open it, if it isn't already open, with your paths confirmed.
 3. Run **Construction Kit > New Region Scene**, which makes a walled room with a sun and a spawn point.
 4. Open **Construction Kit > Prop Browser**. Click **Add** on a prop, or drag its name into the Scene view. The first use of a prop copies its model from the rip.
 5. Move, rotate, scale and alter props as you like. Export decides for each one: props you only moved, rotated or scaled evenly become references to the game's own, and props with any other change, including stretching, are embedded in the mod.

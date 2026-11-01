@@ -1,11 +1,26 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
 
 /// <summary>Asks where things are on this PC, offering what it can find. Nothing is used until it's confirmed.</summary>
+[InitializeOnLoad]
 internal class PathsWindow : EditorWindow
 {
+    private const string REQUIRED_UNITY = "2020.3.26f1";
+    private const string ASKED_THIS_SESSION = "OCK.PathsAsked";
+
+    // Opens by itself on a new project, so the first thing a modder meets is what the kit needs from them.
+    static PathsWindow()
+    {
+        if (OckSettings.PathsConfirmed || SessionState.GetBool(ASKED_THIS_SESSION, false) || Application.isBatchMode
+            || Array.IndexOf(Environment.GetCommandLineArgs(), "-ockSelfTest") >= 0)
+            return;
+        SessionState.SetBool(ASKED_THIS_SESSION, true);
+        EditorApplication.delayCall += Open;
+    }
+
     private string m_gameData;
     private string m_plugins;
     private string m_ripFolder;
@@ -15,7 +30,7 @@ internal class PathsWindow : EditorWindow
     [MenuItem("Construction Kit/Paths")]
     public static void Open()
     {
-        GetWindow<PathsWindow>(true, "Construction Kit Paths").minSize = new Vector2(620f, 330f);
+        GetWindow<PathsWindow>(true, "Construction Kit Paths").minSize = new Vector2(620f, 380f);
     }
 
     private void OnEnable()
@@ -34,6 +49,8 @@ internal class PathsWindow : EditorWindow
 
     private void OnGUI()
     {
+        if (Application.unityVersion != REQUIRED_UNITY)
+            EditorGUILayout.HelpBox($"This is Unity {Application.unityVersion}. Regions need {REQUIRED_UNITY} exactly, to match the game, or they may not load.", MessageType.Error);
         EditorGUILayout.HelpBox("Please check these before confirming. Suggestions are only what could be found on this PC, and nothing here gets changed by looking.", MessageType.Info);
 
         m_gameData = PathRow("Game data folder", "The Outward Definitive Edition_Data folder, inside the game's folder.", m_gameData, m_foundGameData);

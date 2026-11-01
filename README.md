@@ -2,7 +2,7 @@
 
 A toolkit for adding new regions to Outward: Definitive Edition, built from the game's own assets and authored in Unity. Exported regions contain references to vanilla assets, not copies of them.
 
-**Status: in development, not yet released.** It currently expects a particular folder layout, set in `Directory.Build.props` and `OckSettings.cs`.
+**Status: in development, not yet released.**
 
 ## What's here
 
@@ -10,11 +10,14 @@ A toolkit for adding new regions to Outward: Definitive Edition, built from the 
 |---|---|
 | `src/OCK.Runtime` | BepInEx plugin that loads regions. Building it deploys it to the r2modman profile named in `Directory.Build.user.props` (copy it from the `.example` file). |
 | `unity/com.outwardconstructionkit.editor` | Unity package with the Prop Browser and exporter. |
+| `unity/RegionProjectTemplate` | Project settings for the starter project. For working on the kit, a copy of this linked to the package. |
+| `dev` | Scripts for working on the kit: `make-starter.ps1` builds the starter project zip modders download, and `make-template.ps1` rebuilds the extractor's template. |
 | `tests` | Automated tests. |
 | `docs` | Guides, listed below. |
 
 ## Guides
 
+- [Getting started](docs/getting-started.md)
 - [Making a region](docs/making-a-region.md)
 - [How it works](docs/how-it-works.md)
 - [Testing](docs/testing.md)
