@@ -38,7 +38,7 @@ To paint with more of the game's ground, click **Add** beside a texture on the *
 
 It starts with room for 10 m below 0 and 50 m above. For more, raise **Terrain Height** in the Terrain's settings, which stretches existing hills in proportion, or lower the object and add the same amount to the height. Resize `Ground_Edges` to match, because the invisible walls don't follow.
 
-**Add** on the **Water** tab adds a blue marker for that location, whose own water it will use in game. A location marked **can't be drunk** has no water source to copy. Move it to the water's height and scale it to size. It only looks like water in game. Standing in or over it lets players drink and fill waterskins. It has the water type of that scene's first water source, unless you select the marker and choose another under **Water type** on the **Water** tab: clean, fresh, salt, rancid, magic, pure or healing. Shallow water (about 1.2 m or less) splashes underfoot. Enemies walk on the ground beneath it, and it has no collision.
+**Add** on the **Water** tab adds a blue marker for that location, whose own water it will use in game. A location marked **can't be drunk** has no water source to copy. Move it to the water's height and scale it to size. It only looks like water in game. Standing in or over it lets players drink and fill waterskins. It's clean water, unless you select the marker and choose another under **Water type** on the **Water** tab: fresh, salt, rancid, magic, pure or healing. Shallow water (about 1.2 m or less) splashes underfoot. Enemies walk on the ground beneath it, and it has no collision.
 
 ## Dying in a region
 
@@ -50,7 +50,7 @@ A door back to where players entered appears beside the arrival point automatica
 
 ## How doors look
 
-Entrance and return doors use a vanilla door by default. To use any prop instead, add it to your scene, turn it so its front faces along the blue axis, scale it evenly if you like, keep it selected, and click **Use selected prop** in the Prop Browser. You can delete it from the scene afterwards. **Reset** goes back to the default. If a door's model can't be loaded in game, it's a plain blue slab, so players never lose their way out.
+Entrance and return doors use a vanilla door by default. To use any prop instead, add it to your scene, turn it so its front faces along the blue axis, scale it evenly if you like, keep it selected, and click **Use Selected Prop as Door Model** in the Prop Browser. You can delete it from the scene afterwards. **Reset** goes back to the default. If a door's model can't be loaded in game, it's a plain blue slab, so players never lose their way out.
 
 ## Ripping more scenes
 

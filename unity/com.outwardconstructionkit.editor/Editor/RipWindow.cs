@@ -57,13 +57,13 @@ internal class RipWindow : EditorWindow
         if (!OckSettings.PathsConfirmed || string.IsNullOrEmpty(OckSettings.RipFolder))
         {
             EditorGUILayout.HelpBox("First, choose a rip folder in the paths window.", MessageType.Info);
-            if (GUILayout.Button("Set Up Paths"))
+            if (GUILayout.Button(new GUIContent("Set Up Paths", "Opens the window that says where the game, your mods and your rips are.")))
                 PathsWindow.Open();
             return;
         }
 
         EditorGUILayout.HelpBox("Ripping copies a scene's models out of your own game files, for the Prop Browser to show. A scene usually takes 10 to 30 minutes and several gigabytes, up to about 15. It runs in its own window, so you can keep working.", MessageType.Info);
-        if (GUILayout.Button("Rip All Scenes"))
+        if (GUILayout.Button(new GUIContent("Rip All Scenes", "Rips every scene not yet ripped, one after another. It says how much that takes before starting.")))
             RipAll();
         m_search = EditorGUILayout.TextField("Search", m_search);
         m_scroll = EditorGUILayout.BeginScrollView(m_scroll);
@@ -78,7 +78,7 @@ internal class RipWindow : EditorWindow
                 EditorGUILayout.LabelField(new GUIContent(name, "The game calls this " + scene + "."));
                 if (m_ripped.Contains(scene))
                     EditorGUILayout.LabelField("ripped", EditorStyles.miniLabel, GUILayout.Width(60f));
-                else if (GUILayout.Button("Rip", GUILayout.Width(60f)))
+                else if (GUILayout.Button(new GUIContent("Rip", "Copies this scene's models out of your own game files, in its own window, so you can keep working."), GUILayout.Width(60f)))
                     Rip(scene, i);
             }
         }

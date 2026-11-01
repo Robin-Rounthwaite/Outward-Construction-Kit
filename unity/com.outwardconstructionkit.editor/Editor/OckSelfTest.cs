@@ -233,7 +233,11 @@ internal static class OckSelfTest
 
         Check("scenes get the names players know", LocationNames.For("HallowedMarshNewTerrain") == "Hallowed Marsh" && LocationNames.For("AntiqueField_Dungeon3") == "Antique Plateau dungeon 3" && LocationNames.For("Chersonese_Dungeon4_BlueChamber") == "Chersonese dungeon 4, Blue Chamber" && LocationNames.For("EmercarDungeonsBosses") == "Enmerkar Forest boss arenas" && LocationNames.For("SomethingNew") == "SomethingNew");
         Check("every scene has a name that isn't the game's raw one, or is already readable", OckSettings.BuildSceneNames().All(s => LocationNames.For(s) != s ? true : !s.Contains("_") && !s.Contains("NewTerrain")), string.Join(", ", OckSettings.BuildSceneNames().Where(s => LocationNames.For(s) == s).ToArray()));
-        Check("Test Region asks for the region, and the character if named", GameLauncher.TestRequest("r", "Jim").SequenceEqual(new[] { "character Jim", "visit r" }) && GameLauncher.TestRequest("r", "").SequenceEqual(new[] { "visit r" }));
+        Check("testing a region asks for the region and the character's save ID", GameLauncher.TestRequest("r", "abc").SequenceEqual(new[] { "characterid abc", "visit r" }));
+        Check("test characters list the most recently used first, and tell apart shared names", TestCharacterOrderIsRight());
+        Check("a character's name can be read from a save", ReadsACharacterName());
+        Check("Unity's terrain tools can still be switched from code", GroundTools.CanSwitchTerrainTools);
+        Check("water is Clean unless chosen otherwise", GroundTools.WaterTypes[0] == "Clean");
         Check("the game is started pointing at the profile's BepInEx", GameLauncher.SteamArguments(@"C:\p\BepInEx").Contains(@"--doorstop-target ""C:\p\BepInEx\core\BepInEx.Preloader.dll"""));
 
         // Every tab has to draw, and the errors of a window that doesn't are only ever in the log.
@@ -426,7 +430,7 @@ internal static class OckSelfTest
 
         Check("all four ground layers are references", manifest.Count(l => l.StartsWith("ground ")) == 4);
         Check("ground layers name their textures", manifest.Any(l => l == "ground | Monsoon | Ground_Grass | tex_env_masterGroundGrassFull | tex_env_masterGroundGrassFull_n"));
-        Check("both waters are listed with their donors", manifest.Contains("water | Monsoon | -35,-1.5,0 | 40,1,40 | 0") && manifest.Contains("water | ChersoneseNewTerrain | 35,-1.5,0 | 40,1,40 | 0"));
+        Check("both waters are listed with their donors", manifest.Contains("water | Monsoon | -35,-1.5,0 | 40,1,40 | 0 | Clean") && manifest.Contains("water | ChersoneseNewTerrain | 35,-1.5,0 | 40,1,40 | 0 | Clean"));
         Check("the return door is listed", manifest.Contains("returndoor | -1.8,0,1.8 | 135"));
         Check("the second rip's enemy has its real path", manifest.Any(l => l.StartsWith("enemy | ChersoneseNewTerrain | AISquadManagerStructure/")));
 
@@ -527,6 +531,32 @@ internal static class OckSelfTest
         var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
         instance.transform.position = position;
         return instance;
+    }
+
+    private static bool TestCharacterOrderIsRight()
+    {
+        var old = new TestCharacters.Character { Id = "old", Name = "Sam", LastSaved = new System.DateTime(2020, 1, 1) };
+        var fresh = new TestCharacters.Character { Id = "fresh", Name = "Sam", LastSaved = new System.DateTime(2024, 1, 1) };
+        var tested = new TestCharacters.Character { Id = "tested", Name = "Jim", LastSaved = new System.DateTime(2021, 1, 1) };
+        List<TestCharacters.Character> ordered = TestCharacters.Order(new[] { old, fresh, tested }, new List<string> { "tested" });
+        return ordered.Select(c => c.Id).SequenceEqual(new[] { "tested", "fresh", "old" }) && tested.Label == "Jim" && old.Label != fresh.Label;
+    }
+
+    private static bool ReadsACharacterName()
+    {
+        string file = Path.GetTempFileName();
+        try
+        {
+            using (FileStream stream = File.Create(file))
+            using (var zipped = new System.IO.Compression.GZipStream(stream, System.IO.Compression.CompressionMode.Compress))
+            using (var writer = new StreamWriter(zipped))
+                writer.Write("<?xml version=\"1.0\"?><Character><Name>wrong</Name><PSave><Level>1</Level><Name>Jim &amp; Co</Name></PSave></Character>");
+            return TestCharacters.ReadName(file) == "Jim & Co";
+        }
+        finally
+        {
+            File.Delete(file);
+        }
     }
 
     private static void Render(string path)

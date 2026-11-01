@@ -66,7 +66,7 @@ internal class PathsWindow : EditorWindow
         GUILayout.FlexibleSpace();
         using (new EditorGUI.DisabledScope(!PathDetector.IsGameData(m_gameData) || !PathDetector.IsPluginsFolder(m_plugins)))
         {
-            if (GUILayout.Button("Confirm", GUILayout.Height(28f)))
+            if (GUILayout.Button(new GUIContent("Confirm", "Saves these paths. The kit uses nothing until you've confirmed them."), GUILayout.Height(28f)))
             {
                 OckSettings.GameData = m_gameData;
                 OckSettings.PluginsFolder = m_plugins;
@@ -88,7 +88,7 @@ internal class PathsWindow : EditorWindow
         using (new EditorGUILayout.HorizontalScope())
         {
             value = EditorGUILayout.TextField(value);
-            if (GUILayout.Button("...", GUILayout.Width(26f)))
+            if (GUILayout.Button(new GUIContent("...", "Choose a folder."), GUILayout.Width(26f)))
             {
                 string picked = EditorUtility.OpenFolderPanel(label, value, "");
                 if (!string.IsNullOrEmpty(picked))
