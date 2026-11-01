@@ -187,7 +187,7 @@ namespace OutwardConstructionKit.Runtime
             // InteractionSwitchArea refuses any scene missing from this list, which comes from the build settings.
             AreaManager.ActiveScenes = AreaManager.ActiveScenes.Concat(new[] { SceneName }).ToArray();
 
-            KitPlugin.Log.LogMessage($"Registered region '{Id}': scene {SceneName}, area {AreaId}.");
+            KitPlugin.Detail($"Registered region '{Id}': scene {SceneName}, area {AreaId}.");
         }
 
         /// <summary>

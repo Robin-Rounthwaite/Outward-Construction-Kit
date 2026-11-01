@@ -8,7 +8,7 @@ Adds new regions to Outward: Definitive Edition. Walk through a door, get a real
 
 Install a region mod with a mod manager such as r2modman, and this comes with it. The first launch after installing a region takes a little longer, while the kit prepares what that region uses from your own copy of the game. It keeps the results in `BepInEx/OCK_Cache`, which is always safe to delete.
 
-If you uninstall a region while your character is inside it, travel out first.
+If you uninstall a region while your character is inside it, you'll arrive back where you entered it, as long as the kit stays installed. Don't uninstall the kit itself while inside a region.
 
 ## For modders
 

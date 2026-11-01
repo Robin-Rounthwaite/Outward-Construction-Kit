@@ -51,7 +51,7 @@ namespace OutwardConstructionKit.Runtime
 
             s_templates[scene.name] = template;
             Renderer renderer = template.GetComponent<Renderer>();
-            KitPlugin.Log.LogMessage($"Water '{source.name}' cloned from {scene.name}: material {renderer.sharedMaterial.name}, shader {renderer.sharedMaterial.shader.name}, layer {LayerMask.LayerToName(source.gameObject.layer)}, batched {renderer.isPartOfStaticBatch}.");
+            KitPlugin.Detail($"Water '{source.name}' cloned from {scene.name}: material {renderer.sharedMaterial.name}, shader {renderer.sharedMaterial.shader.name}, layer {LayerMask.LayerToName(source.gameObject.layer)}, batched {renderer.isPartOfStaticBatch}.");
 
             WaterSource drinkable = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<WaterSource>(true)).FirstOrDefault();
             if (drinkable == null)
@@ -63,7 +63,7 @@ namespace OutwardConstructionKit.Runtime
             sourceTemplate.name = drinkable.name;
             sourceTemplate.SetActive(true); // stays asleep under the holder
             s_sources[scene.name] = sourceTemplate;
-            KitPlugin.Log.LogMessage($"Water source '{drinkable.name}' cloned from {scene.name}: {drinkable.WaterType} water, drinkable directly {drinkable.CanDrinkDirectly}, {sourceTemplate.GetComponentsInChildren<BoxCollider>(true).Length} zones.");
+            KitPlugin.Detail($"Water source '{drinkable.name}' cloned from {scene.name}: {drinkable.WaterType} water, drinkable directly {drinkable.CanDrinkDirectly}, {sourceTemplate.GetComponentsInChildren<BoxCollider>(true).Length} zones.");
         }
 
         public static void Place(Scene scene, Region region)
@@ -91,7 +91,7 @@ namespace OutwardConstructionKit.Runtime
                     water.GetComponent<Renderer>().lightmapIndex = -1;
                     AddSplashCollider(water, reference.size.x / scale.x, reference.size.z / scale.z);
                     AddWaterSource(scene, region, reference, index);
-                    KitPlugin.Log.LogMessage($"Water placed at {reference.position}, {reference.size.x} by {reference.size.z} m, at scale {scale}.");
+                    KitPlugin.Detail($"Water placed at {reference.position}, {reference.size.x} by {reference.size.z} m, at scale {scale}.");
                 }
                 catch (System.Exception e)
                 {

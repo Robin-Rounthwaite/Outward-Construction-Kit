@@ -72,7 +72,7 @@ namespace OutwardConstructionKit.Runtime
                 };
             }
             if (used > 0)
-                KitPlugin.Log.LogMessage($"{used} prop placements across all regions use {scene.name}; {s_templates.Count} distinct props cloned so far.");
+                KitPlugin.Detail($"{used} prop placements across all regions use {scene.name}; {s_templates.Count} distinct props cloned so far.");
         }
 
         // The same description the exporter wrote, made from the live prop.
@@ -200,7 +200,7 @@ namespace OutwardConstructionKit.Runtime
                 batched++;
             }
 
-            KitPlugin.Log.LogMessage($"Prop '{prop.name}' placed at {prop.transform.position}, turned {rotation}, scale {scale}:{renderers.Length} renderers ({batched} batched), {prop.GetComponentsInChildren<Collider>(true).Length} colliders, LOD group {prop.GetComponent<LODGroup>() != null}.");
+            KitPlugin.Detail($"Prop '{prop.name}' placed at {prop.transform.position}, turned {rotation}, scale {scale}:{renderers.Length} renderers ({batched} batched), {prop.GetComponentsInChildren<Collider>(true).Length} colliders, LOD group {prop.GetComponent<LODGroup>() != null}.");
             return prop;
         }
 

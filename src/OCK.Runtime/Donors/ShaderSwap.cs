@@ -53,7 +53,7 @@ namespace OutwardConstructionKit.Runtime
                 swapped.Add(name);
             }
 
-            KitPlugin.Log.LogMessage($"Shader swap: {materials.Count} materials, real shaders found for [{string.Join(", ", swapped.ToArray())}], not found for [{string.Join(", ", missing.ToArray())}]. {s_shaders.Count} shaders collected.");
+            KitPlugin.Detail($"Shader swap: {materials.Count} materials, real shaders found for [{string.Join(", ", swapped.ToArray())}], not found for [{string.Join(", ", missing.ToArray())}]. {s_shaders.Count} shaders collected.");
         }
     }
 }

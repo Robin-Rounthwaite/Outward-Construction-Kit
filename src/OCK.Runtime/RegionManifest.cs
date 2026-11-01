@@ -125,7 +125,7 @@ namespace OutwardConstructionKit.Runtime
             }
 
             RegionManifest manifest = Parse(File.ReadAllLines(path));
-            KitPlugin.Log.LogMessage($"Manifest {Path.GetFileName(path)}: environment from '{manifest.environmentDonor}', {manifest.props.Count} props.");
+            KitPlugin.Detail($"Manifest {Path.GetFileName(path)}: environment from '{manifest.environmentDonor}', {manifest.props.Count} props.");
             manifest.CheckGameBuild();
             return manifest;
         }

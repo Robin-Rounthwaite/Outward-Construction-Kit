@@ -37,10 +37,6 @@ namespace OutwardConstructionKit.Runtime
                 terrain.terrainData.terrainLayers = layers;
                 terrain.terrainData.SetBaseMapDirty(); // the far-away view was generated with blank layers
                 terrain.Flush();
-
-                KitPlugin.Log.LogMessage($"Terrain '{terrain.name}': {layers.Length} layers, material {(terrain.materialTemplate != null ? terrain.materialTemplate.shader.name : "none")}, supported {(terrain.materialTemplate != null && terrain.materialTemplate.shader.isSupported)}, base map from {terrain.basemapDistance} m, colour space {QualitySettings.activeColorSpace}, texture limit {QualitySettings.masterTextureLimit}, mip streaming {QualitySettings.streamingMipmapsActive}.");
-                foreach (TerrainLayer layer in layers.Where(l => l != null))
-                    KitPlugin.Log.LogMessage($"  Layer '{layer.name}': {Describe(layer.diffuseTexture)}; normal {(layer.normalMapTexture != null ? layer.normalMapTexture.name : "none")}.");
             }
         }
 
@@ -67,29 +63,6 @@ namespace OutwardConstructionKit.Runtime
             if (texture == null)
                 s_textures.TryGetValue(name, out texture);
             return texture;
-        }
-
-        // Its average colour as the GPU sees it, which tells a grey texture apart from a grey result.
-        private static string Describe(Texture2D texture)
-        {
-            if (texture == null)
-                return "NO TEXTURE";
-
-            RenderTexture target = RenderTexture.GetTemporary(8, 8, 0, RenderTextureFormat.ARGB32);
-            RenderTexture previous = RenderTexture.active;
-            Graphics.Blit(texture, target);
-            RenderTexture.active = target;
-            var pixels = new Texture2D(8, 8, TextureFormat.RGBA32, false);
-            pixels.ReadPixels(new Rect(0, 0, 8, 8), 0, 0);
-            Color[] colors = pixels.GetPixels();
-            RenderTexture.active = previous;
-            RenderTexture.ReleaseTemporary(target);
-            Object.Destroy(pixels);
-
-            Color average = Color.black;
-            foreach (Color color in colors)
-                average += color / colors.Length;
-            return $"{texture.name}, {texture.width}x{texture.height}, {texture.format}, average colour {average.r:0.00} {average.g:0.00} {average.b:0.00}";
         }
     }
 }

@@ -325,8 +325,25 @@ internal static class OckSelfTest
         AssetDatabase.DeleteAsset(dataPath);
     }
 
+    private static void CheckPlacementWarnings()
+    {
+        Scene room = RegionExporter.CreateStarterScene("OCK_SelfTest_placement");
+        string roomPath = room.path;
+        Check("a starter room has nothing to warn about", RegionExporter.PlacementWarnings(room).Count == 0, string.Join(" ", RegionExporter.PlacementWarnings(room).ToArray()));
+        GameObject door = DoorTools.Add();
+        door.transform.position = new Vector3(5f, 4f, 5f);
+        Check("a floating door gets a warning", RegionExporter.PlacementWarnings(room).Count == 1, string.Join(" ", RegionExporter.PlacementWarnings(room).ToArray()));
+        door.transform.position = new Vector3(5f, 0f, 5f);
+        Check("a door on the ground doesn't", RegionExporter.PlacementWarnings(room).Count == 0, string.Join(" ", RegionExporter.PlacementWarnings(room).ToArray()));
+        door.transform.position = new Vector3(500f, 0f, 500f);
+        Check("a door off the map gets a warning", RegionExporter.PlacementWarnings(room).Count == 1);
+        EditorSceneManager.SaveScene(room);
+        AssetDatabase.DeleteAsset(roomPath);
+    }
+
     private static void CheckExampleRegion(string output)
     {
+        CheckPlacementWarnings();
         Scene scene = ExampleRegion.Create();
         string path = scene.path;
         string dataPath = AssetDatabase.GetAssetPath(scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Terrain>(true)).First().terrainData);

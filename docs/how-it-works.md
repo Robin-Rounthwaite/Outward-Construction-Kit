@@ -18,6 +18,19 @@ It works on objects (props and enemies, by path), a scene's main water plane and
 
 Anything that can't be cached falls back to its scene, and the log says why. `SceneExtractor` loads each such donor scene additively once per session, behind the first loading screen while the game sits in its empty transition scene, switches it off before any `Start` runs, clones what's needed under an inactive parent, and unloads the scene. It logs load times and memory. A donor scene costs about 750 MB for the session, so this should be rare. The `UseCache` setting turns the cache off, which is useful for comparing the two.
 
+### Memory
+
+Without donor scenes, regions cost little beyond what they use. Measured on the test regions in late 2026: a region takes about 4.7 GB of process memory, a vanilla town such as Cierzo about 6.2 GB, and the kit adds nothing measurable before entering a region. There's no budget to enforce: a region uses memory much as a vanilla scene of the same size would. To check one, set `VerboseLog = true`, which logs process memory as each scene loads.
+
+### When things go wrong
+
+- **A region mod is damaged**: it's left out, the others load, and the player gets an on-screen notice.
+- **A game update removes something a region names**: that prop or enemy is left out, the rest of the region works, and the player gets a notice for props. Doors fall back to a plain slab.
+- **A region's environment scene no longer exists**: it stays closed, with no door.
+- **A save was left in a region that's gone or closed**: `MissingRegionGuard` sends the character to where they entered it, or to Cierzo, at the first spawn point. This needs the kit itself still installed, so uninstalling the kit while inside a region can still strand a save.
+
+`tests/run-broken-region-test.ps1` tries the first three.
+
 ## Props
 
 A prop reference names the whole prop, so its LODs and colliders come with it. Most props are static-batched, sharing an unreadable combined mesh with their neighbours. The plugin moves and evenly scales those with a batch root rather than through their own transform, and gives each its own material copies so Unity can't draw repeats at one position.
@@ -33,6 +46,7 @@ These are under `[Dev]` in the plugin's config. All but `UseCache` are off by de
 | Setting | What it does |
 |---|---|
 | `UseCache` | Builds and uses the asset cache. Off, everything comes from donor scenes. |
+| `VerboseLog` | Logs routine detail too, such as every prop and door placed. `SelfCheck` turns this on as well. |
 | `SelfCheck` | Logs `[CHECK]` lines after entering a region. See [Testing](testing.md). |
 | `MemoryReport` | Logs what's holding on to assets kept from donor scenes. Adds many seconds to the first load, and inflates the memory it measures. |
 | `ProbeScenes` | Writes what each loaded scene contains to a `probes` folder beside the plugin. |

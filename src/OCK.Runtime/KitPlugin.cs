@@ -31,6 +31,15 @@ namespace OutwardConstructionKit.Runtime
         internal ConfigEntry<bool> SelfCheck;
         internal ConfigEntry<bool> UseCache;
 
+        internal ConfigEntry<bool> VerboseLog;
+
+        /// <summary>Routine detail, such as each prop placed, for working on the kit or a region.</summary>
+        internal static void Detail(string message)
+        {
+            if (Instance != null && (Instance.VerboseLog.Value || Instance.SelfCheck.Value))
+                Log.LogMessage(message);
+        }
+
         private readonly Dictionary<Region, GameObject> m_doors = new Dictionary<Region, GameObject>();
         private int m_selected;
         private bool m_buildPending;
@@ -51,6 +60,8 @@ namespace OutwardConstructionKit.Runtime
             SelfCheck = Config.Bind("Dev", "SelfCheck", false,
                 "After entering a region, log [CHECK] lines saying whether its props, enemies, ground, water and doors came out right.");
 
+            VerboseLog = Config.Bind("Dev", "VerboseLog", false,
+                "Log routine detail too, such as every prop and door placed. SelfCheck turns this on as well.");
             UseCache = Config.Bind("Dev", "UseCache", true,
                 "Load props and enemies from a cache built from your game files, instead of loading the scenes they came from.");
 
@@ -107,7 +118,7 @@ namespace OutwardConstructionKit.Runtime
             if (SceneExtractor.IsExtracting)
                 return;
             // Vanilla travel shows what an ordinary level load costs, to compare with what donor scenes keep.
-            Logger.LogMessage($"Scene {scene.name} loaded, process memory {SceneExtractor.PrivateMemory() / (1024 * 1024)} MB.");
+            KitPlugin.Detail($"Scene {scene.name} loaded, process memory {SceneExtractor.PrivateMemory() / (1024 * 1024)} MB.");
             try
             {
                 Region here = Region.ForScene(scene.name);
@@ -183,7 +194,7 @@ namespace OutwardConstructionKit.Runtime
             if (m_doors.TryGetValue(region, out old) && old != null)
                 Destroy(old);
             m_doors[region] = KitDoor.Build("OCK_Door_" + region.Id, pos, Quaternion.Euler(0f, region.EntranceRotationY, 0f), region.AreaId, 0, DoorModelOf(region));
-            Logger.LogMessage($"Door to '{region.DisplayName}' (area {region.AreaId}) placed at {pos}.");
+            KitPlugin.Detail($"Door to '{region.DisplayName}' (area {region.AreaId}) placed at {pos}.");
         }
 
         private static RegionManifest.PropReference DoorModelOf(Region region)
@@ -207,7 +218,7 @@ namespace OutwardConstructionKit.Runtime
                 foreach (RegionManifest.ReturnDoor door in region.Manifest.returnDoors)
                 {
                     KitDoor.Build("OCK_ReturnDoor", door.position, Quaternion.Euler(0f, door.rotationY, 0f), home.ID, region.ReturnSpawnIndex.Value, DoorModelOf(region));
-                    Logger.LogMessage($"Return door to '{home.SceneName}' placed at {door.position}, as the region asks.");
+                    KitPlugin.Detail($"Return door to '{home.SceneName}' placed at {door.position}, as the region asks.");
                 }
                 return;
             }
@@ -223,7 +234,7 @@ namespace OutwardConstructionKit.Runtime
                 pos.y = hit.point.y;
 
             KitDoor.Build("OCK_ReturnDoor", pos, Quaternion.LookRotation(-forward), home.ID, region.ReturnSpawnIndex.Value, DoorModelOf(region));
-            Logger.LogMessage($"Return door to '{home.SceneName}' placed at {pos}.");
+            KitPlugin.Detail($"Return door to '{home.SceneName}' placed at {pos}.");
         }
 
         // Adds a spawn beside the door. The list is always built in the same order, so the index stays valid.

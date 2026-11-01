@@ -20,6 +20,9 @@ internal static class RegionExporter
     public const string PLUGIN_CONFIG = "catalysten.outwardconstructionkit.cfg";
     private const string SPAWN_ROOT = "SpawnPointManager"; // the plugin finds it by this exact name
     private const float SPAWN_HEIGHT = 0.1f;
+    private const float GROUND_CHECK_START = 3f;
+    private const float GROUND_CHECK_DISTANCE = 200f;
+    private const float MAX_GROUND_GAP = 1f;
     private const string REGIONS_FOLDER = "Assets/Regions";
     private const string WORK_FOLDER = "Assets/OCK/_Export";
 
@@ -96,6 +99,7 @@ internal static class RegionExporter
         if (string.IsNullOrEmpty(scene.path))
             throw new InvalidOperationException("Save the scene before exporting.");
         Validate(scene);
+        List<string> placementWarnings = PlacementWarnings(scene);
         EditorSceneManager.SaveScene(scene);
         string originalPath = scene.path;
         string sceneName = scene.name; // the scene handle stops being valid once another scene opens
@@ -161,6 +165,8 @@ internal static class RegionExporter
             File.WriteAllText(bundleOut + ".refs.txt", manifest);
 
             string summary = $"Exported '{info.DisplayName}' ({info.Id}, from {sceneName}): {new FileInfo(bundleOut).Length / 1024} KB bundle, {referenced} vanilla props referenced, {embedded} altered props embedded, {enemies} enemies, NavMesh {navMeshTriangles} triangles, entrance {(string.IsNullOrEmpty(info.DoorScene) ? "not set" : info.DoorScene)}, to {outputFolder}";
+            foreach (string warning in placementWarnings)
+                summary += "\nWARNING: " + warning;
             if (embedded > 0)
             {
                 summary += $"\nEmbedded materials expecting real game shaders: [{string.Join(", ", embeddedShaders.ToArray())}].";
@@ -243,6 +249,31 @@ internal static class RegionExporter
     {
         if (!HasSpawnPoint(scene))
             throw new InvalidOperationException("This scene has no spawn point, so players would have nowhere to arrive. Click Add Spawn Point in the Prop Browser, or start from New Region.");
+    }
+
+    /// <summary>Spawn points and doors a player couldn't use, because they float above the ground or are under it.</summary>
+    public static List<string> PlacementWarnings(Scene scene)
+    {
+        Physics.SyncTransforms();
+        var warnings = new List<string>();
+        GameObject spawns = scene.GetRootGameObjects().FirstOrDefault(r => r.name == SPAWN_ROOT);
+        if (spawns != null)
+            foreach (Transform spawn in spawns.transform)
+                CheckStandsOnGround("Spawn point " + spawn.name, spawn.position, warnings);
+        foreach (Transform door in DoorTools.Doors(scene))
+            CheckStandsOnGround("A return door", door.position, warnings);
+        return warnings;
+    }
+
+    private static void CheckStandsOnGround(string what, Vector3 position, List<string> warnings)
+    {
+        RaycastHit hit;
+        if (!Physics.Raycast(position + Vector3.up * GROUND_CHECK_START, Vector3.down, out hit, GROUND_CHECK_DISTANCE, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+            warnings.Add($"{what} at {position} has no ground under it, or is below the ground.");
+        else if (position.y - hit.point.y > MAX_GROUND_GAP)
+            warnings.Add($"{what} at {position} floats {position.y - hit.point.y:0.0} m above the ground.");
+        else if (hit.point.y - position.y > MAX_GROUND_GAP)
+            warnings.Add($"{what} at {position} is {hit.point.y - position.y:0.0} m under the ground.");
     }
 
     // A scene made with Unity's own New Scene brings a camera, which would compete with the one the game borrows.

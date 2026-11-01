@@ -49,6 +49,8 @@ Entrance and return doors use a vanilla door by default. To use any prop instead
 
 ## Ripping more scenes
 
-AssetRipper's free edition doesn't separate static-batched meshes, and the importer here does that itself. Run it with `--headless --port <port>`, then POST to `/LoadFile` with the scene's `levelN` and `sharedassetsN.assets`, followed by `/Export/UnityProject`. **Headless export deletes a non-empty target folder, so always give it a new one**, inside the rip folder: the Prop Browser reads every `ExportedProject` under it.
+**Construction Kit > Rip a Scene** lists the game's scenes and rips one in its own window. Monsoon came to 15 GB in about 18 minutes and Chersonese to 7.3 GB in about 8, because a scene pulls in much of the shared game data. Each rip gives the same asset a different ID, so a texture used from two rips is imported twice in the editor. That only costs editor disk space.
 
-A scene's number is its position in the build list, so Monsoon is 52 and ChersoneseNewTerrain is 5. Monsoon came to 15 GB in about 18 minutes and Chersonese to 7.3 GB in about 8, because a scene pulls in much of the shared game data. Each rip gives the same asset a different GUID, so a texture used from two rips is imported twice in the editor. That only costs editor disk space.
+Start with Monsoon, which the ground textures need. ChersoneseNewTerrain adds outdoor props and wild enemies such as hyenas. After that, rip the scene whose look you're after: a vanilla scene's rip offers what that scene uses.
+
+The window runs `Tools~/rip-scene.ps1` in the package, which can also be run by hand. It installs AssetRipper 2.0.0 inside your rip folder and checks the download against its published hash. AssetRipper is a separate project under the GPL, and isn't included with the kit.

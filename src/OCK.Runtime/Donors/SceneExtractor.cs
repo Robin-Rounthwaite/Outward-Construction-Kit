@@ -222,7 +222,7 @@ namespace OutwardConstructionKit.Runtime
                     snapshot.m_field.SetValue(null, snapshot.m_value);
                     restored.Add(snapshot.m_field.DeclaringType.Name + "." + snapshot.m_field.Name);
                 }
-                KitPlugin.Log.LogMessage($"Restored {restored.Count} statics overwritten by donors: {string.Join(", ", restored.ToArray())}");
+                KitPlugin.Detail($"Restored {restored.Count} statics overwritten by donors: {string.Join(", ", restored.ToArray())}");
             }
         }
     }

@@ -230,7 +230,7 @@ namespace OutwardConstructionKit.Runtime
             if (isError)
                 KitPlugin.Log.LogError(message);
             else
-                KitPlugin.Log.LogMessage(message);
+                KitPlugin.Detail(message);
         }
     }
 }

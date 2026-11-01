@@ -74,6 +74,11 @@ internal static class DoorTools
         return scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Transform>(true)).Where(t => t.name.StartsWith(MARKER_NAME)).Select(t => t.gameObject).ToList();
     }
 
+    public static IEnumerable<Transform> Doors(Scene scene)
+    {
+        return Markers(scene).Select(m => m.transform);
+    }
+
     public static void AppendManifest(Scene scene, StringBuilder text)
     {
         var ci = CultureInfo.InvariantCulture;
