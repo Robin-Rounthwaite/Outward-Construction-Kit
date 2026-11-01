@@ -180,6 +180,23 @@ namespace OutwardConstructionKit.Tests
         }
 
         [Test]
+        public void EnemiesGetTheSameNetworkIdsOnEveryPlayersGame()
+        {
+            Assert.That(EnemyDonor.ViewId(3, 1), Is.EqualTo(EnemyDonor.ViewId(3, 1)));
+            Assert.That(EnemyDonor.ViewId(3, 49), Is.LessThan(EnemyDonor.ViewId(4, 0)));
+        }
+
+        [Test]
+        public void NoticesAPlayerWithoutARegion()
+        {
+            string description = CoopGuard.Describe(new[] { "a=1", "b=2" });
+            Assert.That(CoopGuard.Has(description, "b=2"), Is.True);
+            Assert.That(CoopGuard.Has(description, "b=3"), Is.False, "another version");
+            Assert.That(CoopGuard.Has(description, "c=1"), Is.False, "another region");
+            Assert.That(CoopGuard.Has(null, "a=1"), Is.False, "no kit at all");
+        }
+
+        [Test]
         public void ReadsADoorModel()
         {
             List<string> errors;

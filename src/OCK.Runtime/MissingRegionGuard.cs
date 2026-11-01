@@ -28,6 +28,12 @@ namespace OutwardConstructionKit.Runtime
             get { return Path.Combine(Paths.BepInExRootPath, FILE); }
         }
 
+        /// <summary>Splitscreen players each pass through the patch below, so it stays on until the level is ready.</summary>
+        public static void OnLevelReady()
+        {
+            s_arrivingElsewhere = false;
+        }
+
         public static void Patch(Harmony harmony)
         {
             harmony.PatchAll(typeof(ChooseInstancePatch));
@@ -84,7 +90,6 @@ namespace OutwardConstructionKit.Runtime
                 SpawnPointManager spawns = SpawnPointManager.Instance;
                 if (spawns == null || spawns.SpawnPoints == null || spawns.SpawnPoints.Length == 0)
                     return true;
-                s_arrivingElsewhere = false;
                 __instance.transform.position = spawns.SpawnPoints[0].position + Vector3.up * ARRIVAL_HEIGHT;
                 __instance.transform.forward = spawns.SpawnPoints[0].forward;
                 KitPlugin.Log.LogMessage($"Started '{__instance.Name}' at {__instance.transform.position}, this scene's first spawn point.");

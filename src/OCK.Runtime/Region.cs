@@ -31,6 +31,9 @@ namespace OutwardConstructionKit.Runtime
         public int AreaId { get; private set; }
         public RegionManifest Manifest { get; private set; }
 
+        /// <summary>The same for two players only if they have the same version of this region.</summary>
+        public string Signature { get; private set; }
+
         public ConfigEntry<string> DoorScene;
         public ConfigEntry<string> DoorPosition;
         public ConfigEntry<float> DoorRotationY;
@@ -131,6 +134,7 @@ namespace OutwardConstructionKit.Runtime
             return new Region
             {
                 Id = id,
+                Signature = id + "=" + Hash(File.ReadAllText(bundlePath + MANIFEST_SUFFIX)),
                 DisplayName = string.IsNullOrEmpty(manifest.displayName) ? id : manifest.displayName,
                 SceneName = sceneName,
                 AreaId = areaId,
@@ -146,10 +150,15 @@ namespace OutwardConstructionKit.Runtime
         // Stable for a given ID, and well above the game's own area numbers, which stop below 1000.
         internal static int AreaIdFor(string id)
         {
+            return 100000 + (int)(Hash(id) % 900000);
+        }
+
+        private static uint Hash(string text)
+        {
             uint hash = 2166136261;
-            foreach (char c in id)
+            foreach (char c in text)
                 hash = (hash ^ c) * 16777619;
-            return 100000 + (int)(hash % 900000);
+            return hash;
         }
 
         public void Register(AreaManager manager)

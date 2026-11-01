@@ -95,6 +95,14 @@ namespace OutwardConstructionKit.Runtime
             {
                 Logger.LogError("Couldn't set up returning from a defeat in a region: " + e);
             }
+            try
+            {
+                CoopGuard.Patch(harmony);
+            }
+            catch (System.Exception e)
+            {
+                Logger.LogError("Couldn't set up checking that co-op players have the same regions: " + e);
+            }
             if (AreaManager.Instance != null)
                 RegisterAll(AreaManager.Instance);
 
@@ -162,6 +170,7 @@ namespace OutwardConstructionKit.Runtime
                     if (ProbeScenes.Value)
                         SceneProbe.Run(Path.GetDirectoryName(Info.Location));
                     BuildDoors();
+                    MissingRegionGuard.OnLevelReady();
                     PlayerNotice.ShowPending();
                 }
                 catch (System.Exception e)
@@ -310,6 +319,13 @@ namespace OutwardConstructionKit.Runtime
             if (ch == null)
             {
                 Logger.LogWarning("No local character yet; load into the game first.");
+                return;
+            }
+
+            // Only this player would have it, so nobody else could follow them through.
+            if (PhotonNetwork.otherPlayers.Length > 0)
+            {
+                Notify("Doors can only be placed when playing alone.");
                 return;
             }
 

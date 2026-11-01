@@ -39,6 +39,18 @@ Embedded props use exact copies of the vanilla materials. Their placeholder shad
 
 References carry a check, and the manifest records a fingerprint of the game build, so a game update produces a clear error or warning rather than a wrong object.
 
+## Co-op
+
+Online co-op was reviewed against the game's code, and hasn't been tried with a second player yet.
+
+- **Doors** use the game's own request, so everyone agrees and travels together, as with a vanilla door.
+- **Enemies and water** get network IDs worked out from their place in the region, the same on every player's PC. Their other IDs come from the region's ID and the enemy's place too.
+- **A defeat** is decided by the host, who sends everyone to the same place. As in the base game, it comes when the whole party is down.
+- **Missing regions:** `CoopGuard` has each player tell the room which regions they have, and which version. A door to a region someone lacks says who and stays shut, and a host in a region removes a guest who joins without it, after telling the host why.
+- **Doors placed with Ctrl+F10** are per PC, so placing them is refused while others are in the game. Regions should ship their entrance.
+
+To check after the beta: walking through a door together; a guest using a door; enemies fighting and dying for both; a defeat; a guest joining inside a region, with and without it; drinking from water; and splitscreen, including a save left in a removed region.
+
 ## Dev settings
 
 These are under `[Dev]` in the plugin's config. All but `UseCache` are off by default.

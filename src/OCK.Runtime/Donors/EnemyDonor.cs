@@ -21,15 +21,24 @@ namespace OutwardConstructionKit.Runtime
         /// can have, and the blocks above those the Increased Enemy Count mod uses.
         /// </summary>
         private const int VIEW_ID_BASE = 2110000 * 1000;
+        private const int VIEW_IDS_PER_ENEMY = 50;
 
         private static readonly FieldInfo f_aiStates = AccessTools.Field(typeof(CharacterAI), "m_aiStates");
         private static readonly FieldInfo f_aiStatesRoot = AccessTools.Field(typeof(CharacterAI), "m_aiStatesRoot");
 
         private static readonly Dictionary<string, GameObject> s_templates = new Dictionary<string, GameObject>();
         private static GameObject s_holder;
-        private static int s_nextViewId = VIEW_ID_BASE;
         private static Vector2 s_enableDistances = new Vector2(-1f, -1f);
         private static readonly Vector2 s_usualEnableDistances = new Vector2(150f, 50f);
+
+        /// <summary>
+        /// Worked out from the enemy's place in the region, because every player's game has to arrive at the same
+        /// number for the same enemy, whatever else they've done this session, or the host's messages reach the wrong one.
+        /// </summary>
+        internal static int ViewId(int enemyIndex, int slot)
+        {
+            return VIEW_ID_BASE + enemyIndex * VIEW_IDS_PER_ENEMY + slot;
+        }
 
         private static string KeyFor(RegionManifest.EnemyReference reference)
         {
@@ -146,11 +155,14 @@ namespace OutwardConstructionKit.Runtime
             string suffix = "_ock_" + region.Id + "_" + index;
             character.SetUID(new UID(region.Id + "_" + template.name + suffix));
 
+            int slot = 0;
             foreach (PhotonView view in enemy.GetComponentsInChildren<PhotonView>(true))
             {
                 if (view.viewID == 0)
                     continue;
-                view.viewID = s_nextViewId++;
+                if (slot >= VIEW_IDS_PER_ENEMY)
+                    throw new System.InvalidOperationException($"it has more than {VIEW_IDS_PER_ENEMY} network views");
+                view.viewID = ViewId(index, slot++);
                 view.ownerId = 0; // an area object, so whoever hosts controls it, like the originals
             }
             foreach (MonoBehaviour script in enemy.GetComponentsInChildren<MonoBehaviour>(true))

@@ -20,6 +20,8 @@ namespace OutwardConstructionKit.Runtime
         private const float SPLASH_COLLIDER_HEIGHT = 0.02f;
         private const float DRINK_ZONE_HEIGHT = 4f;
         private const string WATER_LAYER = "Water";
+        private const int VIEW_ID_BASE = 2140000 * 1000; // above the enemies' block, and the same for every player's game
+        private const int VIEW_IDS_PER_WATER = 10;
 
         private static readonly Dictionary<string, GameObject> s_templates = new Dictionary<string, GameObject>();
         private static readonly Dictionary<string, GameObject> s_sources = new Dictionary<string, GameObject>();
@@ -166,6 +168,13 @@ namespace OutwardConstructionKit.Runtime
                 {
                     KitPlugin.Log.LogError($"'{reference.waterType}' isn't a type of water, so the water at {reference.position} keeps its scene's own.");
                 }
+            }
+
+            int slot = 0;
+            foreach (PhotonView view in source.GetComponentsInChildren<PhotonView>(true).Where(v => v.viewID != 0).Take(VIEW_IDS_PER_WATER))
+            {
+                view.viewID = VIEW_ID_BASE + index * VIEW_IDS_PER_WATER + slot++;
+                view.ownerId = 0;
             }
 
             string suffix = "_ock_" + region.Id + "_water" + index;

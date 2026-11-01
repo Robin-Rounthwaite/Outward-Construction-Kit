@@ -5,7 +5,9 @@ namespace OutwardConstructionKit.Runtime
 {
     /// <summary>
     /// With no defeat scenario, the game brings a defeated party back by reloading the scene they died in, which in a
-    /// region is beside whatever killed them. This sends them back to where they loaded in from, instead.
+    /// region is beside whatever killed them. This sends them back to where they loaded in from, instead. The host alone
+    /// decides that, and the game's own request takes everyone there together, because players can have come from
+    /// different places: a guest who joined inside the region only knows its entrance.
     /// </summary>
     internal static class DeathReturn
     {
@@ -19,7 +21,7 @@ namespace OutwardConstructionKit.Runtime
         public static void Patch(Harmony harmony)
         {
             harmony.PatchAll(typeof(FailSafePatch));
-            harmony.PatchAll(typeof(LoadLevelPatch));
+            harmony.PatchAll(typeof(ReloadPatch));
         }
 
         /// <summary>Notes each vanilla scene as it loads, since that's where the next region is entered from.</summary>
@@ -40,27 +42,29 @@ namespace OutwardConstructionKit.Runtime
         {
             private static void Prefix()
             {
-                s_returning = Region.ForScene(SceneManager.GetActiveScene().name) != null;
+                s_returning = !PhotonNetwork.isNonMasterClientInRoom && Region.ForScene(SceneManager.GetActiveScene().name) != null;
             }
         }
 
-        [HarmonyPatch(typeof(NetworkLevelLoader), nameof(NetworkLevelLoader.LoadLevel), new[] { typeof(string), typeof(int), typeof(float), typeof(bool) })]
-        private static class LoadLevelPatch
+        [HarmonyPatch(typeof(NetworkLevelLoader), nameof(NetworkLevelLoader.RequestReloadLevel))]
+        private static class ReloadPatch
         {
-            private static void Prefix(ref string _levelName, ref int _spawnPoint)
+            private static bool Prefix(NetworkLevelLoader __instance)
             {
                 if (!s_returning)
-                    return;
+                    return true;
                 s_returning = false;
 
-                Region region = Region.ForScene(_levelName);
+                string scene = SceneManager.GetActiveScene().name;
+                Region region = Region.ForScene(scene);
                 if (region == null)
-                    return;
+                    return true;
                 string destination = Destination(s_cameFrom, region.EntranceScene);
                 // The door's own spawn is beside it, and that only exists in the scene the door is in.
-                _spawnPoint = destination == region.EntranceScene && region.ReturnSpawnIndex.Value >= 0 ? region.ReturnSpawnIndex.Value : 0;
-                KitPlugin.Log.LogMessage($"Defeated in {_levelName}, so returning to {destination}, at spawn {_spawnPoint}.");
-                _levelName = destination;
+                int spawnPoint = destination == region.EntranceScene && region.ReturnSpawnIndex.Value >= 0 ? region.ReturnSpawnIndex.Value : 0;
+                KitPlugin.Log.LogMessage($"Defeated in {scene}, so returning to {destination}, at spawn {spawnPoint}.");
+                __instance.RequestSwitchArea(destination, spawnPoint);
+                return false;
             }
         }
     }
