@@ -29,6 +29,7 @@ namespace OutwardConstructionKit.Runtime
         internal ConfigEntry<bool> ProbeScenes;
         internal ConfigEntry<bool> MemoryReport;
         internal ConfigEntry<bool> SelfCheck;
+        internal ConfigEntry<KeyboardShortcut> ExtractTestKey;
 
         private readonly Dictionary<Region, GameObject> m_doors = new Dictionary<Region, GameObject>();
         private int m_selected;
@@ -49,6 +50,9 @@ namespace OutwardConstructionKit.Runtime
                 "Behind the first loading screen, log what's holding on to the assets kept from donor scenes. Adds many seconds.");
             SelfCheck = Config.Bind("Dev", "SelfCheck", false,
                 "After entering a region, log [CHECK] lines saying whether its props, enemies, ground, water and doors came out right.");
+
+            ExtractTestKey = Config.Bind("Dev", "ExtractTestKey", new KeyboardShortcut(KeyCode.F7, KeyCode.LeftControl),
+                "Press this in game to place the extracted-assets test prop, if its bundle is installed.");
 
             Region.LoadAll(Config);
 
@@ -76,6 +80,8 @@ namespace OutwardConstructionKit.Runtime
                 PlaceDoorInFrontOfPlayer();
             if (NextRegionKey.Value.IsDown())
                 SelectNextRegion();
+            if (ExtractTestKey.Value.IsDown())
+                ExtractTest.PlaceInFrontOfPlayer();
         }
 
         // Runs before the loader spawns the player, which is the last moment the spawn list can change.
@@ -85,6 +91,7 @@ namespace OutwardConstructionKit.Runtime
                 return;
             // Vanilla travel shows what an ordinary level load costs, to compare with what donor scenes keep.
             Logger.LogMessage($"Scene {scene.name} loaded, process memory {SceneExtractor.PrivateMemory() / (1024 * 1024)} MB.");
+            ExtractTest.TryLoad(); // the first scene is the main menu, before any donor has loaded
             try
             {
                 Region here = Region.ForScene(scene.name);

@@ -102,7 +102,7 @@ namespace OutwardConstructionKit.Runtime
                 // One bad prop mustn't stop the rest of the scene setup, or the loading screen never closes.
                 try
                 {
-                    PlaceOne(scene, template, reference);
+                    PlaceCopy(scene, template.Object, template.SourcePosition, template.SourceRotation, reference.position, reference.rotation);
                     placed++;
                 }
                 catch (System.Exception e)
@@ -113,15 +113,15 @@ namespace OutwardConstructionKit.Runtime
             return placed;
         }
 
-        private static void PlaceOne(Scene scene, Template template, RegionManifest.PropReference reference)
+        internal static GameObject PlaceCopy(Scene scene, GameObject source, Vector3 sourcePosition, Quaternion sourceRotation, Vector3 position, Vector3 rotation)
         {
-            GameObject prop = Object.Instantiate(template.Object);
-            prop.name = template.Object.name;
+            GameObject prop = Object.Instantiate(source);
+            prop.name = source.name;
             SceneManager.MoveGameObjectToScene(prop, scene);
 
-            Quaternion turn = Quaternion.Euler(reference.rotation);
-            prop.transform.position = reference.position;
-            prop.transform.rotation = turn * template.SourceRotation;
+            Quaternion turn = Quaternion.Euler(rotation);
+            prop.transform.position = position;
+            prop.transform.rotation = turn * sourceRotation;
 
             Transform batchRoot = null;
             int batched = 0;
@@ -137,7 +137,7 @@ namespace OutwardConstructionKit.Runtime
                     batchRoot = new GameObject(prop.name + "_BatchRoot").transform;
                     SceneManager.MoveGameObjectToScene(batchRoot.gameObject, scene);
                     batchRoot.rotation = turn;
-                    batchRoot.position = reference.position - turn * template.SourcePosition;
+                    batchRoot.position = position - turn * sourcePosition;
                 }
                 // Exists on Renderer but isn't public.
                 AccessTools.Property(typeof(Renderer), "staticBatchRootTransform").SetValue(renderer, batchRoot, null);
@@ -148,7 +148,8 @@ namespace OutwardConstructionKit.Runtime
                 batched++;
             }
 
-            KitPlugin.Log.LogMessage($"Prop '{prop.name}' placed at {prop.transform.position}, turned {reference.rotation}: {renderers.Length} renderers ({batched} batched), {prop.GetComponentsInChildren<Collider>(true).Length} colliders, LOD group {prop.GetComponent<LODGroup>() != null}.");
+            KitPlugin.Log.LogMessage($"Prop '{prop.name}' placed at {prop.transform.position}, turned {rotation}: {renderers.Length} renderers ({batched} batched), {prop.GetComponentsInChildren<Collider>(true).Length} colliders, LOD group {prop.GetComponent<LODGroup>() != null}.");
+            return prop;
         }
 
         internal static Transform Find(Scene scene, string path)
