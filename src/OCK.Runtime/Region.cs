@@ -52,9 +52,19 @@ namespace OutwardConstructionKit.Runtime
             return All.SelectMany(r => r.Manifest.DonorScenes(AssetCache.Has)).Distinct();
         }
 
+        /// <summary>
+        /// Whether this can load at all. A region can't without the scene it borrows its sky, camera and audio from,
+        /// which a game update could rename. It then gets no door, and saves left inside it go elsewhere.
+        /// </summary>
+        public bool CanLoad
+        {
+            get { return !string.IsNullOrEmpty(Manifest.environmentDonor) && Enumerable.Range(0, SceneManager.sceneCountInBuildSettings).Any(i => Path.GetFileNameWithoutExtension(SceneUtility.GetScenePathByBuildIndex(i)) == Manifest.environmentDonor); }
+        }
+
         public static void LoadAll(ConfigFile config)
         {
-            foreach (string manifestFile in Directory.GetFiles(Paths.PluginPath, "*" + MANIFEST_SUFFIX, SearchOption.AllDirectories).OrderBy(f => Path.GetFileName(f)))
+            string[] manifests = Directory.GetFiles(Paths.PluginPath, "*" + MANIFEST_SUFFIX, SearchOption.AllDirectories);
+            foreach (string manifestFile in manifests.OrderBy(f => Path.GetFileName(f)))
             {
                 try
                 {
@@ -68,6 +78,10 @@ namespace OutwardConstructionKit.Runtime
                 }
             }
             KitPlugin.Log.LogMessage($"{All.Count} regions installed: {string.Join(", ", All.Select(r => r.Id).ToArray())}");
+            if (manifests.Length > All.Count)
+                PlayerNotice.Add($"{manifests.Length - All.Count} region mods couldn't load.");
+            foreach (Region region in All.Where(r => !r.CanLoad))
+                PlayerNotice.Add($"'{region.DisplayName}' needs a scene the game doesn't have, so it's closed until it's updated.");
         }
 
         private static Region Load(string bundlePath, ConfigFile config)
@@ -184,6 +198,8 @@ namespace OutwardConstructionKit.Runtime
         {
             ShaderSwap.Apply(scene); // first, so it only touches what came from the bundle
             int propsPlaced = PropDonor.Place(scene, this); // before the layers, so its colliders get the ground layer below
+            if (propsPlaced < Manifest.props.Count)
+                PlayerNotice.Add($"'{DisplayName}' is missing {Manifest.props.Count - propsPlaced} of its props, perhaps after a game update.");
             GroundDonor.Apply(scene, this);
 
             int ground = LayerMask.NameToLayer("LargeEnvironment");

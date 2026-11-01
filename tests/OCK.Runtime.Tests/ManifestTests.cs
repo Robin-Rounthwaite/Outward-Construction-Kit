@@ -116,6 +116,41 @@ namespace OutwardConstructionKit.Tests
             Assert.That(ParseSample().DonorScenes(), Is.EquivalentTo(new[] { "ChersoneseNewTerrain", "Monsoon" }));
         }
 
+        private static string Replace(string scene, string[] installed, Dictionary<string, string> entrances)
+        {
+            return MissingRegionGuard.Replacement(scene, installed, entrances);
+        }
+
+        [Test]
+        public void LeavesAVanillaSaveAlone()
+        {
+            Assert.That(Replace("Monsoon", new string[0], new Dictionary<string, string>()), Is.Null);
+        }
+
+        [Test]
+        public void LeavesASaveInAnInstalledRegionAlone()
+        {
+            Assert.That(Replace("OCK_a", new[] { "OCK_a" }, new Dictionary<string, string>()), Is.Null);
+        }
+
+        [Test]
+        public void SendsASaveInARemovedRegionToItsEntrance()
+        {
+            Assert.That(Replace("OCK_a", new string[0], new Dictionary<string, string> { { "OCK_a", "Monsoon" } }), Is.EqualTo("Monsoon"));
+        }
+
+        [Test]
+        public void SendsASaveInAnUnknownRegionSomewhereSafe()
+        {
+            Assert.That(Replace("OCK_a", new string[0], new Dictionary<string, string>()), Is.EqualTo("CierzoNewTerrain"));
+        }
+
+        [Test]
+        public void WontSendASaveThroughAnotherRemovedRegion()
+        {
+            Assert.That(Replace("OCK_a", new string[0], new Dictionary<string, string> { { "OCK_a", "OCK_b" } }), Is.EqualTo("CierzoNewTerrain"));
+        }
+
         [Test]
         public void ReadsADoorModel()
         {

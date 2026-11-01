@@ -23,6 +23,7 @@ namespace OutwardConstructionKit.Runtime
         private const float STEP_TIMEOUT_SECONDS = 240f;
         private const float CHECKS_SECONDS = 12f; // longer than the checks' own wait
         private const string TEST_SHADER = "Custom/Water/CustomWater";
+        private const float GROUND_SEARCH_DISTANCE = 6f;
 
         public static bool Begin(KitPlugin plugin)
         {
@@ -104,12 +105,20 @@ namespace OutwardConstructionKit.Runtime
             yield return PressAnyKey(result);
             if (!ok)
                 yield break;
+            // A run that ended in a fight can save its character close to death, and they'd die on the next arrival.
+            Player().Stats.RestoreAllVitals();
             yield return new WaitForSecondsRealtime(3f);
             string home = SceneManager.GetActiveScene().name;
             Log($"Started in {home}, at memory {SceneExtractor.PrivateMemory() / (1024 * 1024)} MB.");
-            Shader rareShader = AssetCache.LoadShader(TEST_SHADER);
-            Log(rareShader != null && rareShader.isSupported ? $"A shader from the cache works: {rareShader.name}." : $"FAIL couldn't load {TEST_SHADER} from the cache.");
-            AssetCache.ReleaseAll();
+            Vector3 feet = Player().transform.position;
+            Log(Physics.Raycast(feet + Vector3.up, Vector3.down, GROUND_SEARCH_DISTANCE, Global.FullEnvironmentMask, QueryTriggerInteraction.Ignore)
+                ? $"Standing on the ground at {feet}." : $"FAIL not standing on anything at {feet}.");
+            if (KitPlugin.Instance.UseCache.Value)
+            {
+                Shader rareShader = AssetCache.LoadShader(TEST_SHADER);
+                Log(rareShader != null && rareShader.isSupported ? $"A shader from the cache works: {rareShader.name}." : $"FAIL couldn't load {TEST_SHADER} from the cache.");
+                AssetCache.ReleaseAll();
+            }
 
             foreach (string id in regions)
             {
@@ -117,6 +126,11 @@ namespace OutwardConstructionKit.Runtime
                 if (region == null)
                 {
                     Log($"FAIL no region called '{id}'.");
+                    continue;
+                }
+                if (!region.CanLoad)
+                {
+                    Log($"'{id}' can't load, so it's left closed, and isn't visited.");
                     continue;
                 }
 
@@ -129,7 +143,7 @@ namespace OutwardConstructionKit.Runtime
                 yield return Screenshot(id);
             }
 
-            if (regions.Length > 0)
+            if (regions.Length > 0 && !request.Contains("endinregion"))
             {
                 yield return Travel(home, 0, result);
                 if (!ok)

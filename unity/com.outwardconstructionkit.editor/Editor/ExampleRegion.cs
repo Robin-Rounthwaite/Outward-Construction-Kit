@@ -15,7 +15,7 @@ internal static class ExampleRegion
     private const string STATUE = "mdl_env_propStatueTripleLadies_c";
     private const string HOUND = "Enemy Hound";
     private const string ENTRANCE_SCENE = "CierzoNewTerrain";
-    private const string ENTRANCE_POSITION = "-176,-1495.1,764"; // in the open, near where the game starts you off in town
+    private const string ENTRANCE_POSITION = "1236,27.9,1684"; // beside the scene's first spawn point
     private static readonly Vector3 s_hill = new Vector3(0f, 0f, 45f);
     private static readonly Vector3 s_pond = new Vector3(-30f, 0f, 5f);
 

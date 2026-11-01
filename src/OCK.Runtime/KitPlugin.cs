@@ -67,6 +67,15 @@ namespace OutwardConstructionKit.Runtime
             var harmony = new Harmony(GUID);
             harmony.PatchAll(typeof(AreaManagerAwakePatch));
             SceneExtractor.Patch(harmony);
+            try
+            {
+                MissingRegionGuard.Remember();
+                MissingRegionGuard.Patch(harmony);
+            }
+            catch (System.Exception e)
+            {
+                Logger.LogError("Couldn't set up the guard for saves left in removed regions: " + e);
+            }
             if (AreaManager.Instance != null)
                 RegisterAll(AreaManager.Instance);
 
@@ -133,6 +142,7 @@ namespace OutwardConstructionKit.Runtime
                     if (ProbeScenes.Value)
                         SceneProbe.Run(Path.GetDirectoryName(Info.Location));
                     BuildDoors();
+                    PlayerNotice.ShowPending();
                 }
                 catch (System.Exception e)
                 {
@@ -163,7 +173,7 @@ namespace OutwardConstructionKit.Runtime
                 return;
 
             // Without its borrowed environment the region can't finish loading, so a door would trap the player.
-            if (!EnvironmentDonor.IsReady(region.Manifest.environmentDonor))
+            if (!region.CanLoad || !EnvironmentDonor.IsReady(region.Manifest.environmentDonor))
             {
                 Logger.LogError($"Region '{region.Id}' couldn't borrow its environment from '{region.Manifest.environmentDonor}', so its door is left out.");
                 return;
