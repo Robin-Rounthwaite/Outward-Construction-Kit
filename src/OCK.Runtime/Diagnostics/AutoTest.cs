@@ -25,6 +25,7 @@ namespace OutwardConstructionKit.Runtime
         private const string TEST_SHADER = "Custom/Water/CustomWater";
         private const float GROUND_SEARCH_DISTANCE = 6f;
         private const string VISIT = "visit "; // the Test Region button: goes there, then it's normal play
+        private const string CHARACTER_ID = "characterid ";
 
         public static bool Begin(KitPlugin plugin)
         {
@@ -89,12 +90,16 @@ namespace OutwardConstructionKit.Runtime
             continueButton.onClick.Invoke();
             yield return new WaitForSecondsRealtime(2f);
 
+            // The Test Region button asks by save ID, because two characters can share a name. The test script asks by name.
+            string wantedId = request.Where(l => l.StartsWith(CHARACTER_ID)).Select(l => l.Substring(CHARACTER_ID.Length).Trim()).FirstOrDefault();
             string wanted = request.Where(l => l.StartsWith("character ")).Select(l => l.Substring(10).Trim()).FirstOrDefault();
             List<CharacterSaveInstanceHolder> saves = SaveManager.Instance.CharacterSaves.Where(s => s.MostRecentInstance != null).ToList();
-            CharacterSaveInstanceHolder chosen = wanted == null ? saves.FirstOrDefault() : saves.FirstOrDefault(s => s.MostRecentInstance.CharSave.PSave.Name == wanted);
+            CharacterSaveInstanceHolder chosen = wantedId != null ? saves.FirstOrDefault(s => s.CharacterUID == wantedId)
+                : wanted != null ? saves.FirstOrDefault(s => s.MostRecentInstance.CharSave.PSave.Name == wanted)
+                : saves.FirstOrDefault();
             if (chosen == null)
             {
-                Log($"FAIL no character called '{wanted}'. There are: {string.Join(", ", saves.Select(s => s.MostRecentInstance.CharSave.PSave.Name).ToArray())}");
+                Log($"FAIL no character called '{wantedId ?? wanted}'. There are: {string.Join(", ", saves.Select(s => s.MostRecentInstance.CharSave.PSave.Name).ToArray())}");
                 yield break;
             }
             var panel = (CharacterSelectionPanel)AccessTools.Field(typeof(MainScreen), "m_characterSelection").GetValue(menu);
