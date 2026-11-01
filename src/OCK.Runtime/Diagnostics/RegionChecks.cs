@@ -15,14 +15,19 @@ namespace OutwardConstructionKit.Runtime
     {
         private const float SETTLE_SECONDS = 8f;
         private const float GROUND_SEARCH_DISTANCE = 5f;
+        private const float PARKED_BELOW_HEIGHT = -1000f; // the game moves players far below the world as they leave
 
         public static IEnumerator Run(Region region, Scene scene, int propsPlaced)
         {
             while (NetworkLevelLoader.Instance == null || !NetworkLevelLoader.Instance.IsOverallLoadingDone)
                 yield return null;
             yield return new WaitForSeconds(SETTLE_SECONDS);
-            if (!scene.isLoaded)
+            Character player = CharacterManager.Instance != null ? CharacterManager.Instance.GetFirstLocalCharacter() : null;
+            if (!scene.isLoaded || (player != null && player.transform.position.y < PARKED_BELOW_HEIGHT))
+            {
+                KitPlugin.Log.LogMessage($"[CHECK] {region.Id}: skipped, because the player left within {SETTLE_SECONDS} seconds.");
                 yield break;
+            }
 
             int passed = 0;
             int failed = 0;
@@ -82,6 +87,10 @@ namespace OutwardConstructionKit.Runtime
 
             AISquadManager squads = AISquadManager.Instance;
             check("enemies have a wake distance", squads != null && (squads.AIEnableDistances.x > 0f || squads.AIEnableDistances.y > 0f), squads != null ? squads.AIEnableDistances.ToString() : "no squad manager");
+
+            int dead = enemies.Count(e => e.IsDead);
+            if (dead > 0)
+                KitPlugin.Log.LogMessage($"[CHECK] {region.Id}: {dead} enemies are already dead, so their movement can't be checked.");
 
             foreach (Character enemy in enemies.Where(e => !e.IsDead))
             {
