@@ -20,7 +20,7 @@ Props are stand-ins on a simple shader of our own, because ripped shaders are on
 
 ## Enemies and the entrance door
 
-Export bakes a NavMesh from the scene and its stand-ins, so enemies can walk the region. To place an enemy, add it from the **Enemies** category: it shows as a red capsule, with a small box marking its facing. Enemies are always references, cloned from a donor scene and given their own identity.
+Export bakes a NavMesh from the scene and its stand-ins, so enemies can walk the region. To place an enemy, add it from the **Enemies** category: it shows as a red capsule, with a small box marking its facing. Enemies are always references, built from the player's own game files and given their own identity.
 
 Your entrance door ships with the region too: after placing it in game with **Ctrl+F10**, click **Use door placed in game** in the Prop Browser, then export. A door a player places themselves overrides the shipped one.
 
@@ -30,7 +30,7 @@ Your entrance door ships with the region too: after placing it in game with **Ct
 
 It starts with room for 10 m below 0 and 50 m above. For more, raise **Terrain Height** in the Terrain's settings, which stretches existing hills in proportion, or lower the object and add the same amount to the height. Resize `Ground_Edges` to match, because the invisible walls don't follow.
 
-**Add Water** adds a blue marker for the scene chosen in the browser, whose own water it will use in game. Move it to the water's height and scale it to size. It only looks like water in game. Standing in or over it lets players drink and fill waterskins, with the water type of the donor scene's first water source, and shallow water (about 1.2 m or less) splashes underfoot. Enemies walk on the ground beneath it, since the NavMesh ignores water, and it has no collision.
+**Add Water** adds a blue marker for the scene chosen in the browser, whose own water it will use in game. Move it to the water's height and scale it to size. It only looks like water in game. Standing in or over it lets players drink and fill waterskins, with the water type of that scene's first water source, and shallow water (about 1.2 m or less) splashes underfoot. Enemies walk on the ground beneath it, since the NavMesh ignores water, and it has no collision.
 
 ## Return doors
 

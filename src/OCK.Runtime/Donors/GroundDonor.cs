@@ -52,12 +52,21 @@ namespace OutwardConstructionKit.Runtime
 
             TerrainLayer copy = Object.Instantiate(layer);
             copy.name = layer.name; // this is how it's found next time, since the terrain outlives the scene
-            Texture2D texture;
-            if (s_textures.TryGetValue(source.diffuse, out texture))
+            Texture2D texture = TextureFor(source.scene, source.diffuse);
+            if (texture != null)
                 copy.diffuseTexture = texture;
-            if (!string.IsNullOrEmpty(source.normal) && s_textures.TryGetValue(source.normal, out texture))
+            texture = string.IsNullOrEmpty(source.normal) ? null : TextureFor(source.scene, source.normal);
+            if (texture != null)
                 copy.normalMapTexture = texture;
             return copy;
+        }
+
+        private static Texture2D TextureFor(string scene, string name)
+        {
+            Texture2D texture = AssetCache.LoadTexture(scene, name);
+            if (texture == null)
+                s_textures.TryGetValue(name, out texture);
+            return texture;
         }
 
         // Its average colour as the GPU sees it, which tells a grey texture apart from a grey result.

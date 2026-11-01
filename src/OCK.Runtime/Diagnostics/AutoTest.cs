@@ -22,6 +22,7 @@ namespace OutwardConstructionKit.Runtime
         private const string RESULTS_FOLDER = "OCK_AutoTest";
         private const float STEP_TIMEOUT_SECONDS = 240f;
         private const float CHECKS_SECONDS = 12f; // longer than the checks' own wait
+        private const string TEST_SHADER = "Custom/Water/CustomWater";
 
         public static bool Begin(KitPlugin plugin)
         {
@@ -106,6 +107,9 @@ namespace OutwardConstructionKit.Runtime
             yield return new WaitForSecondsRealtime(3f);
             string home = SceneManager.GetActiveScene().name;
             Log($"Started in {home}, at memory {SceneExtractor.PrivateMemory() / (1024 * 1024)} MB.");
+            Shader rareShader = AssetCache.LoadShader(TEST_SHADER);
+            Log(rareShader != null && rareShader.isSupported ? $"A shader from the cache works: {rareShader.name}." : $"FAIL couldn't load {TEST_SHADER} from the cache.");
+            AssetCache.ReleaseAll();
 
             foreach (string id in regions)
             {
@@ -120,6 +124,7 @@ namespace OutwardConstructionKit.Runtime
                 if (!ok)
                     yield break;
                 Log($"In {id}, at memory {SceneExtractor.PrivateMemory() / (1024 * 1024)} MB.");
+                Player().Invincible = true; // no one's at the keyboard, and enemies that work will kill a character standing still
                 yield return new WaitForSecondsRealtime(CHECKS_SECONDS);
                 yield return Screenshot(id);
             }
@@ -130,6 +135,7 @@ namespace OutwardConstructionKit.Runtime
                 if (!ok)
                     yield break;
                 Log($"Back in {home}, so the game saved on the way, at memory {SceneExtractor.PrivateMemory() / (1024 * 1024)} MB.");
+                Player().Invincible = false;
                 yield return new WaitForSecondsRealtime(3f);
             }
 

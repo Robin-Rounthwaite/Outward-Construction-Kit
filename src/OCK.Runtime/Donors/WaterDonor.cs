@@ -40,14 +40,7 @@ namespace OutwardConstructionKit.Runtime
                 return;
             }
 
-            if (s_holder == null)
-            {
-                s_holder = new GameObject("OCK_WaterDonor");
-                s_holder.SetActive(false);
-                Object.DontDestroyOnLoad(s_holder);
-            }
-
-            GameObject template = Object.Instantiate(source.gameObject, s_holder.transform);
+            GameObject template = Object.Instantiate(source.gameObject, Holder().transform);
             template.name = source.name;
             template.transform.localScale = source.transform.lossyScale;
             foreach (MonoBehaviour script in template.GetComponentsInChildren<MonoBehaviour>(true).Reverse())
@@ -75,12 +68,13 @@ namespace OutwardConstructionKit.Runtime
 
         public static void Place(Scene scene, Region region)
         {
+            var temporary = new List<GameObject>();
             int index = 0;
             foreach (RegionManifest.WaterReference reference in region.Manifest.water)
             {
                 index++;
-                GameObject template;
-                if (!s_templates.TryGetValue(reference.scene, out template))
+                GameObject template = TemplateFromCache(reference.scene, temporary);
+                if (template == null && !s_templates.TryGetValue(reference.scene, out template))
                     continue;
 
                 // One bad plane mustn't stop the rest of the scene setup, or the loading screen never closes.
@@ -104,6 +98,38 @@ namespace OutwardConstructionKit.Runtime
                     KitPlugin.Log.LogError($"Couldn't place water from {reference.scene}: {e}");
                 }
             }
+            foreach (GameObject template in temporary)
+                Object.Destroy(template);
+        }
+
+        private static GameObject Holder()
+        {
+            if (s_holder == null)
+            {
+                s_holder = new GameObject("OCK_WaterDonor");
+                s_holder.SetActive(false);
+                Object.DontDestroyOnLoad(s_holder);
+            }
+            return s_holder;
+        }
+
+        // A cached plane is as it was in its level, so it gets the same treatment as one cloned from a donor scene.
+        private static GameObject TemplateFromCache(string scene, List<GameObject> temporary)
+        {
+            GameObject cached = AssetCache.Load(scene, RegionManifest.WATER_KEY);
+            if (cached == null)
+                return null;
+
+            GameObject template = Object.Instantiate(cached, Holder().transform);
+            template.name = cached.name;
+            template.transform.localScale = cached.transform.lossyScale;
+            template.SetActive(true); // stays asleep under the holder
+            foreach (MonoBehaviour script in template.GetComponentsInChildren<MonoBehaviour>(true).Reverse())
+                if (!(script is WaterRender))
+                    Object.DestroyImmediate(script);
+            template.GetComponent<WaterRender>().BoundsColliders = new BoxCollider[0]; // Start reads these without checking
+            temporary.Add(template);
+            return template;
         }
 
         private static void AddSplashCollider(GameObject water, float width, float length)
@@ -121,11 +147,12 @@ namespace OutwardConstructionKit.Runtime
         // Built asleep, because a trigger registers its ID as it wakes. The IDs only need to be stable and unique.
         private static void AddWaterSource(Scene scene, Region region, RegionManifest.WaterReference reference, int index)
         {
-            GameObject template;
-            if (!s_sources.TryGetValue(reference.scene, out template))
+            GameObject template = AssetCache.Load(reference.scene, RegionManifest.WATER_SOURCE_KEY);
+            if (template == null && !s_sources.TryGetValue(reference.scene, out template))
                 return;
 
-            GameObject source = Object.Instantiate(template, s_holder.transform);
+            GameObject source = Object.Instantiate(template, Holder().transform);
+            source.SetActive(true); // stays asleep under the holder
             source.name = template.name + "_" + index;
             string suffix = "_ock_" + region.Id + "_water" + index;
             foreach (MonoBehaviour script in source.GetComponentsInChildren<MonoBehaviour>(true))

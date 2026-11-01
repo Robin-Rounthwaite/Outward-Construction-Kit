@@ -69,8 +69,8 @@ while (((Get-Date) - $started).TotalSeconds -lt $TimeoutSeconds) {
         break
     }
     if ($game.HasExited) {
-        # It may have logged its last line just before closing.
-        $finished = Select-String -Path $log -Pattern '\[AUTOTEST\] FINISHED|\[AUTOTEST\] FAIL' -Quiet
+        # BepInEx's log can lose its last line as the game closes, but the game's own keeps it.
+        $finished = Select-String -Path $log, (Join-Path $GameFolder 'output_log.txt') -Pattern '\[AUTOTEST\] FINISHED|\[AUTOTEST\] FAIL' -Quiet
         break
     }
 }

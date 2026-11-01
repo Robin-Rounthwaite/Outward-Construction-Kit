@@ -104,6 +104,68 @@ namespace OutwardConstructionKit.Tests
         }
 
         [Test]
+        public void LeavesASceneBehindWhenBuildingItsEnvironment()
+        {
+            string file = Path.Combine(m_folder, "environment");
+            BuildReport report = m_builder.BuildPruned(MONSOON, "Environment", new[] { "WindZone", "WorldItems", "Sky Dome Custom", "WeatherEvents" }, "Season", file);
+            TestContext.Progress.WriteLine($"Environment: {report.Objects} objects, {report.Scripts} scripts, {report.Bytes / 1024} KB");
+            Assert.That(report.Scripts, Is.GreaterThan(0));
+            Assert.That(report.Bytes, Is.LessThan(16 * 1024 * 1024), "no terrain or props came along");
+            Assert.That(Open(file).AssetInfos.Count(i => i.TypeId == 4), Is.GreaterThan(5), "its kept children and seasons");
+            Assert.That(Open(file).AssetInfos.Any(i => i.TypeId == 156), Is.False, "no terrain data");
+        }
+
+        [Test]
+        public void FindsAWaterPlaneByItsScript()
+        {
+            string file = Path.Combine(m_folder, "water");
+            BuildReport report = m_builder.BuildScriptHolder(MONSOON, "WaterRender", true, file);
+            Assert.That(report.Scripts, Is.GreaterThan(0));
+            Assert.That(Open(file).AssetInfos.Any(i => i.TypeId == 23), Is.True, "the plane's renderer");
+        }
+
+        [Test]
+        public void FindsAWaterSourceByItsScript()
+        {
+            BuildReport report = m_builder.BuildScriptHolder(CHERSONESE, "WaterSource", false, Path.Combine(m_folder, "source"));
+            Assert.That(report.Scripts, Is.GreaterThan(1), "the source and its interactions");
+        }
+
+        [Test]
+        public void MakesAPointerToATextureWithoutCopyingIt()
+        {
+            string file = Path.Combine(m_folder, "texture");
+            BuildReport report = m_builder.BuildTexturePointer(MONSOON, "tex_env_masterGroundGrassFull", file);
+            Assert.That(report.Bytes, Is.LessThan(64 * 1024), "just a pointer, not a 2048 pixel texture");
+            AssetsFile built = Open(file);
+            Assert.That(built.Metadata.Externals.Count, Is.EqualTo(1));
+            Assert.That(built.AssetInfos.Single().PathId, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void MakesAPointerToAShaderFoundByName()
+        {
+            string file = Path.Combine(m_folder, "shader");
+            var timer = System.Diagnostics.Stopwatch.StartNew();
+            BuildReport report = m_builder.BuildShaderPointer("Custom/Water/CustomWater", file);
+            TestContext.Progress.WriteLine($"Shader found in {timer.ElapsedMilliseconds} ms");
+            Assert.That(report.Bytes, Is.LessThan(64 * 1024));
+            Assert.That(Open(file).Metadata.Externals.Single().PathName, Does.EndWith(".assets"));
+        }
+
+        [Test]
+        public void RefusesAShaderThatIsntThere()
+        {
+            Assert.Throws<InvalidDataException>(() => m_builder.BuildShaderPointer("Custom/No Such Shader", Path.Combine(m_folder, "noshader")));
+        }
+
+        [Test]
+        public void RefusesATextureThatIsntThere()
+        {
+            Assert.Throws<InvalidDataException>(() => m_builder.BuildTexturePointer(MONSOON, "tex_no_such_texture", Path.Combine(m_folder, "notexture")));
+        }
+
+        [Test]
         public void RefusesAnObjectThatIsntThere()
         {
             Assert.Throws<InvalidDataException>(() => m_builder.Build(MONSOON, "Nowhere/Nothing", Path.Combine(m_folder, "none")));

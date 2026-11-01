@@ -73,12 +73,34 @@ namespace OutwardConstructionKit.Runtime
         public string environmentDonor;
         public List<PropReference> props = new List<PropReference>();
 
+        // Cache keys for things found by what they are, rather than by a hierarchy path.
+        public const string WATER_KEY = "#water";
+        public const string WATER_SOURCE_KEY = "#watersource";
+        public const string ENVIRONMENT_KEY = "#environment";
+        private const string TEXTURE_KEY_PREFIX = "#texture:";
+
+        // Woken in this order: audio and sky exist by the time the camera looks for them.
+        public static readonly string[] EnvironmentParts = { "AudioManager", ENVIRONMENT_KEY, "Main Camera" };
+
+        public static string TextureKey(string name)
+        {
+            return TEXTURE_KEY_PREFIX + name;
+        }
+
+        public static bool IsTextureKey(string key, out string name)
+        {
+            bool isTexture = key.StartsWith(TEXTURE_KEY_PREFIX);
+            name = isTexture ? key.Substring(TEXTURE_KEY_PREFIX.Length) : null;
+            return isTexture;
+        }
+
         /// <summary>The scenes that have to load for this region. A reference already cached needs no scene of its own.</summary>
         public IEnumerable<string> DonorScenes(System.Func<string, string, bool> isCached = null)
         {
             System.Func<string, string, bool> cached = isCached ?? ((scene, path) => false);
-            return new[] { environmentDonor }.Concat(props.Where(p => !cached(p.scene, p.path)).Select(p => p.scene)).Concat(enemies.Where(e => !cached(e.scene, e.path)).Select(e => e.scene))
-                .Concat(groundLayers.Select(g => g.scene)).Concat(water.Select(w => w.scene)).Where(s => !string.IsNullOrEmpty(s)).Distinct();
+            return (EnvironmentParts.All(part => cached(environmentDonor, part)) ? new string[0] : new[] { environmentDonor }).Concat(props.Where(p => !cached(p.scene, p.path)).Select(p => p.scene)).Concat(enemies.Where(e => !cached(e.scene, e.path)).Select(e => e.scene))
+                .Concat(groundLayers.Where(g => !cached(g.scene, TextureKey(g.diffuse)) || (g.normal.Length > 0 && !cached(g.scene, TextureKey(g.normal)))).Select(g => g.scene))
+                .Concat(water.Where(w => !cached(w.scene, WATER_KEY)).Select(w => w.scene)).Where(s => !string.IsNullOrEmpty(s)).Distinct();
         }
 
         public static RegionManifest Load(string path)

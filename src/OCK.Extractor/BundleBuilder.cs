@@ -17,9 +17,13 @@ namespace OutwardConstructionKit.Extractor
     {
         private const string TEMPLATE_RESOURCE = "ock_template";
         public const string PREFAB_PATH = "assets/ock/extracted.prefab";
+        public const string POINTER_PATH = "assets/ock/extracted.pointer";
 
         private const int GAME_OBJECT = 1;
         private const int TRANSFORM = 4;
+        private const int TEXTURE = 28;
+        private const int SHADER = 48;
+        private const int WIND_ZONE = 182;
         private const int MESH = 43;
         private const int SCRIPT = 114;
         private const int MESH_FILTER = 33;
@@ -37,6 +41,7 @@ namespace OutwardConstructionKit.Extractor
         private readonly Dictionary<string, LevelIndex> m_levels = new Dictionary<string, LevelIndex>();
         private readonly Dictionary<string, AssetsFile> m_scriptFiles = new Dictionary<string, AssetsFile>();
         private readonly Dictionary<string, AssetTypeTemplateField> m_scriptFields = new Dictionary<string, AssetTypeTemplateField>();
+        private HashSet<long> m_onlyChildren; // for the build in progress: the root's children, if not all of them
 
         private class LevelIndex
         {
@@ -47,6 +52,7 @@ namespace OutwardConstructionKit.Extractor
             public Dictionary<long, long> FatherOf = new Dictionary<long, long>();
             public Dictionary<long, List<long>> ChildrenOf = new Dictionary<long, List<long>>();
             public List<long> RootTransforms = new List<long>();
+            public Dictionary<ushort, string> ScriptClasses = new Dictionary<ushort, string>();
         }
 
         public BundleBuilder(string gameData)
@@ -63,6 +69,28 @@ namespace OutwardConstructionKit.Extractor
             m_types = template.Metadata.TypeTreeTypes.GroupBy(t => t.TypeId).ToDictionary(g => g.Key, g => g.First());
             m_describer = new ScriptDescriber(m_types.Values);
             m_scriptReader = new MonoCecilTempGenerator(Path.Combine(gameData, "Managed"));
+            DescribeWindZone();
+        }
+
+        // Unity writes no wind zones into a bundle it builds, though scenes have them, so the template can't supply this.
+        private void DescribeWindZone()
+        {
+            var fields = new AssetTypeTemplateField();
+            fields.FromTypeTree(m_types[SCRIPT]);
+            fields.Type = "WindZone";
+            fields.Children = fields.Children.Where(c => c.Name == "m_GameObject" || c.Name == "m_Enabled").ToList();
+            fields.Children.Add(SimpleField("m_Mode", "int", AssetValueType.Int32));
+            foreach (string name in new[] { "m_Radius", "m_WindMain", "m_WindTurbulence", "m_WindPulseMagnitude", "m_WindPulseFrequency" })
+                fields.Children.Add(SimpleField(name, "float", AssetValueType.Float));
+
+            var type = new TypeTreeType { TypeId = WIND_ZONE, ScriptTypeIndex = 0xFFFF, TypeDependencies = new int[0] };
+            m_describer.Describe(fields, type);
+            m_types[WIND_ZONE] = type;
+        }
+
+        private static AssetTypeTemplateField SimpleField(string name, string type, AssetValueType valueType)
+        {
+            return new AssetTypeTemplateField { Name = name, Type = type, ValueType = valueType, HasValue = true, Children = new List<AssetTypeTemplateField>() };
         }
 
         private AssetsFile OpenTemplate(out BundleFileInstance bundle, out AssetBundleDirectoryInfo entry)
@@ -126,7 +154,224 @@ namespace OutwardConstructionKit.Extractor
             long root = FindTransform(level, hierarchyPath);
             if (root == 0)
                 throw new InvalidDataException($"'{hierarchyPath}' isn't in {levelFile}. The game may have changed.");
+            return BuildFrom(level, root, hierarchyPath, outputFile);
+        }
 
+        /// <summary>
+        /// Builds the object holding a given script, for things found by what they do rather than where they are.
+        /// With several, takes the first, or if asked, the one with the largest scale, which is how a level's main
+        /// water plane stands out from its puddles.
+        /// </summary>
+        public BuildReport BuildScriptHolder(string levelFile, string scriptClass, bool largest, string outputFile)
+        {
+            LevelIndex level = LevelFor(levelFile);
+            List<long> holders = level.File.AssetInfos.Where(i => i.TypeId == SCRIPT && ClassOf(level, i) == scriptClass)
+                .Select(i => TransformOfScript(level, i)).Where(t => t != 0).ToList();
+            if (holders.Count == 0)
+                throw new InvalidDataException($"{levelFile} has nothing holding a {scriptClass}.");
+            long chosen = largest ? holders.OrderByDescending(ScaleOf(level)).First() : FirstInSceneOrder(level, holders);
+            return BuildFrom(level, chosen, scriptClass, outputFile);
+        }
+
+        // The order they're stored in means nothing, and a level's first source is its general-purpose one.
+        private static long FirstInSceneOrder(LevelIndex level, List<long> candidates)
+        {
+            var wanted = new HashSet<long>(candidates);
+            Func<long, long> search = null;
+            search = t =>
+            {
+                if (wanted.Contains(t))
+                    return t;
+                foreach (long child in level.ChildrenOf[t])
+                {
+                    long found = search(child);
+                    if (found != 0)
+                        return found;
+                }
+                return 0;
+            };
+            return level.RootTransforms.Select(search).FirstOrDefault(t => t != 0);
+        }
+
+        private System.Func<long, float> ScaleOf(LevelIndex level)
+        {
+            return t =>
+            {
+                AssetTypeValueField f = Read(level.ById[t], level.File);
+                bool drawn = Read(level.ById[level.GameObjectOf[t]], level.File)["m_Component.Array"].Children.Any(c => level.ById[c["component.m_PathID"].AsLong].TypeId == MESH_FILTER);
+                return drawn ? f["m_LocalScale.x"].AsFloat : 0f;
+            };
+        }
+
+        private long TransformOfScript(LevelIndex level, AssetFileInfo script)
+        {
+            long gameObject = Read(script, level.File)["m_GameObject.m_PathID"].AsLong;
+            foreach (KeyValuePair<long, long> pair in level.GameObjectOf)
+                if (pair.Value == gameObject)
+                    return pair.Key;
+            return 0;
+        }
+
+        private string ClassOf(LevelIndex level, AssetFileInfo script)
+        {
+            TypeTreeType type = level.File.Metadata.TypeTreeTypes[script.TypeIdOrIndex];
+            string name;
+            if (level.ScriptClasses.TryGetValue(type.ScriptTypeIndex, out name))
+                return name;
+            AssetPPtr pointer = level.File.Metadata.ScriptTypes[type.ScriptTypeIndex];
+            string fileName = level.File.Metadata.Externals[pointer.FileId - 1].PathName;
+            AssetsFile scriptFile = ScriptFileFor(fileName);
+            name = Read(scriptFile.AssetInfos.First(i => i.PathId == pointer.PathId), scriptFile)["m_ClassName"].AsString;
+            level.ScriptClasses[type.ScriptTypeIndex] = name;
+            return name;
+        }
+
+        private AssetsFile ScriptFileFor(string fileName)
+        {
+            AssetsFile file;
+            if (!m_scriptFiles.TryGetValue(fileName, out file))
+                m_scriptFiles[fileName] = file = m_manager.LoadAssetsFile(Path.Combine(m_gameData, fileName), false).file;
+            return file;
+        }
+
+        /// <summary>
+        /// Builds a bundle holding nothing but a pointer to a texture in the game's files, found by name among the
+        /// files the level uses, for textures a region uses directly rather than through an object.
+        /// </summary>
+        public BuildReport BuildTexturePointer(string levelFile, string textureName, string outputFile)
+        {
+            LevelIndex level = LevelFor(levelFile);
+            AssetsFileExternal external = null;
+            long pathId = 0;
+            foreach (AssetsFileExternal candidate in level.File.Metadata.Externals.Where(e => e.PathName.EndsWith(".assets")))
+            {
+                if (candidate.PathName == "globalgamemanagers.assets" || !File.Exists(Path.Combine(m_gameData, candidate.PathName)))
+                    continue;
+                AssetsFile file = ScriptFileFor(candidate.PathName);
+                foreach (AssetFileInfo info in file.AssetInfos.Where(i => i.TypeId == TEXTURE))
+                {
+                    // Every named object starts with its name, as a length and then the text.
+                    file.Reader.Position = info.GetAbsoluteByteOffset(file);
+                    int length = file.Reader.ReadInt32();
+                    if (length != textureName.Length)
+                        continue;
+                    if (System.Text.Encoding.UTF8.GetString(file.Reader.ReadBytes(length)) == textureName)
+                    {
+                        external = candidate;
+                        pathId = info.PathId;
+                        break;
+                    }
+                }
+                if (external != null)
+                    break;
+            }
+            if (external == null)
+                throw new InvalidDataException($"No texture called {textureName} in the files {levelFile} uses.");
+            return BuildPointer(external, pathId, outputFile);
+        }
+
+        /// <summary>
+        /// The same for a shader, which any level might use, so all the game's files are searched. It has to read
+        /// every shader until it finds the one, so this is only for one that isn't otherwise in memory.
+        /// </summary>
+        public BuildReport BuildShaderPointer(string shaderName, string outputFile)
+        {
+            foreach (string path in Directory.GetFiles(m_gameData, "*.assets").OrderBy(p => p))
+            {
+                string fileName = Path.GetFileName(path);
+                AssetsFile file = ScriptFileFor(fileName);
+                foreach (AssetFileInfo info in file.AssetInfos.Where(i => i.TypeId == SHADER))
+                {
+                    if (Read(info, file)["m_ParsedForm.m_Name"].AsString != shaderName)
+                        continue;
+                    var external = new AssetsFileExternal { PathName = fileName, OriginalPathName = fileName, VirtualAssetPathName = "", Type = AssetsFileExternalType.Normal };
+                    return BuildPointer(external, info.PathId, outputFile);
+                }
+            }
+            throw new InvalidDataException($"No shader called {shaderName} in the game's files.");
+        }
+
+        private BuildReport BuildPointer(AssetsFileExternal external, long pathId, string outputFile)
+        {
+            BundleFileInstance bundle;
+            AssetBundleDirectoryInfo entry;
+            AssetsFile output = OpenTemplate(out bundle, out entry);
+            AssetFileInfo existing = output.AssetInfos.First(i => i.TypeId == ASSET_BUNDLE);
+            AssetTypeValueField record = Read(existing, output);
+            string name = Path.GetFileName(outputFile);
+            record["m_Name"].AsString = name;
+            record["m_AssetBundleName"].AsString = name;
+            AssetTypeValueField preload = record["m_PreloadTable.Array"];
+            preload.Children.Clear();
+            AssetTypeValueField item = ValueBuilder.DefaultValueFieldFromArrayTemplate(preload);
+            item["m_FileID"].AsInt = 1;
+            item["m_PathID"].AsLong = pathId;
+            preload.Children.Add(item);
+            AssetTypeValueField container = record["m_Container.Array"];
+            AssetTypeValueField slot = container.Children[0];
+            container.Children.Clear();
+            slot["first"].AsString = POINTER_PATH;
+            slot["second.preloadIndex"].AsInt = 0;
+            slot["second.preloadSize"].AsInt = 1;
+            slot["second.asset.m_FileID"].AsInt = 1;
+            slot["second.asset.m_PathID"].AsLong = pathId;
+            container.Children.Add(slot);
+            byte[] bytes = record.WriteToByteArray();
+
+            foreach (AssetFileInfo info in output.AssetInfos.ToList())
+                output.Metadata.RemoveAssetInfo(info);
+            output.Metadata.Externals = new List<AssetsFileExternal> { external };
+            output.Metadata.ScriptTypes = new List<AssetPPtr>();
+            output.Metadata.TypeTreeTypes = new List<TypeTreeType> { m_types[ASSET_BUNDLE] };
+            var added = new AssetFileInfo { PathId = BUNDLE_RECORD_ID, TypeIdOrIndex = 0, OldTypeId = ASSET_BUNDLE, ScriptTypeIndex = 0xFFFF, TypeId = ASSET_BUNDLE };
+            added.SetNewData(bytes);
+            output.Metadata.AddAssetInfo(added);
+            return Write(bundle, entry, output, outputFile, new BuildReport { Objects = 1 });
+        }
+
+        private static BuildReport Write(BundleFileInstance bundle, AssetBundleDirectoryInfo entry, AssetsFile output, string outputFile, BuildReport report)
+        {
+            entry.Name = "CAB-ock-" + Path.GetFileName(outputFile); // two loaded bundles can't share one
+            entry.SetNewData(output);
+
+            string temporary = outputFile + ".tmp";
+            Directory.CreateDirectory(Path.GetDirectoryName(outputFile));
+            using (var writer = new AssetsFileWriter(temporary))
+                bundle.file.Write(writer);
+            if (File.Exists(outputFile))
+                File.Delete(outputFile);
+            File.Move(temporary, outputFile);
+            report.Bytes = new FileInfo(outputFile).Length;
+            return report;
+        }
+
+        /// <summary>
+        /// Builds a scene's whole Environment object without the scene: only the named children, plus whatever holds
+        /// the named script, which moves up to sit directly under the root. Everything else there is terrain and props.
+        /// </summary>
+        public BuildReport BuildPruned(string levelFile, string rootName, string[] keepChildren, string keepHolding, string outputFile)
+        {
+            LevelIndex level = LevelFor(levelFile);
+            long root = FindTransform(level, rootName);
+            if (root == 0)
+                throw new InvalidDataException($"'{rootName}' isn't in {levelFile}. The game may have changed.");
+
+            var children = new HashSet<long>(level.ChildrenOf[root].Where(c => keepChildren.Contains(NameOf(level, c))));
+            foreach (AssetFileInfo script in level.File.AssetInfos.Where(i => i.TypeId == SCRIPT && ClassOf(level, i) == keepHolding))
+            {
+                long holder = TransformOfScript(level, script);
+                bool covered = holder == root;
+                for (long t = holder; t != 0 && t != root && !covered; t = level.FatherOf[t])
+                    covered = children.Contains(t);
+                if (holder != 0 && !covered)
+                    children.Add(holder);
+            }
+            return BuildFrom(level, root, rootName, outputFile, children);
+        }
+
+        private BuildReport BuildFrom(LevelIndex level, long root, string hierarchyPath, string outputFile, HashSet<long> onlyChildren = null)
+        {
+            m_onlyChildren = onlyChildren;
             HashSet<long> keep = Gather(level, root);
             string missing = string.Join(", ", keep.Select(k => level.ById[k].TypeId).Distinct().Where(t => !m_types.ContainsKey(t)).OrderBy(t => t));
             if (missing.Length > 0)
@@ -186,18 +431,7 @@ namespace OutwardConstructionKit.Extractor
                 report.Objects++;
             }
 
-            entry.Name = "CAB-ock-" + Path.GetFileName(outputFile); // two loaded bundles can't share one
-            entry.SetNewData(output);
-
-            string temporary = outputFile + ".tmp";
-            Directory.CreateDirectory(Path.GetDirectoryName(outputFile));
-            using (var writer = new AssetsFileWriter(temporary))
-                bundle.file.Write(writer);
-            if (File.Exists(outputFile))
-                File.Delete(outputFile);
-            File.Move(temporary, outputFile);
-            report.Bytes = new FileInfo(outputFile).Length;
-            return report;
+            return Write(bundle, entry, output, outputFile, report);
         }
 
         /// <summary>Reports what a build would meet, without writing anything, to measure what the template covers.</summary>
@@ -207,6 +441,7 @@ namespace OutwardConstructionKit.Extractor
             long root = FindTransform(level, hierarchyPath);
             if (root == 0)
                 return new[] { "not found" };
+            m_onlyChildren = null;
             return Gather(level, root).Select(k => level.ById[k].TypeId).Distinct().Where(t => !m_types.ContainsKey(t)).Select(t => "class " + t).ToArray();
         }
 
@@ -229,7 +464,7 @@ namespace OutwardConstructionKit.Extractor
                 enqueue(gameObject);
                 foreach (AssetTypeValueField component in Read(level.ById[gameObject], level.File)["m_Component.Array"].Children)
                     enqueue(component["component.m_PathID"].AsLong);
-                foreach (long child in level.ChildrenOf[t])
+                foreach (long child in t == root && m_onlyChildren != null ? m_onlyChildren : (IEnumerable<long>)level.ChildrenOf[t])
                     addHierarchy(child);
             };
             addHierarchy(root);
@@ -309,9 +544,7 @@ namespace OutwardConstructionKit.Extractor
         {
             AssetPPtr pointer = level.File.Metadata.ScriptTypes[source.ScriptTypeIndex];
             string fileName = level.File.Metadata.Externals[pointer.FileId - 1].PathName;
-            AssetsFile scriptFile;
-            if (!m_scriptFiles.TryGetValue(fileName, out scriptFile))
-                m_scriptFiles[fileName] = scriptFile = m_manager.LoadAssetsFile(Path.Combine(m_gameData, fileName), false).file;
+            AssetsFile scriptFile = ScriptFileFor(fileName);
 
             AssetFileInfo scriptInfo = scriptFile.AssetInfos.First(i => i.PathId == pointer.PathId);
             AssetTypeValueField script = Read(scriptInfo, scriptFile);
@@ -340,6 +573,12 @@ namespace OutwardConstructionKit.Extractor
             AssetsFile file = level.File;
             if (info.PathId == root)
                 return RootTransformBytes(level, info);
+            if (info.TypeId == TRANSFORM && m_onlyChildren != null && m_onlyChildren.Contains(info.PathId) && level.FatherOf[info.PathId] != root)
+            {
+                AssetTypeValueField moved = Read(info, file);
+                moved["m_Father.m_PathID"].AsLong = root;
+                return moved.WriteToByteArray();
+            }
             if (info.TypeId == MESH)
             {
                 AssetTypeValueField mesh = Read(info, file);
@@ -399,6 +638,18 @@ namespace OutwardConstructionKit.Extractor
             root["m_LocalScale.x"].AsFloat = world.SX;
             root["m_LocalScale.y"].AsFloat = world.SY;
             root["m_LocalScale.z"].AsFloat = world.SZ;
+            if (m_onlyChildren != null)
+            {
+                AssetTypeValueField children = root["m_Children.Array"];
+                children.Children.Clear();
+                foreach (long child in m_onlyChildren)
+                {
+                    AssetTypeValueField item = ValueBuilder.DefaultValueFieldFromArrayTemplate(children);
+                    item["m_FileID"].AsInt = 0;
+                    item["m_PathID"].AsLong = child;
+                    children.Children.Add(item);
+                }
+            }
             return root.WriteToByteArray();
         }
 

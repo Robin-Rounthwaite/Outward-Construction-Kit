@@ -8,7 +8,8 @@ namespace OutwardConstructionKit.Runtime
     /// <summary>
     /// Embedded props arrive with placeholder shaders, because the real ones can't be extracted. A placeholder
     /// has the real shader's name and properties, so swapping in the real one by name restores the proper look.
-    /// Most game shaders are only in memory while something uses them, so they're collected from donor scenes.
+    /// Most game shaders are only in memory while something uses them, so one that isn't comes from the asset cache,
+    /// or was collected from a donor scene if any had to load.
     /// </summary>
     internal static class ShaderSwap
     {
@@ -40,7 +41,7 @@ namespace OutwardConstructionKit.Runtime
                     continue;
 
                 Shader real;
-                if (!s_shaders.TryGetValue(name, out real) && (real = Shader.Find(name)) == null)
+                if (!s_shaders.TryGetValue(name, out real) && (real = Shader.Find(name)) == null && (real = AssetCache.LoadShader(name)) == null)
                 {
                     missing.Add(name);
                     continue;

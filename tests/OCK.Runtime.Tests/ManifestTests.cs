@@ -117,6 +117,18 @@ namespace OutwardConstructionKit.Tests
         }
 
         [Test]
+        public void NeedsNoDonorSceneWhenEverythingIsCached()
+        {
+            Assert.That(ParseSample().DonorScenes((scene, path) => true), Is.Empty);
+        }
+
+        [Test]
+        public void NeedsTheDonorSceneIfAnyPartOfTheEnvironmentIsntCached()
+        {
+            Assert.That(ParseSample().DonorScenes((scene, path) => path != "Main Camera"), Is.EquivalentTo(new[] { ParseSample().environmentDonor }));
+        }
+
+        [Test]
         public void ReportsLinesItCantRead()
         {
             List<string> errors;
