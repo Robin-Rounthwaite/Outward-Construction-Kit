@@ -20,6 +20,14 @@ internal class RegionInfo
     public string DoorPosition;
     public float DoorRotationY;
 
+    // For sharing it, which Package Region uses. None of it affects the game.
+    public string PackageName;
+    public string PackageVersion = "1.0.0";
+    public string Description;
+    public string WebsiteUrl;
+    public string About;
+    public string IconPath;
+
     /// <summary>The name its scene gets in the bundle. Scenes load by name, and saves are kept by it.</summary>
     public string BuiltSceneName
     {

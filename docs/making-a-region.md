@@ -17,6 +17,12 @@ Any number of regions can be installed: the plugin finds every `*.refs.txt` unde
 
 Props are stand-ins on a simple shader of our own, because ripped shaders are only placeholders. Some may look different from the game (the triple-ladies statue renders blue, and some tree leaves show as dark cards), but the game always uses its real assets. The Prop Browser's **Textures** setting picks **Fast** (the default, with smaller uncompressed textures for quicker imports) or **Detailed** (full resolution plus the materials' surface detail maps). Neither can show the game's real shaders or lighting, so the game still looks much better than either. Embedded props always ship at full quality, so exporting them takes longer in Fast mode.
 
+## Sharing your region
+
+Set your region's entrance, then click **Package** in the Prop Browser (or **Construction Kit > Package Region**). Fill in a mod name, version and short description, and click **Make Upload Zip**. It writes `Build/Upload/<name>-<version>.zip` in your project, ready to upload at [thunderstore.io](https://thunderstore.io) under the Outward community, and it depends on the kit, so a mod manager installs that too. Raise the version for each upload.
+
+To try the zip first, use **Settings > Import local mod** in r2modman. Remove your own exported copy of the region from that profile first, because two copies share one ID.
+
 ## Enemies and the entrance door
 
 Export bakes a NavMesh from the scene and its stand-ins, so enemies can walk the region. To place an enemy, add it from the **Enemies** category: it shows as a red capsule, with a small box marking its facing. Enemies are always references, built from the player's own game files and given their own identity.

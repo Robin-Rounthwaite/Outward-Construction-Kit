@@ -317,6 +317,8 @@ internal class PropBrowser : EditorWindow
                     Debug.LogException(e);
                 }
             }
+            if (GUILayout.Button(new GUIContent("Package", "Makes a zip to upload to Thunderstore."), GUILayout.Width(70)))
+                PackageWindow.Open();
         }
     }
 

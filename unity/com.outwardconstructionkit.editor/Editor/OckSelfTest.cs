@@ -204,8 +204,38 @@ internal static class OckSelfTest
         Check("referenced props' art stays out", !RegionExporter.LastDependencies.Any(d => d.Contains("BarrelGroup") || d.Contains("LightHolder")), string.Join(", ", RegionExporter.LastDependencies.Where(d => d.Contains("BarrelGroup") || d.Contains("LightHolder")).ToArray()));
         Check("the enemy marker stays out", !RegionExporter.LastDependencies.Any(d => d.Contains("ShellHorror") || d.Contains("mdl_cha_")));
 
+        CheckPackaging(RegionInfo.For(path), output);
+
         AssetDatabase.DeleteAsset(path + ".region.json");
         AssetDatabase.DeleteAsset(path);
+    }
+
+    private static void CheckPackaging(RegionInfo info, string output)
+    {
+        Check("packaging asks for a mod name and description", RegionPackager.Problems(new RegionInfo { PackageName = "has spaces", PackageVersion = "1", DoorScene = "Monsoon" }).Count == 3);
+        Check("packaging asks for an entrance", RegionPackager.Problems(new RegionInfo { PackageName = "Good", PackageVersion = "1.0.0", Description = "Fine." }).Count == 1);
+        Check("packaging refuses a long description", RegionPackager.Problems(new RegionInfo { PackageName = "Good", PackageVersion = "1.0.0", Description = new string('x', 251), DoorScene = "Monsoon" }).Count == 1);
+
+        info.PackageName = "Test_Region_Alpha";
+        info.PackageVersion = "1.2.3";
+        info.Description = "A \"quoted\" test.";
+        info.DoorScene = "CierzoNewTerrain";
+        Check("a complete region is ready to package", RegionPackager.Problems(info).Count == 0, string.Join(" ", RegionPackager.Problems(info).ToArray()));
+
+        string summary;
+        string zip = RegionPackager.Package(info, Path.Combine(output, "upload"), out summary);
+        Check("the zip is named as Thunderstore expects", Path.GetFileName(zip) == "Test_Region_Alpha-1.2.3.zip", zip);
+        using (var archive = new System.IO.Compression.ZipArchive(File.OpenRead(zip)))
+        {
+            string[] names = archive.Entries.Select(e => e.FullName).ToArray();
+            Check("the zip holds the region and Thunderstore's files, at its top level", new[] { "manifest.json", "README.md", "icon.png", info.Id, info.Id + ".refs.txt" }.All(names.Contains) && names.Length == 5, string.Join(", ", names));
+            using (var reader = new StreamReader(archive.GetEntry("manifest.json").Open()))
+            {
+                string manifest = reader.ReadToEnd();
+                Check("its manifest depends on the kit", manifest.Contains("\"Catalysten-Outward_Construction_Kit-" + RegionPackager.KitVersion + "\""), manifest);
+                Check("its manifest escapes quotes", manifest.Contains("A \\\"quoted\\\" test."), manifest);
+            }
+        }
     }
 
     // A hill, a dirt path, ponds and a return door, the way a modder would make them but without the clicks.
