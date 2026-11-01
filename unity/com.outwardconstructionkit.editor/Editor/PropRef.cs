@@ -94,7 +94,8 @@ internal class PropRef
             Collect(child, found);
     }
 
-    private static PropRef Of(GameObject instance)
+    /// <summary>What a stand-in stands for, or null if it isn't one.</summary>
+    public static PropRef Of(GameObject instance)
     {
         if (!PrefabUtility.IsOutermostPrefabInstanceRoot(instance))
             return null;

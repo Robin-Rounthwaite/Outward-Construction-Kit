@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Text.RegularExpressions;
 using UnityEditor;
+using Vector3 = UnityEngine.Vector3;
 
 /// <summary>
 /// A region's identity, kept in a small file beside its scene. Not in the scene's import settings,
@@ -19,6 +20,12 @@ internal class RegionInfo
     public string DoorScene;
     public string DoorPosition;
     public float DoorRotationY;
+
+    // What its doors look like, from a stand-in chosen in the scene. Empty uses the kit's default door.
+    public string DoorModelScene;
+    public string DoorModelPath;
+    public Vector3 DoorModelRotation;
+    public float DoorModelScale = 1f;
 
     // For sharing it, which Package Region uses. None of it affects the game.
     public string PackageName;

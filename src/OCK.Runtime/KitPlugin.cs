@@ -172,8 +172,13 @@ namespace OutwardConstructionKit.Runtime
             GameObject old;
             if (m_doors.TryGetValue(region, out old) && old != null)
                 Destroy(old);
-            m_doors[region] = KitDoor.Build("OCK_Door_" + region.Id, pos, Quaternion.Euler(0f, region.EntranceRotationY, 0f), region.AreaId, 0);
+            m_doors[region] = KitDoor.Build("OCK_Door_" + region.Id, pos, Quaternion.Euler(0f, region.EntranceRotationY, 0f), region.AreaId, 0, DoorModelOf(region));
             Logger.LogMessage($"Door to '{region.DisplayName}' (area {region.AreaId}) placed at {pos}.");
+        }
+
+        private static RegionManifest.PropReference DoorModelOf(Region region)
+        {
+            return region.Manifest.doorModel ?? RegionManifest.DefaultDoorModel;
         }
 
         // Where the modder put it, or else in front of the arrival spawn, facing it.
@@ -191,7 +196,7 @@ namespace OutwardConstructionKit.Runtime
             {
                 foreach (RegionManifest.ReturnDoor door in region.Manifest.returnDoors)
                 {
-                    KitDoor.Build("OCK_ReturnDoor", door.position, Quaternion.Euler(0f, door.rotationY, 0f), home.ID, region.ReturnSpawnIndex.Value);
+                    KitDoor.Build("OCK_ReturnDoor", door.position, Quaternion.Euler(0f, door.rotationY, 0f), home.ID, region.ReturnSpawnIndex.Value, DoorModelOf(region));
                     Logger.LogMessage($"Return door to '{home.SceneName}' placed at {door.position}, as the region asks.");
                 }
                 return;
@@ -207,7 +212,7 @@ namespace OutwardConstructionKit.Runtime
             if (Physics.Raycast(pos + Vector3.up * 2f, Vector3.down, out hit, 6f, Global.FullEnvironmentMask, QueryTriggerInteraction.Ignore))
                 pos.y = hit.point.y;
 
-            KitDoor.Build("OCK_ReturnDoor", pos, Quaternion.LookRotation(-forward), home.ID, region.ReturnSpawnIndex.Value);
+            KitDoor.Build("OCK_ReturnDoor", pos, Quaternion.LookRotation(-forward), home.ID, region.ReturnSpawnIndex.Value, DoorModelOf(region));
             Logger.LogMessage($"Return door to '{home.SceneName}' placed at {pos}.");
         }
 

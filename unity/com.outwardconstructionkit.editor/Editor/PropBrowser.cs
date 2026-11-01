@@ -210,6 +210,8 @@ internal class PropBrowser : EditorWindow
             label = prop.Node.ScenePath;
         GUILayout.Label(new GUIContent(label, prop.Node.ScenePath));
         GUILayout.FlexibleSpace();
+        if (!prop.IsEnemy && prop.Node.SelfAndDescendants().Any(n => n.IsInteractive))
+            GUILayout.Label(new GUIContent("decoration", "Players can use this in its own scene, but in a region it's only for show."), EditorStyles.miniLabel, GUILayout.Width(60));
         GUILayout.Label(prop.Category, EditorStyles.miniLabel, GUILayout.Width(80));
         if (GUILayout.Button("Add", GUILayout.Width(44)))
             PlaceAtViewCentre(prop);
@@ -276,6 +278,35 @@ internal class PropBrowser : EditorWindow
                 info.DisplayName = EditorGUILayout.DelayedTextField(info.DisplayName);
                 if (EditorGUI.EndChangeCheck())
                     info.SaveFor(scenePath);
+            }
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                bool custom = !string.IsNullOrEmpty(info.DoorModelPath);
+                EditorGUILayout.LabelField("Door looks like: " + (custom ? System.IO.Path.GetFileName(info.DoorModelPath) : "the kit's default door"), EditorStyles.miniLabel);
+                if (GUILayout.Button(new GUIContent("Use selected prop", "Doors will look like the prop selected in the scene, at its scale. Turn it first so its front faces along the blue axis, away from the wall it would sit in."), GUILayout.Width(120)))
+                {
+                    GameObject selected = Selection.activeGameObject;
+                    PropRef chosen = selected != null ? PropRef.Of(selected) : null;
+                    if (chosen == null || chosen.IsEnemy)
+                        m_status = "Select a prop in the scene first. You can delete it afterwards, and its art stays out of the mod.";
+                    else
+                    {
+                        info.DoorModelScene = chosen.DonorScene;
+                        info.DoorModelPath = chosen.Path;
+                        info.DoorModelRotation = selected.transform.eulerAngles;
+                        info.DoorModelScale = PropRef.ScaleOf(selected);
+                        info.SaveFor(scenePath);
+                        m_status = "Doors will look like " + selected.name + " on your next export.";
+                    }
+                }
+                using (new EditorGUI.DisabledScope(!custom))
+                {
+                    if (GUILayout.Button("Reset", GUILayout.Width(50)))
+                    {
+                        info.DoorModelScene = info.DoorModelPath = null;
+                        info.SaveFor(scenePath);
+                    }
+                }
             }
             using (new EditorGUILayout.HorizontalScope())
             {

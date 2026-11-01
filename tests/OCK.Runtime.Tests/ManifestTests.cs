@@ -117,6 +117,24 @@ namespace OutwardConstructionKit.Tests
         }
 
         [Test]
+        public void ReadsADoorModel()
+        {
+            List<string> errors;
+            RegionManifest manifest = Parse(new[] { "doormodel | Monsoon | a/door | 0,90,0 | 1.5" }, out errors);
+            Assert.That(errors, Is.Empty);
+            Assert.That(manifest.doorModel.path, Is.EqualTo("a/door"));
+            Assert.That(manifest.doorModel.rotation.y, Is.EqualTo(90f));
+            Assert.That(manifest.doorModel.scale, Is.EqualTo(1.5f));
+        }
+
+        [Test]
+        public void LeavesTheDoorModelToTheKitWhenNoneIsNamed()
+        {
+            List<string> errors;
+            Assert.That(Parse(new[] { "environment | Monsoon" }, out errors).doorModel, Is.Null);
+        }
+
+        [Test]
         public void ReadsAPropsScaleWhenItHasOne()
         {
             List<string> errors;

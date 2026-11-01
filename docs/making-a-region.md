@@ -13,6 +13,8 @@ A region needs a root object named exactly `SpawnPointManager`, with at least on
 
 Any number of regions can be installed: the plugin finds every `*.refs.txt` under `BepInEx\plugins` with a bundle beside it of the same name. Each needs a unique ID, scene name and bundle build name, and the exporter derives all three from the ID.
 
+Props are decoration for now. Their scripts are left behind, so anything players can use in its own scene, such as a chest or gathering spot, is only for show in a region. The Prop Browser marks those **decoration**.
+
 ## How props look in the editor
 
 Props are stand-ins on a simple shader of our own, because ripped shaders are only placeholders. Some may look different from the game (the triple-ladies statue renders blue, and some tree leaves show as dark cards), but the game always uses its real assets. The Prop Browser's **Textures** setting picks **Fast** (the default, with smaller uncompressed textures for quicker imports) or **Detailed** (full resolution plus the materials' surface detail maps). Neither can show the game's real shaders or lighting, so the game still looks much better than either. Embedded props always ship at full quality, so exporting them takes longer in Fast mode.
@@ -39,7 +41,11 @@ It starts with room for 10 m below 0 and 50 m above. For more, raise **Terrain H
 
 ## Return doors
 
-A door back to where players entered appears beside the arrival point automatically. **Add Return Door** places it yourself: stand the marker on the ground with its small box on the side players walk up to, and rotate it to suit. With one or more markers, the automatic door is left out. Return doors stay plain slabs for now, and all of them lead to the same place: where the region's entrance door is.
+A door back to where players entered appears beside the arrival point automatically. **Add Return Door** places it yourself: stand the marker on the ground with its small box on the side players walk up to, and rotate it to suit. With one or more markers, the automatic door is left out. All of them lead to the same place: where the region's entrance door is.
+
+## How doors look
+
+Entrance and return doors use a vanilla door by default. To use any prop instead, add it to your scene, turn it so its front faces along the blue axis, scale it evenly if you like, keep it selected, and click **Use selected prop** in the Prop Browser. You can delete it from the scene afterwards. **Reset** goes back to the default. If a door's model can't be loaded in game, it's a plain blue slab, so players never lose their way out.
 
 ## Ripping more scenes
 

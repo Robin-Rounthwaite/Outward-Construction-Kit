@@ -115,6 +115,25 @@ namespace OutwardConstructionKit.Runtime
             return placed;
         }
 
+        /// <summary>A door's model, facing the way the door does. Null if it can't be had, and the door falls back on a plain slab.</summary>
+        public static GameObject PlaceDoorModel(Scene scene, RegionManifest.PropReference model, Vector3 position, Quaternion rotation)
+        {
+            GameObject cached = AssetCache.Load(model.scene, model.path);
+            if (cached == null)
+                return null;
+
+            Template template = TemplateFromCache(cached, model);
+            try
+            {
+                Quaternion turn = rotation * Quaternion.Euler(model.rotation) * Quaternion.Inverse(template.SourceRotation);
+                return PlaceCopy(scene, template.Object, template.SourcePosition, template.SourceRotation, position + rotation * model.position, turn.eulerAngles, model.scale);
+            }
+            finally
+            {
+                Object.Destroy(template.Object);
+            }
+        }
+
         private static GameObject Holder()
         {
             if (s_holder == null)

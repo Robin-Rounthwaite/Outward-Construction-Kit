@@ -132,6 +132,8 @@ internal static class OckSelfTest
         Check("bandit AI that isn't a character isn't an enemy", !first.Props.Any(p => p.IsEnemy && p.BaseName.StartsWith("AI")));
         Check("water planes aren't offered as props", !first.Props.Concat(second.Props).Any(p => p.BaseName.Contains("Waterplane")));
         Check("each entry names its first instance", first.Props.Where(p => !p.IsEnemy).All(p => p.Node != null && p.Node.ScenePath.Contains("/")));
+        Check("props players can use in their own scene are noticed", first.Props.Concat(second.Props).Any(p => !p.IsEnemy && p.Node.SelfAndDescendants().Any(n => n.IsInteractive)));
+        Check("plain props aren't marked as interactive", !first.Props.First(p => p.BaseName == BARRELS).Node.SelfAndDescendants().Any(n => n.IsInteractive));
     }
 
     private static void CheckImporter(RipScene rip)
@@ -221,6 +223,11 @@ internal static class OckSelfTest
         info.PackageVersion = "1.2.3";
         info.Description = "A \"quoted\" test.";
         info.DoorScene = "CierzoNewTerrain";
+        info.DoorModelScene = FIRST_RIP;
+        info.DoorModelPath = "Some/Prop";
+        info.DoorModelRotation = new Vector3(0f, 90f, 0f);
+        info.DoorModelScale = 1.5f;
+        info.SaveFor(SceneManager.GetActiveScene().path);
         Check("a complete region is ready to package", RegionPackager.Problems(info).Count == 0, string.Join(" ", RegionPackager.Problems(info).ToArray()));
 
         string summary;
@@ -228,6 +235,8 @@ internal static class OckSelfTest
         Check("the zip is named as Thunderstore expects", Path.GetFileName(zip) == "Test_Region_Alpha-1.2.3.zip", zip);
         using (var archive = new System.IO.Compression.ZipArchive(File.OpenRead(zip)))
         {
+            using (var reader = new StreamReader(archive.GetEntry(info.Id + ".refs.txt").Open()))
+                Check("a chosen door model is listed", reader.ReadToEnd().Contains("doormodel | " + FIRST_RIP + " | Some/Prop | 0,90,0 | 1.5"));
             string[] names = archive.Entries.Select(e => e.FullName).ToArray();
             Check("the zip holds the region and Thunderstore's files, at its top level", new[] { "manifest.json", "README.md", "icon.png", info.Id, info.Id + ".refs.txt" }.All(names.Contains) && names.Length == 5, string.Join(", ", names));
             using (var reader = new StreamReader(archive.GetEntry("manifest.json").Open()))
@@ -327,7 +336,8 @@ internal static class OckSelfTest
         Check("the example lists its props as references", manifest.Count(l => l.StartsWith("prop ")) == 3, string.Join(" / ", manifest));
         Check("the example's scaled barrels stay a reference", manifest.Any(l => l.StartsWith("prop ") && l.EndsWith("| 1.5")));
         Check("the example has an enemy, water, ground and a door", manifest.Any(l => l.StartsWith("enemy ")) && manifest.Any(l => l.StartsWith("water ")) && manifest.Any(l => l.StartsWith("ground ")) && manifest.Any(l => l.StartsWith("returndoor ")));
-        Check("the example ships no vanilla art", !RegionExporter.LastDependencies.Any(d => d.StartsWith(PropImporter.LIBRARY)), string.Join(", ", RegionExporter.LastDependencies.Where(d => d.StartsWith(PropImporter.LIBRARY)).ToArray()));
+        Check("a region with no door model leaves it to the kit", !manifest.Any(l => l.StartsWith("doormodel ")));
+        Check("the example ships no vanilla art",!RegionExporter.LastDependencies.Any(d => d.StartsWith(PropImporter.LIBRARY)), string.Join(", ", RegionExporter.LastDependencies.Where(d => d.StartsWith(PropImporter.LIBRARY)).ToArray()));
 
         AssetDatabase.DeleteAsset(path + ".region.json");
         AssetDatabase.DeleteAsset(path);

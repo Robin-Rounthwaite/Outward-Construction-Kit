@@ -16,6 +16,7 @@ namespace OutwardConstructionKit.Runtime
     ///   water | scene | x,y,z | width,1,length | rotationY
     ///   returndoor | x,y,z | rotationY, replacing the automatic door beside the arrival point
     ///   prop | scene | hierarchy path | x,y,z | rotation, as x,y,z degrees or just y | optional check | optional even scale
+    ///   doormodel | scene | hierarchy path | rotation as x,y,z degrees, with the door's front along +Z | even scale
     /// The check is "first drawn object's name:number of drawn objects", to catch a path finding the wrong object.
     /// Not JSON, because JsonUtility dropped the nested prop list when running from a plugin DLL.
     /// </summary>
@@ -61,6 +62,17 @@ namespace OutwardConstructionKit.Runtime
             public float rotationY;
         }
 
+        // Used for a region's doors unless it names its own. Picked from the inn doors in Monsoon, because they look
+        // the part standing alone, and a player's game always has them.
+        public static readonly PropReference DefaultDoorModel = new PropReference
+        {
+            scene = "Monsoon",
+            path = "InnInteractions/Interactions/Room2/mdl_env_buildingDoorInteractibleF",
+            rotation = Vector3.zero,
+            position = new Vector3(-0.5f, 0f, 0f), // its pivot is at one edge, and this centres it on the door's spot
+        };
+
+        public PropReference doorModel;
         public List<ReturnDoor> returnDoors = new List<ReturnDoor>();
         public List<EnemyReference> enemies = new List<EnemyReference>();
         public List<GroundLayer> groundLayers = new List<GroundLayer>();
@@ -157,6 +169,10 @@ namespace OutwardConstructionKit.Runtime
                     && KitPlugin.TryParseVector(parts[3], out rotation)
                     && float.TryParse(parts[4], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out rotationY))
                     manifest.water.Add(new WaterReference { scene = parts[1], position = position, size = rotation, rotationY = rotationY });
+                else if (parts[0] == "doormodel" && parts.Length == 5
+                    && KitPlugin.TryParseVector(parts[3], out rotation)
+                    && float.TryParse(parts[4], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out scale) && scale > 0f)
+                    manifest.doorModel = new PropReference { scene = parts[1], path = parts[2], rotation = rotation, scale = scale };
                 else if (parts[0] == "game" && parts.Length == 2)
                     manifest.gameFingerprint = parts[1];
                 else if (parts[0] == "prop" && parts.Length >= 5

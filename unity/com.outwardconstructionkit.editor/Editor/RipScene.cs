@@ -38,6 +38,7 @@ internal class RipScene
         public Vector3 Scale = Vector3.one;
         public bool HasLodGroup;
         public bool IsCharacter;
+        public bool IsInteractive;
         public string MeshGuid;
         public long MeshFileId;
         public bool RendererEnabled;
@@ -126,6 +127,7 @@ internal class RipScene
         ColliderInfo collider = null;
         bool inMaterials = false;
         string characterScript = CharacterScriptGuid(file);
+        HashSet<string> interactiveScripts = InteractiveScriptGuids(file);
 
         foreach (string line in File.ReadLines(file))
         {
@@ -174,6 +176,12 @@ internal class RipScene
                 case "114":
                     if (characterScript != null && line.StartsWith("  m_Script:") && line.Contains(characterScript))
                         current.IsCharacter = true;
+                    else if (line.StartsWith("  m_Script:"))
+                    {
+                        Match script = s_guid.Match(line);
+                        if (script.Success && interactiveScripts.Contains(script.Groups[1].Value))
+                            current.IsInteractive = true;
+                    }
                     break;
                 case "1":
                     if (line.StartsWith("  m_Name:"))
@@ -264,6 +272,22 @@ internal class RipScene
     }
 
     // Rips include the game's scripts, and a script's GUID is how a scene says what's attached to an object.
+    // What a player can use in the game. In a region these are decoration, because their scripts are left behind.
+    private static readonly string[] s_interactiveScripts = { "InteractionTriggerBase", "InteractionActivator", "Gatherable", "CentralGatherableAccessPoint", "TreasureChest", "ItemContainer", "Item", "ItemSpawner", "TrapTrigger" };
+
+    private static HashSet<string> InteractiveScriptGuids(string sceneFile)
+    {
+        string scripts = Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(sceneFile)), "Scripts", "Assembly-CSharp");
+        var guids = new HashSet<string>();
+        foreach (string name in s_interactiveScripts)
+        {
+            string meta = Path.Combine(scripts, name + ".cs.meta");
+            if (File.Exists(meta))
+                guids.Add(File.ReadLines(meta).Skip(1).First().Replace("guid:", "").Trim());
+        }
+        return guids;
+    }
+
     private static string CharacterScriptGuid(string sceneFile)
     {
         string assets = Path.GetDirectoryName(Path.GetDirectoryName(sceneFile));

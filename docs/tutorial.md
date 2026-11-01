@@ -51,7 +51,7 @@ Click **Export Region**. The message at the top of the browser's tools says what
 Launch the game from the profile you chose. Then, in a town or anywhere else outdoors:
 
 1. Press **Ctrl+F8** until your region is the one chosen.
-2. Press **Ctrl+F10** to place its door in front of you. It's a plain slab.
+2. Press **Ctrl+F10** to place its door in front of you.
 3. Walk up and use the door. You get a loading screen, then your region.
 
 If something's missing, search `BepInEx\LogOutput.log` for your region's ID and for `[Error`. Setting `SelfCheck = true` under `[Dev]` in the kit's config also logs a checklist for each region, as `[CHECK]` lines.

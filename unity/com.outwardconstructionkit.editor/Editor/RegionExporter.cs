@@ -264,6 +264,10 @@ internal static class RegionExporter
         text.Append("environment | ").Append(OckSettings.EnvironmentDonor).Append('\n');
         if (!string.IsNullOrEmpty(info.DoorScene))
             text.Append("door | ").Append(info.DoorScene).Append(" | ").Append(info.DoorPosition).Append(" | ").Append(info.DoorRotationY.ToString("0.###", ci)).Append('\n');
+        if (!string.IsNullOrEmpty(info.DoorModelPath))
+            text.Append("doormodel | ").Append(info.DoorModelScene).Append(" | ").Append(info.DoorModelPath).Append(" | ")
+                .Append(info.DoorModelRotation.x.ToString("0.###", ci)).Append(',').Append(info.DoorModelRotation.y.ToString("0.###", ci)).Append(',').Append(info.DoorModelRotation.z.ToString("0.###", ci)).Append(" | ")
+                .Append(info.DoorModelScale.ToString("0.###", ci)).Append('\n');
         foreach (KeyValuePair<GameObject, PropRef> enemy in PropRef.FindIn(scene).Where(p => p.Value.IsEnemy).OrderBy(p => p.Key.name))
         {
             Vector3 p = enemy.Key.transform.position;
