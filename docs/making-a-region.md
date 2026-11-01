@@ -1,23 +1,22 @@
 # Making a region
 
-1. Set up the starter project by following [Getting started](getting-started.md).
-2. Open it, if it isn't already open, with your paths confirmed.
-3. Run **Construction Kit > New Region Scene**, which makes a walled room with a sun and a spawn point.
-4. Open **Construction Kit > Prop Browser**. Click **Add** on a prop, or drag its name into the Scene view. The first use of a prop copies its model from the rip.
-5. Move, rotate, scale and alter props as you like. Export decides for each one: props you only moved, rotated or scaled evenly become references to the game's own, and props with any other change, including stretching, are embedded in the mod.
-6. Set the region's ID and name in the Prop Browser. Don't change the ID after sharing a region, because saves and door placements depend on it.
-7. Click **Export Region**, which writes `<id>` and `<id>.refs.txt` to their own mod folder, `BepInEx\plugins\OCK-Region-<id>`. Embedded props contain Outward's art, so check the rights holder's and the mod site's rules before sharing such a mod.
-8. Launch the game. **Ctrl+F8** chooses a region, and **Ctrl+F10** places its door in front of you.
+This goes into more detail on what [Your first region](tutorial.md) walks through. It assumes you've finished [Getting started](getting-started.md).
 
-A region needs a root object named exactly `SpawnPointManager`, with at least one child as a spawn point.
+## The Prop Browser
 
-Any number of regions can be installed: the plugin finds every `*.refs.txt` under `BepInEx\plugins` with a bundle beside it of the same name. Each needs a unique ID, scene name and bundle build name, and the exporter derives all three from the ID.
+**Construction Kit > Prop Browser** has tabs for **Enemies**, **Water**, **Ground**, **Props** and **Items**. Each can be narrowed to one location, or show **All locations**, which reads every rip and so takes longer. Click **Add** beside something, or drag a prop's name into the Scene view. The first use of a prop copies its model from the rip.
 
-Props are decoration for now. Their scripts are left behind, so anything players can use in its own scene, such as a chest or gathering spot, is only for show in a region. The Prop Browser marks those **decoration**.
+Move, rotate, scale and alter props as you like. Export decides for each one: props you only moved, rotated or scaled evenly become references to the game's own, and props with any other change, including stretching, are embedded in the mod. Embedded props contain Outward's art, so check the rights holder's and the mod site's rules before sharing such a mod.
+
+Don't change a region's ID after sharing it, because saves and door placements depend on it. **Export Region** writes it to its own mod folder in your profile, `BepInEx\plugins\OCK-Region-<id>`, and players can have any number of regions installed.
+
+A scene made with **New Region Scene** has what it needs. If you start from your own, it needs a root object named exactly `SpawnPointManager`, with at least one child as a spawn point.
+
+Props are decoration for now, and so is the **Items** tab, until items can be picked up. Their scripts are left behind, so anything players can use in its own scene, such as a chest or gathering spot, is only for show in a region. The Prop Browser marks those **decoration**.
 
 ## How props look in the editor
 
-Props are stand-ins on a simple shader of our own, because ripped shaders are only placeholders. Some may look different from the game (the triple-ladies statue renders blue, and some tree leaves show as dark cards), but the game always uses its real assets. The Prop Browser's **Textures** setting picks **Fast** (the default, with smaller uncompressed textures for quicker imports) or **Detailed** (full resolution plus the materials' surface detail maps). Neither can show the game's real shaders or lighting, so the game still looks much better than either. Embedded props always ship at full quality, so exporting them takes longer in Fast mode.
+What you see in the editor are stand-ins: copies of the props with a simple look of our own, because the game's real shaders don't survive ripping. They never ship in your mod. Some may look different from the game (the triple-ladies statue renders blue, and some tree leaves show as dark cards), but the game always uses its real assets. The Prop Browser's **Textures** setting picks **Fast** (the default, with smaller uncompressed textures for quicker imports) or **Detailed** (full resolution plus the materials' surface detail maps). Neither can show the game's real shaders or lighting, so the game still looks much better than either. Embedded props always ship at full quality, so exporting them takes longer in Fast mode.
 
 ## Sharing your region
 
@@ -27,19 +26,19 @@ To try the zip first, use **Settings > Import local mod** in r2modman. Remove yo
 
 ## Enemies and the entrance door
 
-Export bakes a NavMesh from the scene and its stand-ins, so enemies can walk the region. To place an enemy, add it from the **Enemies** category: it shows as its real model in a default pose, or a red capsule if the model isn't in the rip. Enemies are always references, built from the player's own game files and given their own identity.
+Export works out where enemies can walk from the ground and props in your scene. Unity calls this a NavMesh. To place an enemy, add it from the **Enemies** tab: it shows as its real model in a default pose, or a red capsule if the model isn't in the rip. Enemies are always references, built from the player's own game files and given their own identity.
 
 Your entrance door ships with the region too: after placing it in game with **Ctrl+F10**, click **Use door placed in game** in the Prop Browser, then export. A door a player places themselves overrides the shipped one.
 
 ## Ground and water
 
-**Add Ground** in the Prop Browser (or the Construction Kit menu) replaces the starter room with a flat 200 by 200 m terrain at height 0, with invisible walls around its edge. It's Unity's own Terrain, so select it and use the Inspector's Paint Terrain tool: **Raise or Lower Terrain** and **Smooth Height** make hills and hollows, and **Paint Texture** paints the four layers: grass, dirt, sand and rock. Move the spawn point and props to sit on the shapes you make. Heights and paint ship in the mod, and vanilla textures are references, so they add almost nothing to it. A layer using your own texture ships that texture.
+**Add Ground** on the Prop Browser's **Ground** tab (or the Construction Kit menu) replaces the starter room with a flat 200 by 200 m terrain at height 0, with invisible walls around its edge. It's Unity's own Terrain, so select it and use the Inspector's Paint Terrain tool: **Raise or Lower Terrain** and **Smooth Height** make hills and hollows, and **Paint Texture** paints the four layers: grass, dirt, sand and rock. Move the spawn point and props to sit on the shapes you make. Heights and paint ship in the mod, and vanilla textures are references, so they add almost nothing to it. A layer using your own texture ships that texture.
 
-To paint with more of the game's ground, choose a scene in the browser, pick from its **Ground texture** list and click **Add**. The texture joins the Terrain's Paint Texture layers, and ships as a reference. More than four layers costs the game an extra drawing pass, so keep to what you need.
+To paint with more of the game's ground, click **Add** beside a texture on the **Ground** tab. The texture joins the Terrain's Paint Texture layers, and ships as a reference. More than four layers costs the game an extra drawing pass, so keep to what you need.
 
 It starts with room for 10 m below 0 and 50 m above. For more, raise **Terrain Height** in the Terrain's settings, which stretches existing hills in proportion, or lower the object and add the same amount to the height. Resize `Ground_Edges` to match, because the invisible walls don't follow.
 
-**Add Water** adds a blue marker for the scene chosen in the browser, whose own water it will use in game. Move it to the water's height and scale it to size. It only looks like water in game. Standing in or over it lets players drink and fill waterskins. It has the water type of that scene's first water source, unless you select the marker and choose another under **Water type** in the Prop Browser: clean, fresh, salt, rancid, magic, pure or healing. Shallow water (about 1.2 m or less) splashes underfoot. Enemies walk on the ground beneath it, since the NavMesh ignores water, and it has no collision.
+**Add** on the **Water** tab adds a blue marker for that location, whose own water it will use in game. A location marked **can't be drunk** has no water source to copy. Move it to the water's height and scale it to size. It only looks like water in game. Standing in or over it lets players drink and fill waterskins. It has the water type of that scene's first water source, unless you select the marker and choose another under **Water type** on the **Water** tab: clean, fresh, salt, rancid, magic, pure or healing. Shallow water (about 1.2 m or less) splashes underfoot. Enemies walk on the ground beneath it, and it has no collision.
 
 ## Dying in a region
 
@@ -55,8 +54,8 @@ Entrance and return doors use a vanilla door by default. To use any prop instead
 
 ## Ripping more scenes
 
-**Construction Kit > Rip a Scene** lists the game's scenes and rips one in its own window. Monsoon came to 15 GB in about 18 minutes and Chersonese to 7.3 GB in about 8, because a scene pulls in much of the shared game data. Each rip gives the same asset a different ID, so a texture used from two rips is imported twice in the editor. That only costs editor disk space.
+**Construction Kit > Rip a Scene** lists the game's scenes and rips one in its own window. **Rip All Scenes**, there and in the Prop Browser, rips every scene not yet ripped, regions and towns first. It says how much space and time to expect, stops before the drive fills up, and carries on from where it stopped if run again. Few modders need it, because rips are large and each holds its own copy of shared game data. Monsoon came to 15 GB in about 18 minutes, Chersonese to 7.3 GB in about 8, and even a near-empty scene to 3.1 GB in 3, because a scene pulls in much of the shared game data. Each rip gives the same asset a different ID, so a texture used from two rips is imported twice in the editor. That only costs editor disk space.
 
-Start with Monsoon, which the ground textures need. ChersoneseNewTerrain adds outdoor props and wild enemies such as hyenas. After that, rip the scene whose look you're after: a vanilla scene's rip offers what that scene uses.
+Start with Monsoon, which the ground textures need. Chersonese adds outdoor props and wild enemies such as hyenas. After that, rip the scene whose look you're after: a vanilla scene's rip offers what that scene uses.
 
 The window runs `Tools~/rip-scene.ps1` in the package, which can also be run by hand. It installs AssetRipper 2.0.0 inside your rip folder and checks the download against its published hash. AssetRipper is a separate project under the GPL, and isn't included with the kit.

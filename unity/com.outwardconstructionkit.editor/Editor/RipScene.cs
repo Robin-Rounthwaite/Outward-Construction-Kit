@@ -39,6 +39,9 @@ internal class RipScene
         public bool HasLodGroup;
         public bool IsCharacter;
         public bool IsInteractive;
+        public bool IsItem;
+        public bool IsWaterPlane;
+        public bool IsWaterSource;
         public string MeshGuid;
         public long MeshFileId;
         public bool RendererEnabled;
@@ -86,11 +89,15 @@ internal class RipScene
         public int InstanceCount = 1;
         public bool Batched;
         public bool IsEnemy;
+        public bool IsItem;
+        public RipScene Scene;
     }
 
     // Not scenery, and full of things that aren't props.
     private static readonly HashSet<string> s_skipRoots = new HashSet<string> { "AudioManager", "Main Camera", "SpawnPointManager", "AISquadManagerStructure", "_SNPC", "_DefeatScenario_Holder", "FXWorld" };
-    private static readonly Regex s_notProps = new Regex("Sky Dome|Waterplane|WaterPro|Billboard", RegexOptions.IgnoreCase);
+    private static readonly Regex s_notProps = new Regex(@"Sky Dome|Waterplane|WaterPro|Billboard|^collision$|^Cube|Zone( \(\d+\))?$", RegexOptions.IgnoreCase);
+    // The game's invisible markers for its designers, which have meshes but aren't anything to place.
+    private static readonly HashSet<string> s_designFolders = new HashSet<string> { "MapBounds", "MicroDesign" };
     private static readonly Regex s_instanceSuffix = new Regex(@" \(\d+\)$");
     private static readonly Regex s_guid = new Regex(@"guid: (\w+)");
     private static readonly Regex s_fileId = new Regex(@"fileID: (-?\d+)");
@@ -101,6 +108,10 @@ internal class RipScene
 
     /// <summary>One entry per distinct prop, using its first instance, which is the one a path lookup finds.</summary>
     public List<Prop> Props = new List<Prop>();
+
+    /// <summary>Whether the game has a water plane here, for water to look like, and a source, for drinking from it.</summary>
+    public bool HasWater;
+    public bool HasWaterSource;
 
     public static RipScene Load(string sceneName, string file)
     {
@@ -127,7 +138,10 @@ internal class RipScene
         ColliderInfo collider = null;
         bool inMaterials = false;
         string characterScript = CharacterScriptGuid(file);
-        HashSet<string> interactiveScripts = InteractiveScriptGuids(file);
+        HashSet<string> interactiveScripts = ScriptGuids(file, s_interactiveScripts);
+        HashSet<string> itemScripts = ScriptGuids(file, s_itemScripts);
+        HashSet<string> waterPlaneScripts = ScriptGuids(file, s_waterPlaneScripts);
+        HashSet<string> waterSourceScripts = ScriptGuids(file, s_waterSourceScripts);
 
         foreach (string line in File.ReadLines(file))
         {
@@ -179,8 +193,13 @@ internal class RipScene
                     else if (line.StartsWith("  m_Script:"))
                     {
                         Match script = s_guid.Match(line);
-                        if (script.Success && interactiveScripts.Contains(script.Groups[1].Value))
-                            current.IsInteractive = true;
+                        if (!script.Success)
+                            break;
+                        string guid = script.Groups[1].Value;
+                        current.IsInteractive |= interactiveScripts.Contains(guid) || itemScripts.Contains(guid);
+                        current.IsItem |= itemScripts.Contains(guid);
+                        current.IsWaterPlane |= waterPlaneScripts.Contains(guid);
+                        current.IsWaterSource |= waterSourceScripts.Contains(guid);
                     }
                     break;
                 case "1":
@@ -273,13 +292,16 @@ internal class RipScene
 
     // Rips include the game's scripts, and a script's GUID is how a scene says what's attached to an object.
     // What a player can use in the game. In a region these are decoration, because their scripts are left behind.
-    private static readonly string[] s_interactiveScripts = { "InteractionTriggerBase", "InteractionActivator", "Gatherable", "CentralGatherableAccessPoint", "TreasureChest", "ItemContainer", "Item", "ItemSpawner", "TrapTrigger" };
+    private static readonly string[] s_interactiveScripts = { "InteractionTriggerBase", "InteractionActivator", "Gatherable", "CentralGatherableAccessPoint", "TreasureChest", "ItemContainer", "ItemSpawner", "TrapTrigger" };
+    private static readonly string[] s_itemScripts = { "Item", "Equipment", "Weapon", "Armor", "Bag", "Consumable", "Food" };
+    private static readonly string[] s_waterPlaneScripts = { "WaterRender" };
+    private static readonly string[] s_waterSourceScripts = { "WaterSource" };
 
-    private static HashSet<string> InteractiveScriptGuids(string sceneFile)
+    private static HashSet<string> ScriptGuids(string sceneFile, string[] names)
     {
         string scripts = Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(sceneFile)), "Scripts", "Assembly-CSharp");
         var guids = new HashSet<string>();
-        foreach (string name in s_interactiveScripts)
+        foreach (string name in names)
         {
             string meta = Path.Combine(scripts, name + ".cs.meta");
             if (File.Exists(meta))
@@ -372,7 +394,43 @@ internal class RipScene
             foreach (Node child in root.Children)
                 Walk(child, byName);
         FindEnemies(byName);
+        FindItems(byName);
         Props = byName.Values.OrderBy(p => p.BaseName).ToList();
+        foreach (Prop prop in Props)
+            prop.Scene = this;
+
+        List<Node> everything = Roots.SelectMany(r => r.SelfAndDescendants()).ToList();
+        HasWater = everything.Any(n => n.IsWaterPlane && n.HasMesh);
+        HasWaterSource = everything.Any(n => n.IsWaterSource);
+    }
+
+    // Things with the game's item scripts, wherever they sit, as long as there's something to see.
+    private void FindItems(Dictionary<string, Prop> byName)
+    {
+        foreach (Node root in Roots)
+            foreach (Node node in root.SelfAndDescendants().Where(n => n.IsItem && !n.IsCharacter))
+            {
+                string baseName = s_instanceSuffix.Replace(node.Name, "");
+                Prop prop;
+                if (byName.TryGetValue(baseName, out prop))
+                {
+                    if (!prop.IsEnemy)
+                        prop.IsItem = true;
+                    continue;
+                }
+                List<Node> drawn = node.SelfAndDescendants().Where(n => n.HasMesh && n.HasRenderer).ToList();
+                if (drawn.Count == 0)
+                    continue;
+                string[] parts = node.ScenePath.Split('/');
+                byName[baseName] = new Prop
+                {
+                    Node = node,
+                    BaseName = baseName,
+                    Category = parts.Length > 2 ? parts[parts.Length - 2] : parts[0],
+                    Batched = drawn.Any(n => n.SubMeshCount > 0),
+                    IsItem = true,
+                };
+            }
     }
 
     // Anything with the game's Character script. Scenes tend to group them, so foes and friends are told apart by that.
@@ -404,7 +462,7 @@ internal class RipScene
     // A prop is the highest object that is either a LOD group or has a mesh of its own.
     private void Walk(Node node, Dictionary<string, Prop> byName)
     {
-        if (s_notProps.IsMatch(node.Name))
+        if (s_notProps.IsMatch(node.Name) || s_designFolders.Contains(node.Name))
             return;
         if (!node.HasLodGroup && !node.HasMesh && !IsWrapperOfOneProp(node))
         {

@@ -39,6 +39,10 @@ try {
     Copy-Item (Join-Path $repo 'unity\starter\*') $project -Exclude 'licence-repair-report.txt' # it holds that PC's paths
     [IO.File]::WriteAllText((Join-Path $project 'START HERE.txt'), "Open Guides\getting-started.md and follow it.`r`n")
 
+    foreach ($needed in 'Repair Unity Licence.cmd', 'Check My Setup.cmd', 'Check My Setup.ps1') {
+        if (-not (Test-Path -LiteralPath (Join-Path $project $needed))) { throw "The starter is missing $needed." }
+    }
+
     $bad = Get-ChildItem $project -Recurse -File | Where-Object { $_.Extension -in '.assets', '.resS', '.bundle' -or $_.Name -like 'level*' }
     if ($bad) { throw "Game files must never ship: $($bad.FullName -join ', ')" }
 

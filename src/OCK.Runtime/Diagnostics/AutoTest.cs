@@ -24,6 +24,7 @@ namespace OutwardConstructionKit.Runtime
         private const float CHECKS_SECONDS = 12f; // longer than the checks' own wait
         private const string TEST_SHADER = "Custom/Water/CustomWater";
         private const float GROUND_SEARCH_DISTANCE = 6f;
+        private const string VISIT = "visit "; // the Test Region button: goes there, then it's normal play
 
         public static bool Begin(KitPlugin plugin)
         {
@@ -33,7 +34,8 @@ namespace OutwardConstructionKit.Runtime
 
             string[] request = File.ReadAllLines(file);
             File.Delete(file);
-            plugin.SelfCheck.Value = true;
+            if (!request.Any(l => l.StartsWith(VISIT)))
+                plugin.SelfCheck.Value = true;
             Application.runInBackground = true; // the game pauses itself otherwise, if something else has focus
             plugin.StartCoroutine(Run(request));
             return true;
@@ -89,14 +91,14 @@ namespace OutwardConstructionKit.Runtime
 
             string wanted = request.Where(l => l.StartsWith("character ")).Select(l => l.Substring(10).Trim()).FirstOrDefault();
             List<CharacterSaveInstanceHolder> saves = SaveManager.Instance.CharacterSaves.Where(s => s.MostRecentInstance != null).ToList();
-            CharacterSaveInstanceHolder chosen = saves.FirstOrDefault(s => s.MostRecentInstance.CharSave.PSave.Name == wanted);
+            CharacterSaveInstanceHolder chosen = wanted == null ? saves.FirstOrDefault() : saves.FirstOrDefault(s => s.MostRecentInstance.CharSave.PSave.Name == wanted);
             if (chosen == null)
             {
                 Log($"FAIL no character called '{wanted}'. There are: {string.Join(", ", saves.Select(s => s.MostRecentInstance.CharSave.PSave.Name).ToArray())}");
                 yield break;
             }
             var panel = (CharacterSelectionPanel)AccessTools.Field(typeof(MainScreen), "m_characterSelection").GetValue(menu);
-            Log($"Choosing {wanted}.");
+            Log($"Choosing {chosen.MostRecentInstance.CharSave.PSave.Name}.");
             panel.OnCharacterClicked(chosen);
 
             yield return WaitFor(() => Player() != null && Loaded(), "the character is in the world", result);
@@ -105,6 +107,24 @@ namespace OutwardConstructionKit.Runtime
             yield return PressAnyKey(result);
             if (!ok)
                 yield break;
+
+            string visit = request.Where(l => l.StartsWith(VISIT)).Select(l => l.Substring(VISIT.Length).Trim()).FirstOrDefault();
+            if (visit != null)
+            {
+                Region visited = Region.All.FirstOrDefault(r => r.Id == visit);
+                if (visited == null || !visited.CanLoad)
+                {
+                    KitPlugin.Log.LogError($"Couldn't go to '{visit}', because it isn't installed or can't load. The log above says why.");
+                    Log($"FAIL couldn't visit '{visit}'.");
+                    yield break;
+                }
+                yield return new WaitForSecondsRealtime(1f);
+                yield return Travel(visited.SceneName, 0, result);
+                if (ok)
+                    Log($"FINISHED, in {visit}, for a person to play.");
+                yield break;
+            }
+
             // A run that ended in a fight can save its character close to death, and they'd die on the next arrival.
             Player().Stats.RestoreAllVitals();
             yield return new WaitForSecondsRealtime(3f);

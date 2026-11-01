@@ -6,21 +6,25 @@ Adds new regions to Outward: Definitive Edition. Walk through a door, get a real
 
 ## For players
 
-Install a region mod with a mod manager such as r2modman, and this comes with it. The first launch after installing a region takes a little longer, while the kit prepares what that region uses from your own copy of the game. It keeps the results in `BepInEx/OCK_Cache`, which is always safe to delete.
+Install [r2modman](https://thunderstore.io/package/ebkr/r2modman/), choose Outward: Definitive Edition, create a profile, and install a region mod from its **Online** tab. This kit and BepInEx, which runs mods, come with it. Start the game with r2modman's **Start modded** button, because Steam's own Play button starts it without mods.
+
+Each region's page says where to find its door. Walk up to the door and use it, like any other door in the game.
+
+The first launch after installing a region takes a little longer, while the kit prepares what that region uses from your own copy of the game. It keeps the results in `BepInEx/OCK_Cache`, which is always safe to delete.
 
 If you uninstall a region while your character is inside it, you'll arrive back where you entered it, as long as the kit stays installed. Don't uninstall the kit itself while inside a region.
 
 ## For modders
 
-Regions are made in Unity 2020.3.26f1, with the free starter project on [GitHub](https://github.com/Robin-Rounthwaite/Outward-Construction-Kit). You place vanilla props and enemies, sculpt and paint ground, add water, and export. Anything you only move, rotate or evenly scale stays a reference to the player's own game files, so no art ships in your mod.
+Regions are made in Unity 2020.3.26f1, with the free starter project and guides on [GitHub](https://github.com/Robin-Rounthwaite/Outward-Construction-Kit). You place vanilla props and enemies, sculpt and paint ground, add water, and export. Anything you only move, rotate or evenly scale stays a reference to the player's own game files, so no art ships in your mod.
 
 ## Current limitations
 
 - Co-op hasn't been tested yet.
-- Only Outward: Definitive Edition is supported.
-- Props are decoration for now: chests and gathering spots don't work.
+- Only Outward: Definitive Edition on Windows is supported.
+- Props and items are decoration for now: chests, gathering spots and pick-ups don't work.
 - Dying in a region always returns you to where you entered it. There are no defeat scenarios yet.
-- A game update can stop a region's references from matching, which the log reports.
+- A game update can stop a region's references from matching. The game then shows a notice on screen, and the log has the details.
 
 ## Reporting problems
 

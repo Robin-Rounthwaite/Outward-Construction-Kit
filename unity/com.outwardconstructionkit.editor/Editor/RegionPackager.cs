@@ -119,8 +119,8 @@ internal static class RegionPackager
     {
         var text = new StringBuilder();
         text.Append("# ").Append(info.DisplayName).Append("\n\n").Append(string.IsNullOrEmpty(info.About) ? info.Description : info.About).Append("\n\n");
-        text.Append("## How to get there\n\nLook for its door in ").Append(info.DoorScene).Append(".\n\n");
-        text.Append("## Requirements\n\nThis region needs the [Outward Construction Kit](https://thunderstore.io/c/outward/p/Catalysten/Outward_Construction_Kit/), which a mod manager such as r2modman installs for you.\n");
+        text.Append("## How to get there\n\nLook for its door in ").Append(LocationNames.For(info.DoorScene)).Append(".\n\n");
+        text.Append("## Requirements\n\nThis region needs the [Outward Construction Kit](https://thunderstore.io/c/outward/p/Catalysten/Outward_Construction_Kit/), which r2modman installs for you. Start the game with r2modman's Start modded button.\n");
         return text.ToString();
     }
 

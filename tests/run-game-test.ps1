@@ -18,6 +18,9 @@ Kills the character in the last region, to test that they come back where they e
 .PARAMETER StartIn
 A scene to travel to first, if the character's save is somewhere else.
 
+.PARAMETER Visit
+A region to go straight to and stay in, as the Test Region button does. Leaves the game open.
+
 .PARAMETER TimeoutSeconds
 How long to wait before stopping the game and reporting that it hung.
 #>
@@ -27,6 +30,7 @@ param(
     [switch]$EndInRegion,
     [switch]$DieInRegion,
     [string]$StartIn,
+    [string]$Visit,
     [string]$Character = 'Jim of the Doors',
     [int]$TimeoutSeconds = 600,
     [int]$AppId = 1758860,
@@ -56,6 +60,11 @@ robocopy (Join-Path $GameFolder 'SaveGames') $backup /MIR /NFL /NDL /NJH /NJS /N
 Write-Host "Saves backed up to $backup"
 
 $request = @("character $Character") + @($Regions -split ',' | Where-Object { $_.Trim() } | ForEach-Object { "region $($_.Trim())" })
+if ($Visit) {
+    # What the Unity kit's Test Region button asks for.
+    $request = @("character $Character", "visit $Visit")
+    $Stay = $true
+}
 if ($Stay) { $request += 'stay' }
 if ($EndInRegion) { $request += 'endinregion' }
 if ($DieInRegion) { $request += 'dieinregion' }

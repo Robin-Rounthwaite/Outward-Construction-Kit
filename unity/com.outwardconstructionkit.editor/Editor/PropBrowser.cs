@@ -5,28 +5,39 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
-/// <summary>Browse a ripped scene's props, and click or drag them into the open scene.</summary>
-internal class PropBrowser : EditorWindow
+/// <summary>Browse what ripped scenes offer, by tab and by where it came from, and add it to the open scene.</summary>
+internal partial class PropBrowser : EditorWindow
 {
+    public enum Tab { Enemies, Water, Ground, Props, Items }
+
     private const float ROW_HEIGHT = 22f;
     private const string DRAG_KEY = "OckProp";
+    private const string ALL_LOCATIONS = "All locations";
+    private const string ALL_CATEGORIES = "All";
 
+    private static readonly string[] s_tabNames = Enum.GetNames(typeof(Tab));
     private static readonly Dictionary<string, RipScene> s_scenes = new Dictionary<string, RipScene>();
+    private static readonly Dictionary<string, List<string>> s_groundTextures = new Dictionary<string, List<string>>();
 
+    [SerializeField] private Tab m_tab = Tab.Props;
+    [SerializeField] private string m_location;
     private Dictionary<string, string> m_ripped = new Dictionary<string, string>();
     private string[] m_sceneNames = new string[0];
-    private int m_sceneIndex;
+    private string[] m_sceneLabels = new string[0];
+    private string[] m_locations = new string[0];
+    private string[] m_locationLabels = new string[0];
+    private List<RipScene> m_loaded = new List<RipScene>();
     private string m_search = "";
-    private string[] m_categories = { "All" };
+    private string[] m_categories = { ALL_CATEGORIES };
     private int m_categoryIndex;
     private Vector2 m_scroll;
     private List<RipScene.Prop> m_visible = new List<RipScene.Prop>();
-    private RipScene m_scene;
+    private List<RipScene> m_visibleWater = new List<RipScene>();
+    private List<KeyValuePair<string, string>> m_visibleTextures = new List<KeyValuePair<string, string>>();
     private string m_status = "";
-    private string m_groundTexturesScene;
-    private string[] m_groundTextures = new string[0];
-    private int m_groundTextureIndex;
     private bool m_showPaths;
+
+    private bool ShowsProps { get { return m_tab == Tab.Enemies || m_tab == Tab.Props || m_tab == Tab.Items; } }
 
     [MenuItem("Construction Kit/Prop Browser")]
     public static void Open()
@@ -37,6 +48,9 @@ internal class PropBrowser : EditorWindow
     private void OnEnable()
     {
         SceneView.duringSceneGui += OnSceneGui;
+        // A reload shouldn't mean waiting for every rip to be read again.
+        if (m_location == ALL_LOCATIONS)
+            m_location = null;
         Refresh();
     }
 
@@ -50,34 +64,49 @@ internal class PropBrowser : EditorWindow
         // Waits until the editor is idle, because this can run during a reload, before new shaders have imported.
         EditorApplication.delayCall += PropImporter.RefreshLibraryMaterials;
         m_ripped = OckSettings.RippedScenes();
-        m_sceneNames = m_ripped.Keys.OrderBy(n => n).ToArray();
-        m_sceneIndex = Mathf.Clamp(m_sceneIndex, 0, Mathf.Max(0, m_sceneNames.Length - 1));
-        m_scene = null;
-        LoadScene();
+        m_sceneNames = m_ripped.Keys.OrderBy(LocationNames.For).ToArray();
+        m_sceneLabels = m_sceneNames.Select(LocationNames.For).ToArray();
+        m_locations = new[] { ALL_LOCATIONS }.Concat(m_sceneNames).ToArray();
+        m_locationLabels = new[] { ALL_LOCATIONS }.Concat(m_sceneLabels).ToArray();
+        if (m_location != ALL_LOCATIONS && !m_sceneNames.Contains(m_location))
+            m_location = m_sceneNames.FirstOrDefault();
+        LoadLocation();
     }
 
-    private void LoadScene()
+    // Each rip takes seconds to read, so they're only read when wanted, and reading them all can be stopped partway.
+    private void LoadLocation()
     {
-        m_scene = null;
-        m_visible.Clear();
-        if (m_sceneNames.Length == 0)
-            return;
-
-        string name = m_sceneNames[m_sceneIndex];
-        if (!s_scenes.TryGetValue(name, out m_scene))
+        m_loaded.Clear();
+        string[] wanted = m_location == ALL_LOCATIONS ? m_sceneNames : m_sceneNames.Where(n => n == m_location).ToArray();
+        try
         {
-            EditorUtility.DisplayProgressBar("Construction Kit", "Reading " + name + "...", 0.5f);
-            try
+            for (int i = 0; i < wanted.Length; i++)
             {
-                m_scene = RipScene.Load(name, m_ripped[name]);
-                s_scenes[name] = m_scene;
-            }
-            finally
-            {
-                EditorUtility.ClearProgressBar();
+                string name = wanted[i];
+                RipScene scene;
+                if (!s_scenes.TryGetValue(name, out scene))
+                {
+                    if (EditorUtility.DisplayCancelableProgressBar("Construction Kit", "Reading " + LocationNames.For(name) + "...", (i + 0.5f) / wanted.Length))
+                    {
+                        m_status = $"Stopped reading rips, so this shows {m_loaded.Count} of {wanted.Length} locations.";
+                        break;
+                    }
+                    scene = RipScene.Load(name, m_ripped[name]);
+                    s_scenes[name] = scene;
+                }
+                m_loaded.Add(scene);
             }
         }
-        m_categories = new[] { "All" }.Concat(m_scene.Props.Select(p => p.Category).Distinct().OrderBy(c => c)).ToArray();
+        finally
+        {
+            EditorUtility.ClearProgressBar();
+        }
+        UpdateCategories();
+    }
+
+    private void UpdateCategories()
+    {
+        m_categories = new[] { ALL_CATEGORIES }.Concat(m_loaded.SelectMany(s => s.Props).Where(p => InTab(p, m_tab)).Select(p => p.Category).Distinct().OrderBy(c => c)).ToArray();
         m_categoryIndex = 0;
         Filter();
     }
@@ -85,19 +114,76 @@ internal class PropBrowser : EditorWindow
     private void Filter()
     {
         m_visible.Clear();
-        if (m_scene == null)
-            return;
-        string category = m_categories[Mathf.Clamp(m_categoryIndex, 0, m_categories.Length - 1)];
-        m_visible.AddRange(m_scene.Props.Where(p =>
-            (m_categoryIndex == 0 || p.Category == category)
-            && (m_search.Length == 0 || p.BaseName.IndexOf(m_search, StringComparison.OrdinalIgnoreCase) >= 0)));
+        m_visibleWater.Clear();
+        m_visibleTextures.Clear();
+        m_scroll = Vector2.zero;
+        if (ShowsProps)
+        {
+            string category = m_categoryIndex > 0 && m_categoryIndex < m_categories.Length ? m_categories[m_categoryIndex] : null;
+            m_visible = PropsFor(m_tab, m_loaded, category, m_search);
+        }
+        else if (m_tab == Tab.Water)
+            m_visibleWater = m_loaded.Where(s => s.HasWater && Matches(s.SceneName, m_search)).ToList();
+        else
+            m_visibleTextures = TexturesFor(m_loaded, m_search);
+    }
+
+    public static bool InTab(RipScene.Prop prop, Tab tab)
+    {
+        switch (tab)
+        {
+            case Tab.Enemies: return prop.IsEnemy;
+            case Tab.Items: return prop.IsItem;
+            case Tab.Props: return !prop.IsEnemy && !prop.IsItem;
+            default: return false;
+        }
+    }
+
+    /// <summary>What a tab lists. A thing found in several locations is listed once, from the first of them.</summary>
+    public static List<RipScene.Prop> PropsFor(Tab tab, IEnumerable<RipScene> scenes, string category, string search)
+    {
+        return scenes.SelectMany(s => s.Props)
+            .Where(p => InTab(p, tab) && (category == null || p.Category == category) && Matches(p.BaseName, search))
+            .GroupBy(p => p.BaseName).Select(g => g.First()).OrderBy(p => p.BaseName).ToList();
+    }
+
+    // Texture name to the location it's taken from, listed once each like the props.
+    private List<KeyValuePair<string, string>> TexturesFor(IEnumerable<RipScene> scenes, string search)
+    {
+        var found = new Dictionary<string, string>();
+        foreach (RipScene scene in scenes)
+        {
+            List<string> textures;
+            if (!s_groundTextures.TryGetValue(scene.SceneName, out textures))
+            {
+                string root = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(m_ripped[scene.SceneName])));
+                s_groundTextures[scene.SceneName] = textures = GroundTools.GroundTexturesIn(root);
+            }
+            foreach (string texture in textures.Where(t => Matches(t, search) && !found.ContainsKey(t)))
+                found[texture] = scene.SceneName;
+        }
+        return found.OrderBy(t => t.Key).ToList();
+    }
+
+    private static bool Matches(string name, string search)
+    {
+        return search.Length == 0 || name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
     /// <summary>The paths window calls this when they change.</summary>
     public void OnPathsChanged()
     {
         s_scenes.Clear();
+        s_groundTextures.Clear();
         Refresh();
+    }
+
+    /// <summary>Lets the self-test go through the tabs.</summary>
+    public void ShowTab(Tab tab)
+    {
+        m_tab = tab;
+        UpdateCategories();
+        Repaint();
     }
 
     private void OnGUI()
@@ -110,15 +196,34 @@ internal class PropBrowser : EditorWindow
             return;
         }
         DrawSettings();
-        if (m_scene == null)
+        if (m_sceneNames.Length == 0)
         {
             EditorGUILayout.HelpBox("No ripped scenes found. Rip one, or set the rip folder to the folder holding your AssetRipper exports.", MessageType.Info);
             if (GUILayout.Button("Rip a Scene"))
                 RipWindow.Open();
             return;
         }
+
+        EditorGUI.BeginChangeCheck();
+        m_tab = (Tab)GUILayout.Toolbar((int)m_tab, s_tabNames);
+        if (EditorGUI.EndChangeCheck())
+            UpdateCategories();
+
         DrawFilters();
-        DrawList();
+        switch (m_tab)
+        {
+            case Tab.Water:
+                DrawWaterTab();
+                break;
+            case Tab.Ground:
+                DrawGroundTab();
+                break;
+            default:
+                if (m_tab == Tab.Items)
+                    EditorGUILayout.HelpBox("Items can't be picked up yet, so for now they're only for show.", MessageType.None);
+                DrawRows(m_visible.Count, i => DrawPropRow(m_visible[i]));
+                break;
+        }
         DrawRegionTools();
     }
 
@@ -139,13 +244,17 @@ internal class PropBrowser : EditorWindow
             if (EditorGUI.EndChangeCheck())
             {
                 OckSettings.RipFolder = root;
-                s_scenes.Clear();
-                Refresh();
+                OnPathsChanged();
             }
             if (GUILayout.Button(new GUIContent("Refresh", "Looks for newly finished rips."), GUILayout.Width(60)))
                 OnPathsChanged();
             if (GUILayout.Button("Rip a Scene", GUILayout.Width(85)))
                 RipWindow.Open();
+            if (GUILayout.Button(new GUIContent("Rip All Scenes", "Rips every scene not yet ripped, one after another, which takes a very long time and hundreds of gigabytes. It says how much before starting."), GUILayout.Width(100)))
+            {
+                RipWindow.RipAll();
+                GUIUtility.ExitGUI();
+            }
         }
 
         using (new EditorGUILayout.HorizontalScope())
@@ -173,24 +282,93 @@ internal class PropBrowser : EditorWindow
         using (new EditorGUILayout.HorizontalScope())
         {
             EditorGUI.BeginChangeCheck();
-            m_sceneIndex = EditorGUILayout.Popup(m_sceneIndex, m_sceneNames, GUILayout.Width(150));
+            int location = EditorGUILayout.Popup(Mathf.Max(0, Array.IndexOf(m_locations, m_location)), m_locationLabels, GUILayout.Width(170));
             if (EditorGUI.EndChangeCheck())
-                LoadScene();
+            {
+                m_location = m_locations[location];
+                LoadLocation();
+                GUIUtility.ExitGUI();
+            }
 
             EditorGUI.BeginChangeCheck();
-            m_categoryIndex = EditorGUILayout.Popup(m_categoryIndex, m_categories, GUILayout.Width(120));
+            if (ShowsProps)
+                m_categoryIndex = EditorGUILayout.Popup(m_categoryIndex, m_categories, GUILayout.Width(120));
             m_search = EditorGUILayout.TextField(m_search, EditorStyles.toolbarSearchField);
             if (EditorGUI.EndChangeCheck())
                 Filter();
         }
+        if (!ShowsProps)
+            return;
         using (new EditorGUILayout.HorizontalScope())
         {
-            EditorGUILayout.LabelField($"{m_visible.Count} props. Click Add, or drag a name into the Scene view.", EditorStyles.miniLabel);
+            EditorGUILayout.LabelField($"{m_visible.Count} found. Click Add, or drag a name into the Scene view.", EditorStyles.miniLabel);
             m_showPaths = EditorGUILayout.ToggleLeft("Paths", m_showPaths, GUILayout.Width(60));
         }
     }
 
-    private void DrawList()
+    private void DrawWaterTab()
+    {
+        if (GroundTools.IsWater(Selection.activeGameObject))
+        {
+            int waterType = GroundTools.WaterTypeIndex(Selection.activeGameObject);
+            int chosenType = EditorGUILayout.Popup(new GUIContent("Water type", "What players get from drinking this water or filling a waterskin with it."), waterType, GroundTools.WaterTypes);
+            if (chosenType != waterType)
+                GroundTools.SetWaterType(Selection.activeGameObject, chosenType);
+        }
+        else
+            EditorGUILayout.LabelField("Each location's water looks different. Select water in your scene to set its type.", EditorStyles.miniLabel);
+
+        DrawRows(m_visibleWater.Count, i =>
+        {
+            RipScene scene = m_visibleWater[i];
+            using (new EditorGUILayout.HorizontalScope(GUILayout.Height(ROW_HEIGHT)))
+            {
+                GUILayout.Label("Water from " + LocationNames.For(scene.SceneName));
+                GUILayout.FlexibleSpace();
+                if (!scene.HasWaterSource)
+                    GUILayout.Label(new GUIContent("can't be drunk", "This location has no water source to copy, so players can't drink from this water or fill a waterskin."), EditorStyles.miniLabel, GUILayout.Width(80));
+                if (GUILayout.Button(new GUIContent("Add", "Adds a marker to move and scale. In game it becomes this location's own water."), GUILayout.Width(44)))
+                {
+                    Selection.activeGameObject = GroundTools.AddWater(scene.SceneName);
+                    m_status = "Water added. Move and scale the blue marker; in game it's replaced by the real water at that height and size.";
+                }
+            }
+        });
+    }
+
+    private void DrawGroundTab()
+    {
+        Terrain ground = UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Terrain>(true)).FirstOrDefault();
+        if (ground == null && GUILayout.Button(new GUIContent("Add Ground", "Replaces the starter room with a terrain. Sculpt and paint it with the Terrain component's tools in the Inspector.")))
+        {
+            GroundTools.AddGroundFromMenu();
+            m_status = "Ground added. In the Inspector, use the Terrain's Paint tool: Raise or Lower Terrain and Smooth Height for hills, Paint Texture for grass, dirt, sand and rock.";
+            GUIUtility.ExitGUI();
+        }
+        EditorGUILayout.LabelField(ground == null ? "Add ground first, then its textures." : $"{m_visibleTextures.Count} textures to add to your ground's Paint Texture layers.", EditorStyles.miniLabel);
+
+        DrawRows(m_visibleTextures.Count, i =>
+        {
+            KeyValuePair<string, string> texture = m_visibleTextures[i];
+            using (new EditorGUILayout.HorizontalScope(GUILayout.Height(ROW_HEIGHT)))
+            {
+                GUILayout.Label(texture.Key);
+                GUILayout.FlexibleSpace();
+                if (m_location == ALL_LOCATIONS)
+                    GUILayout.Label(LocationNames.For(texture.Value), EditorStyles.miniLabel, GUILayout.Width(150));
+                using (new EditorGUI.DisabledScope(ground == null))
+                {
+                    if (GUILayout.Button(new GUIContent("Add", "Adds this vanilla texture to the Terrain's Paint Texture layers. It ships as a reference, so it adds nothing to your mod."), GUILayout.Width(44)))
+                    {
+                        GroundTools.AddLayer(ground, texture.Value, texture.Key);
+                        m_status = "Texture added. Select the Terrain, and paint with it using Paint Texture.";
+                    }
+                }
+            }
+        });
+    }
+
+    private void DrawRows(int total, Action<int> drawRow)
     {
         m_scroll = EditorGUILayout.BeginScrollView(m_scroll, GUILayout.ExpandHeight(true));
 
@@ -198,14 +376,14 @@ internal class PropBrowser : EditorWindow
         int first = Mathf.Max(0, Mathf.FloorToInt(m_scroll.y / ROW_HEIGHT));
         int count = Mathf.CeilToInt(position.height / ROW_HEIGHT) + 1;
         GUILayout.Space(first * ROW_HEIGHT);
-        for (int i = first; i < Mathf.Min(m_visible.Count, first + count); i++)
-            DrawRow(m_visible[i]);
-        GUILayout.Space(Mathf.Max(0, m_visible.Count - first - count) * ROW_HEIGHT);
+        for (int i = first; i < Mathf.Min(total, first + count); i++)
+            drawRow(i);
+        GUILayout.Space(Mathf.Max(0, total - first - count) * ROW_HEIGHT);
 
         EditorGUILayout.EndScrollView();
     }
 
-    private void DrawRow(RipScene.Prop prop)
+    private void DrawPropRow(RipScene.Prop prop)
     {
         Rect row = EditorGUILayout.BeginHorizontal(GUILayout.Height(ROW_HEIGHT));
         string label = prop.BaseName + (prop.InstanceCount > 1 ? "  x" + prop.InstanceCount : "");
@@ -215,6 +393,8 @@ internal class PropBrowser : EditorWindow
         GUILayout.FlexibleSpace();
         if (!prop.IsEnemy && prop.Node.SelfAndDescendants().Any(n => n.IsInteractive))
             GUILayout.Label(new GUIContent("decoration", "Players can use this in its own scene, but in a region it's only for show."), EditorStyles.miniLabel, GUILayout.Width(60));
+        if (m_location == ALL_LOCATIONS)
+            GUILayout.Label(LocationNames.For(prop.Scene.SceneName), EditorStyles.miniLabel, GUILayout.Width(150));
         GUILayout.Label(prop.Category, EditorStyles.miniLabel, GUILayout.Width(80));
         if (GUILayout.Button("Add", GUILayout.Width(44)))
             PlaceAtViewCentre(prop);
@@ -228,170 +408,6 @@ internal class PropBrowser : EditorWindow
             DragAndDrop.SetGenericData(DRAG_KEY, prop);
             DragAndDrop.StartDrag(prop.BaseName);
             e.Use();
-        }
-    }
-
-    private void DrawRegionTools()
-    {
-        if (!string.IsNullOrEmpty(m_status))
-            EditorGUILayout.HelpBox(m_status, MessageType.None);
-
-        using (new EditorGUILayout.HorizontalScope())
-        {
-            if (GUILayout.Button(new GUIContent("Add Ground", "Replaces the starter room with a terrain. Sculpt and paint it with the Terrain component's tools in the Inspector.")))
-            {
-                GroundTools.AddGroundFromMenu();
-                m_status = "Ground added. In the Inspector, use the Terrain's Paint tool: Raise or Lower Terrain and Smooth Height for hills, Paint Texture for grass, dirt, sand and rock.";
-            }
-            if (GUILayout.Button(new GUIContent("Add Water from " + m_scene.SceneName, "Adds a marker to move and scale. In game it becomes this scene's own water.")))
-            {
-                Selection.activeGameObject = GroundTools.AddWater(m_scene.SceneName);
-                m_status = "Water added. Move and scale the blue marker; in game it's replaced by the real water at that height and size.";
-            }
-            if (GUILayout.Button(new GUIContent("Add Return Door", "Adds a marker for a door back to where players entered. The small box shows the side they walk up to. With none, a door appears beside the arrival point.")))
-            {
-                DoorTools.AddFromMenu();
-                m_status = "Return door added. Stand it on the ground, with the small box facing the way players will approach.";
-            }
-        }
-
-        if (GroundTools.IsWater(Selection.activeGameObject))
-        {
-            int waterType = GroundTools.WaterTypeIndex(Selection.activeGameObject);
-            int chosenType = EditorGUILayout.Popup(new GUIContent("Water type", "What players get from drinking this water or filling a waterskin with it."), waterType, GroundTools.WaterTypes);
-            if (chosenType != waterType)
-                GroundTools.SetWaterType(Selection.activeGameObject, chosenType);
-        }
-
-        DrawGroundTextures();
-
-        if (!RegionExporter.HasSpawnPoint(UnityEngine.SceneManagement.SceneManager.GetActiveScene()))
-        {
-            EditorGUILayout.HelpBox("This scene has no spawn point, so it can't be exported yet. Players arrive at it.", MessageType.Warning);
-            if (GUILayout.Button("Add Spawn Point"))
-            {
-                SceneView view = SceneView.lastActiveSceneView;
-                Vector3 spot = view != null ? view.pivot : Vector3.zero;
-                Vector3 ground;
-                Selection.activeGameObject = RegionExporter.AddSpawnPoint(TryFindGround(new Ray(spot + Vector3.up * 50f, Vector3.down), out ground) ? ground : spot);
-                m_status = "Spawn point added at the middle of your view. It's selected, so you can move it with the Move tool.";
-            }
-        }
-
-        string scenePath = UnityEngine.SceneManagement.SceneManager.GetActiveScene().path;
-        if (!string.IsNullOrEmpty(scenePath))
-        {
-            RegionInfo info = RegionInfo.For(scenePath);
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                EditorGUI.BeginChangeCheck();
-                EditorGUILayout.LabelField("Region ID", GUILayout.Width(60));
-                info.Id = EditorGUILayout.DelayedTextField(info.Id, GUILayout.Width(150));
-                EditorGUILayout.LabelField("Name", GUILayout.Width(40));
-                info.DisplayName = EditorGUILayout.DelayedTextField(info.DisplayName);
-                if (EditorGUI.EndChangeCheck())
-                    info.SaveFor(scenePath);
-            }
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                bool custom = !string.IsNullOrEmpty(info.DoorModelPath);
-                EditorGUILayout.LabelField("Door looks like: " + (custom ? System.IO.Path.GetFileName(info.DoorModelPath) : "the kit's default door"), EditorStyles.miniLabel);
-                if (GUILayout.Button(new GUIContent("Use selected prop", "Doors will look like the prop selected in the scene, at its scale. Turn it first so its front faces along the blue axis, away from the wall it would sit in."), GUILayout.Width(120)))
-                {
-                    GameObject selected = Selection.activeGameObject;
-                    PropRef chosen = selected != null ? PropRef.Of(selected) : null;
-                    if (chosen == null || chosen.IsEnemy)
-                        m_status = "Select a prop in the scene first. You can delete it afterwards, and its art stays out of the mod.";
-                    else
-                    {
-                        info.DoorModelScene = chosen.DonorScene;
-                        info.DoorModelPath = chosen.Path;
-                        info.DoorModelRotation = selected.transform.eulerAngles;
-                        info.DoorModelScale = PropRef.ScaleOf(selected);
-                        info.SaveFor(scenePath);
-                        m_status = "Doors will look like " + selected.name + " on your next export.";
-                    }
-                }
-                using (new EditorGUI.DisabledScope(!custom))
-                {
-                    if (GUILayout.Button("Reset", GUILayout.Width(50)))
-                    {
-                        info.DoorModelScene = info.DoorModelPath = null;
-                        info.SaveFor(scenePath);
-                    }
-                }
-            }
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                string door = string.IsNullOrEmpty(info.DoorScene) ? "none yet" : info.DoorScene + " at " + info.DoorPosition;
-                EditorGUILayout.LabelField("Entrance: " + door, EditorStyles.miniLabel);
-                if (GUILayout.Button(new GUIContent("Use door placed in game", "Copies where you placed this region's door with Ctrl+F10, so it ships with the mod."), GUILayout.Width(170)))
-                {
-                    if (info.TryCopyDoorFromGame())
-                    {
-                        info.SaveFor(scenePath);
-                        m_status = "Entrance saved. It ships with the mod on your next export.";
-                    }
-                    else
-                        m_status = $"No door placed for '{info.Id}' yet. Export the region, then in game press Ctrl+F8 to choose it and Ctrl+F10 to place its door.";
-                }
-            }
-        }
-
-        using (new EditorGUILayout.HorizontalScope())
-        {
-            EditorGUILayout.LabelField("Sky and audio from", GUILayout.Width(110));
-            int current = Array.IndexOf(m_sceneNames, OckSettings.EnvironmentDonor);
-            EditorGUI.BeginChangeCheck();
-            int picked = EditorGUILayout.Popup(Mathf.Max(0, current), m_sceneNames);
-            if (EditorGUI.EndChangeCheck())
-                OckSettings.EnvironmentDonor = m_sceneNames[picked];
-
-            if (GUILayout.Button("New Region", GUILayout.Width(90)))
-                RegionExporter.NewRegionScene();
-            if (GUILayout.Button("Export Region", GUILayout.Width(100)))
-            {
-                try
-                {
-                    m_status = RegionExporter.ExportToProfile();
-                }
-                catch (Exception e)
-                {
-                    m_status = "Export failed: " + e.Message;
-                    Debug.LogException(e);
-                }
-            }
-            if (GUILayout.Button(new GUIContent("Package", "Makes a zip to upload to Thunderstore."), GUILayout.Width(70)))
-                PackageWindow.Open();
-        }
-    }
-
-    // Only with ground to add to. The list is read once per scene, because it means searching a folder of the rip.
-    private void DrawGroundTextures()
-    {
-        Terrain ground = UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Terrain>(true)).FirstOrDefault();
-        if (ground == null || m_scene == null)
-            return;
-
-        if (m_groundTexturesScene != m_scene.SceneName)
-        {
-            m_groundTexturesScene = m_scene.SceneName;
-            string root = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(m_ripped[m_scene.SceneName])));
-            m_groundTextures = GroundTools.GroundTexturesIn(root).ToArray();
-            m_groundTextureIndex = 0;
-        }
-        if (m_groundTextures.Length == 0)
-            return;
-
-        using (new EditorGUILayout.HorizontalScope())
-        {
-            EditorGUILayout.LabelField("Ground texture", GUILayout.Width(90));
-            m_groundTextureIndex = EditorGUILayout.Popup(m_groundTextureIndex, m_groundTextures);
-            if (GUILayout.Button(new GUIContent("Add", "Adds this vanilla texture to the Terrain's Paint Texture layers. It ships as a reference, so it adds nothing to your mod."), GUILayout.Width(44)))
-            {
-                GroundTools.AddLayer(ground, m_scene.SceneName, m_groundTextures[m_groundTextureIndex]);
-                m_status = "Texture added. Select the Terrain, and paint with it using Paint Texture.";
-            }
         }
     }
 
@@ -448,7 +464,7 @@ internal class PropBrowser : EditorWindow
         try
         {
             EditorUtility.DisplayProgressBar("Construction Kit", "Importing " + prop.BaseName + "...", 0.5f);
-            GameObject prefab = PropImporter.Import(m_scene, prop);
+            GameObject prefab = PropImporter.Import(prop.Scene, prop);
             var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
             instance.transform.position = point;
             Undo.RegisterCreatedObjectUndo(instance, "Add " + prop.BaseName);

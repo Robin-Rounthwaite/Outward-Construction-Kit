@@ -61,7 +61,7 @@ internal class PathsWindow : EditorWindow
         if (!PathDetector.IsPluginsFolder(m_plugins))
             EditorGUILayout.HelpBox("This should be an existing folder called plugins, inside BepInEx.", MessageType.Warning);
 
-        m_ripFolder = PathRow("Rip folder", "The folder holding your AssetRipper exports. You can leave this until you have one.", m_ripFolder, null);
+        m_ripFolder = PathRow("Rip folder", "An empty folder for what you rip from the game, on a drive with plenty of space and off OneDrive. A first rip takes about 15 GB.", m_ripFolder, null);
 
         GUILayout.FlexibleSpace();
         using (new EditorGUI.DisabledScope(!PathDetector.IsGameData(m_gameData) || !PathDetector.IsPluginsFolder(m_plugins)))
@@ -75,6 +75,7 @@ internal class PathsWindow : EditorWindow
                 foreach (PropBrowser browser in Resources.FindObjectsOfTypeAll<PropBrowser>())
                     browser.OnPathsChanged();
                 Close();
+                FirstStepsWindow.OpenIfNew();
             }
         }
     }

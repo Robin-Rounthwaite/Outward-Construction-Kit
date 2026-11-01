@@ -1,6 +1,8 @@
 # Getting started
 
-This takes you from nothing to a Unity project ready to make regions. Most of the time goes on downloads.
+This takes you from nothing to a Unity project ready to make regions, on Windows. Most of the time goes on downloads.
+
+Once you've unzipped the starter project in step 3, you can double-click `Check My Setup.cmd` in it at any point. It looks at this PC without changing anything, and says what's still missing.
 
 ## 1. Install Unity 2020.3.26f1
 
@@ -12,22 +14,49 @@ The version must match the game's exactly, because bundles built with any other 
 
 ## 2. Install the mod
 
-Using r2modman or the Thunderstore app, install Outward_Construction_Kit into a profile for Outward: Definitive Edition, and launch the game from that profile once, to check it starts. This is the profile you'll test your regions in.
+1. Install [r2modman](https://thunderstore.io/package/ebkr/r2modman/), choose Outward: Definitive Edition, and create a profile. This is the profile you'll test your regions in.
+2. In that profile, install [Outward_Construction_Kit](https://thunderstore.io/c/outward/p/Catalysten/Outward_Construction_Kit/) from the **Online** tab.
+3. Click **Start modded** once, to check the game starts. Always start it this way, or with the kit's **Launch Game** button later: Steam's own Play button starts the game without mods.
 
 ## 3. Open the starter project
 
-1. Unzip the starter project to a folder of its own with a short path, such as `D:\OutwardRegions`. In testing, a copy under a very long path sat idle after opening. Keep it off OneDrive and similar services too: they lock Unity's working files, which breaks exports, and your rips will hold game art that shouldn't sync anywhere.
+1. Download the starter project and unzip it to a folder of its own with a short path, such as `D:\OutwardRegions`. In testing, a copy under a very long path sat idle after opening. Keep it off OneDrive and similar services too: they lock Unity's working files, which breaks exports.
 2. In the Hub, click **Open** (**Add** on some versions), and choose the `OutwardRegionProject` folder. The first opening takes a few minutes.
-3. The **Construction Kit Paths** window appears. It suggests the game folder and each mod profile it can find on your PC, looking without changing anything. Check them, pick the profile from step 2, and click **Confirm**. You can reopen it from **Construction Kit > Paths**.
+3. The **Construction Kit Paths** window appears. It suggests the game folder and each mod profile it can find on your PC, looking without changing anything. Check them, and pick the profile from step 2.
+4. For **Rip folder**, choose or make an empty folder on a drive with plenty of space, and off OneDrive. Rips hold game art that shouldn't sync anywhere. See step 4 for how much space.
+5. Click **Confirm**. You can reopen this window from **Construction Kit > Paths**.
 
-If Unity closes again by itself after a few seconds, with "No valid Unity Editor license found" in its log, you probably have the Microsoft Store version of the Hub. It keeps your licence in a private folder that Unity 2020 doesn't look in. Close Unity, double-click `Repair Unity Licence.cmd` in the project folder from File Explorer, and open the project from the Hub again. The file copy goes stale after about a month, so run it again if the error comes back, with the Hub having been open recently.
+The **First Steps** window then opens, and takes you through the rest. You can reopen it from **Construction Kit > First Steps**.
 
-The project's settings matter, so leave them as they are: Color Space has to be Linear like the game's, because Unity compiles that into every shader a bundle carries, and shaders keep only the variants the game's scenes use, which keeps exports quick.
+### If Unity closes by itself
 
-## 4. Rip the scenes you want props from
+If Unity closes again after a few seconds, with "No valid Unity Editor license found" in its log, you probably have the Microsoft Store version of the Hub. It keeps your licence in a private folder that Unity 2020 doesn't look in.
 
-The Prop Browser shows models extracted from your own copy of the game. Open **Construction Kit > Rip a Scene** and click **Rip** beside a scene. The first time, this downloads [AssetRipper](https://github.com/AssetRipper/AssetRipper) from GitHub, about 42 MB, into your rip folder. A scene usually takes 10 to 30 minutes and several gigabytes, up to about 15, and runs in its own window. When it finishes, click **Refresh** in the Prop Browser.
+1. Close Unity, and double-click `Repair Unity Licence.cmd` in the project folder from File Explorer.
+2. Open the project from the Hub again. If it closes once more, try a second time: this happened in testing.
+
+The Store Hub only renews its private copy, which Unity Personal needs about every 30 days, so the repaired copy goes out of date. If the error comes back, open the Hub for a moment, then run the repair again.
+
+### Project settings
+
+Leave the project's settings as they are. Color Space has to be Linear like the game's, because Unity compiles that into every shader a bundle carries, and shaders keep only the variants the game's scenes use, which keeps exports quick.
+
+## 4. Choose what to rip
+
+The Prop Browser shows models extracted ("ripped") from your own copy of the game. You have two choices:
+
+| | Monsoon only | Rip all scenes |
+|---|---|---|
+| **Gives you** | Everything the tutorial needs, including its ground textures | All 79 of the game's scenes except two empty ones, so every prop and enemy |
+| **Disk space** | 15 GB | **Probably about 550 GB, and possibly anywhere from 250 GB to 1.1 TB** |
+| **Time** | About 18 minutes | **About a day** |
+
+Start with Monsoon unless you have the space and want everything from the start. You can rip more scenes at any time.
+
+The figures for ripping everything are estimates, from four scenes that came to between 3 and 15 GB each. Nobody has ripped the whole game yet. It stops before the drive fills up, with regions and towns done first, and carries on from where it stopped if you run it again.
+
+To rip, use **First Steps**, or **Construction Kit > Rip a Scene**, which has a **Rip** button beside each scene and a **Rip All Scenes** button. The first time, this downloads [AssetRipper](https://github.com/AssetRipper/AssetRipper) from GitHub, about 42 MB, into your rip folder. Ripping runs in its own window, so you can keep working. When it finishes, click **Refresh** in the Prop Browser.
 
 ## 5. Make a region
 
-Continue with [Your first region](tutorial.md). Rip Monsoon first, because the ground uses its textures.
+Continue with [Your first region](tutorial.md).

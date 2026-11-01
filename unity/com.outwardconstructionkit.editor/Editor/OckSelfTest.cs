@@ -33,6 +33,16 @@ internal static class OckSelfTest
     private static StringBuilder s_report;
     private static int s_passed;
     private static int s_failed;
+    private static string s_output;
+    private static bool s_originalMode;
+    private static string s_originalRips;
+    private static string s_originalGameData;
+    private static bool s_originalConfirmed;
+    private const double TOUR_SECONDS_PER_WINDOW = 4.0;
+    private const int TOUR_TITLE_HEIGHT = 40;
+    private static double s_tourFrom;
+    private static int s_tourStage = -1;
+    private static EditorWindow s_tourWindow;
 
     static OckSelfTest()
     {
@@ -48,9 +58,10 @@ internal static class OckSelfTest
 
         string output = Environment.GetEnvironmentVariable("OCK_TEST_OUT");
         s_report = new StringBuilder();
-        bool originalMode = OckSettings.FastImport;
-        string originalRips = OckSettings.RipFolder;
-        string originalGameData = OckSettings.GameData;
+        s_originalMode = OckSettings.FastImport;
+        s_originalRips = OckSettings.RipFolder;
+        s_originalGameData = OckSettings.GameData;
+        s_originalConfirmed = OckSettings.PathsConfirmed;
         try
         {
             OckSettings.RipFolder = Environment.GetEnvironmentVariable("OCK_TEST_RIP_FOLDER");
@@ -61,12 +72,72 @@ internal static class OckSelfTest
         {
             Check("the run finished", false, e.ToString());
         }
-        OckSettings.FastImport = originalMode;
-        OckSettings.RipFolder = originalRips;
-        OckSettings.GameData = originalGameData;
+        s_output = output;
+        if (Environment.GetEnvironmentVariable("OCK_TEST_WINDOW_SHOTS") != null)
+        {
+            s_tourFrom = EditorApplication.timeSinceStartup;
+            EditorApplication.update += ShowWindows;
+            return;
+        }
+        Finish();
+    }
+
+    private static void Finish()
+    {
+        OckSettings.FastImport = s_originalMode;
+        OckSettings.RipFolder = s_originalRips;
+        OckSettings.GameData = s_originalGameData;
+        OckSettings.PathsConfirmed = s_originalConfirmed;
         s_report.AppendLine($"{s_passed} passed, {s_failed} failed.");
-        File.WriteAllText(Path.Combine(output, "selftest.txt"), s_report.ToString());
+        File.WriteAllText(Path.Combine(s_output, "selftest.txt"), s_report.ToString());
         EditorApplication.Exit(s_failed == 0 ? 0 : 1);
+    }
+
+    // Only windows drawn on screen can be looked at, so this takes a picture of each, a moment apart, for a person to check.
+    private static void ShowWindows()
+    {
+        double elapsed = EditorApplication.timeSinceStartup - s_tourFrom;
+        int stage = (int)(elapsed / TOUR_SECONDS_PER_WINDOW);
+        if (stage == s_tourStage)
+            return;
+        if (s_tourWindow != null)
+        {
+            Color[] pixels = UnityEditorInternal.InternalEditorUtility.ReadScreenPixel(s_tourWindow.position.position, (int)s_tourWindow.position.width, (int)s_tourWindow.position.height + TOUR_TITLE_HEIGHT);
+            var picture = new Texture2D((int)s_tourWindow.position.width, (int)s_tourWindow.position.height + TOUR_TITLE_HEIGHT);
+            picture.SetPixels(pixels);
+            File.WriteAllBytes(Path.Combine(s_output, $"window{s_tourStage}.png"), picture.EncodeToPNG());
+            s_tourWindow.Close();
+            s_tourWindow = null;
+        }
+        s_tourStage = stage;
+
+        var tabs = (PropBrowser.Tab[])Enum.GetValues(typeof(PropBrowser.Tab));
+        if (stage < tabs.Length)
+        {
+            PropBrowser.Open();
+            PropBrowser browser = EditorWindow.GetWindow<PropBrowser>();
+            browser.ShowTab(tabs[stage]);
+            s_tourWindow = browser;
+        }
+        else if (stage == tabs.Length)
+        {
+            RipWindow.Open();
+            s_tourWindow = EditorWindow.GetWindow<RipWindow>();
+        }
+        else if (stage == tabs.Length + 1)
+        {
+            FirstStepsWindow.Open();
+            s_tourWindow = EditorWindow.GetWindow<FirstStepsWindow>();
+        }
+        else
+        {
+            EditorApplication.update -= ShowWindows;
+            Finish();
+            return;
+        }
+        s_tourWindow.position = new Rect(60f, 60f, 780f, 700f);
+        s_tourWindow.Focus();
+        s_tourWindow.Repaint();
     }
 
     private static void Check(string name, bool ok, string detail = "")
@@ -134,6 +205,62 @@ internal static class OckSelfTest
         Check("each entry names its first instance", first.Props.Where(p => !p.IsEnemy).All(p => p.Node != null && p.Node.ScenePath.Contains("/")));
         Check("props players can use in their own scene are noticed", first.Props.Concat(second.Props).Any(p => !p.IsEnemy && p.Node.SelfAndDescendants().Any(n => n.IsInteractive)));
         Check("plain props aren't marked as interactive", !first.Props.First(p => p.BaseName == BARRELS).Node.SelfAndDescendants().Any(n => n.IsInteractive));
+        CheckBrowserTabs(first, second);
+    }
+
+    private static void CheckBrowserTabs(RipScene first, RipScene second)
+    {
+        var both = new[] { first, second };
+        s_report.AppendLine($"Items: {string.Join(", ", both.SelectMany(s => s.Props).Where(p => p.IsItem).Select(p => p.BaseName).Distinct().ToArray())}");
+        List<RipScene.Prop> enemies = PropBrowser.PropsFor(PropBrowser.Tab.Enemies, both, null, "");
+        List<RipScene.Prop> props = PropBrowser.PropsFor(PropBrowser.Tab.Props, both, null, "");
+        List<RipScene.Prop> items = PropBrowser.PropsFor(PropBrowser.Tab.Items, both, null, "");
+        Check("everything in a rip is in exactly one tab", both.SelectMany(s => s.Props).All(p => (p.IsEnemy ? 1 : 0) + (p.IsItem ? 1 : 0) + (!p.IsEnemy && !p.IsItem ? 1 : 0) == 1));
+        Check("the Enemies tab has enemies from both locations", enemies.Any(p => p.BaseName == SHELL_HORROR) && enemies.Any(p => p.BaseName == HOUND));
+        Check("the Props tab has props and no enemies", props.Any(p => p.BaseName == BARRELS) && !props.Any(p => p.IsEnemy));
+        Check("the Items tab has what the rips hold", items.Count > 0 && items.All(p => p.Node.SelfAndDescendants().Any(n => n.HasMesh && n.HasRenderer)));
+        Check("a thing in two locations is listed once", props.Select(p => p.BaseName).Distinct().Count() == props.Count);
+        Check("filtering by location only shows that location", PropBrowser.PropsFor(PropBrowser.Tab.Enemies, new[] { second }, null, "").All(p => p.Scene == second));
+        Check("searching and categories narrow a tab", PropBrowser.PropsFor(PropBrowser.Tab.Enemies, both, "Enemies", "hound").All(p => p.BaseName.IndexOf("hound", StringComparison.OrdinalIgnoreCase) >= 0 && p.Category == "Enemies"));
+        Check("the game's invisible markers aren't offered", !props.Any(p => p.BaseName == "collision" || p.BaseName.StartsWith("Cube") || p.BaseName.EndsWith("Zone")), string.Join(", ", props.Where(p => p.BaseName == "collision" || p.BaseName.StartsWith("Cube") || p.BaseName.EndsWith("Zone")).Select(p => p.Node.ScenePath).ToArray()));
+        Check("an item can be imported", PropImporter.Import(items[0].Scene, items[0]) != null, items[0].BaseName);
+        Check("rips know their water", first.HasWater && first.HasWaterSource && second.HasWater && second.HasWaterSource);
+        Check("items and enemies say which rip they came from", both.SelectMany(s => s.Props).All(p => p.Scene != null));
+
+        List<string> order = RipWindow.ScenesToRip(new[] { "MainMenu_Empty", "Abrassar_Dungeon1", "Monsoon", "Levant", "Berg", "LowMemory_TransitionScene" }, new[] { "Monsoon" });
+        Check("Rip All does regions before dungeons, and only what's missing", order.SequenceEqual(new[] { "Levant", "Berg", "Abrassar_Dungeon1" }), string.Join(", ", order.ToArray()));
+        Check("the Rip All script ships with the package", File.Exists(Path.GetFullPath(RipWindow.RIP_ALL_SCRIPT)), Path.GetFullPath(RipWindow.RIP_ALL_SCRIPT));
+
+        Check("scenes get the names players know", LocationNames.For("HallowedMarshNewTerrain") == "Hallowed Marsh" && LocationNames.For("AntiqueField_Dungeon3") == "Antique Plateau dungeon 3" && LocationNames.For("Chersonese_Dungeon4_BlueChamber") == "Chersonese dungeon 4, Blue Chamber" && LocationNames.For("EmercarDungeonsBosses") == "Enmerkar Forest boss arenas" && LocationNames.For("SomethingNew") == "SomethingNew");
+        Check("every scene has a name that isn't the game's raw one, or is already readable", OckSettings.BuildSceneNames().All(s => LocationNames.For(s) != s ? true : !s.Contains("_") && !s.Contains("NewTerrain")), string.Join(", ", OckSettings.BuildSceneNames().Where(s => LocationNames.For(s) == s).ToArray()));
+        Check("Test Region asks for the region, and the character if named", GameLauncher.TestRequest("r", "Jim").SequenceEqual(new[] { "character Jim", "visit r" }) && GameLauncher.TestRequest("r", "").SequenceEqual(new[] { "visit r" }));
+        Check("the game is started pointing at the profile's BepInEx", GameLauncher.SteamArguments(@"C:\p\BepInEx").Contains(@"--doorstop-target ""C:\p\BepInEx\core\BepInEx.Preloader.dll"""));
+
+        // Every tab has to draw, and the errors of a window that doesn't are only ever in the log.
+        var errors = new List<string>();
+        Application.LogCallback listen = (message, stack, type) =>
+        {
+            if (type == LogType.Error || type == LogType.Exception)
+                errors.Add(message);
+        };
+        Application.logMessageReceived += listen;
+        OckSettings.PathsConfirmed = true;
+        PropBrowser.Open();
+        PropBrowser browser = EditorWindow.GetWindow<PropBrowser>();
+        foreach (PropBrowser.Tab tab in Enum.GetValues(typeof(PropBrowser.Tab)))
+        {
+            browser.ShowTab(tab);
+            browser.SendEvent(new Event { type = EventType.Layout });
+            browser.SendEvent(new Event { type = EventType.Repaint });
+        }
+        browser.Close();
+        FirstStepsWindow.Open();
+        FirstStepsWindow steps = EditorWindow.GetWindow<FirstStepsWindow>();
+        steps.SendEvent(new Event { type = EventType.Layout });
+        steps.SendEvent(new Event { type = EventType.Repaint });
+        steps.Close();
+        Application.logMessageReceived -= listen;
+        Check("every tab of the browser draws without errors", errors.Count == 0, string.Join(" | ", errors.ToArray()));
     }
 
     private static void CheckImporter(RipScene rip)
