@@ -208,6 +208,18 @@ internal static class OckSelfTest
         CheckBrowserTabs(first, second);
     }
 
+    private static void CheckItemList()
+    {
+        List<ItemTools.Entry> catalog = ItemTools.ParseCatalog(new[] { "# a comment", "5010100 | Item | 5010100_CookingPotKit | Cooking Pot Kit", "2000010 | Weapon | 2000010_Sword | ", "not an item line" });
+        Check("the item list reads IDs and names, using the prefab's name if there's no other", catalog.Count == 2 && catalog[0].Name == "Cooking Pot Kit" && catalog[1].Name == "2000010_Sword");
+        Check("the Items tab searches by name and number, and filters by type", PropBrowser.ItemsFor(catalog, null, "pot").Single().Id == 5010100 && PropBrowser.ItemsFor(catalog, null, "2000010").Single().Id == 2000010 && PropBrowser.ItemsFor(catalog, "Weapon", "").Single().Id == 2000010);
+
+        int id;
+        Check("a rip's item prop gives its ID", ItemTools.TryGetItemId("Interactions/Loot/Region/5010100_CookingPotKit", out id) && id == 5010100);
+        Check("a display model or plain prop isn't an item", !ItemTools.TryGetItemId("Environment/Assets/Props/3100000_ElitePlateArmor_v", out id) && !ItemTools.TryGetItemId("Assets/mdl_env_propBarrelGroupA", out id));
+        Check("an item's manifest line is what the plugin reads", ItemTools.ManifestLine(5010100, new Vector3(1.5f, 0f, -2f), new Vector3(0f, 90f, 0f)) == "item | 5010100 | 1.5,0,-2 | 0,90,0");
+    }
+
     private static void CheckBrowserTabs(RipScene first, RipScene second)
     {
         var both = new[] { first, second };
@@ -226,6 +238,7 @@ internal static class OckSelfTest
         Check("an item can be imported", PropImporter.Import(items[0].Scene, items[0]) != null, items[0].BaseName);
         Check("rips know their water", first.HasWater && first.HasWaterSource && second.HasWater && second.HasWaterSource);
         Check("items and enemies say which rip they came from", both.SelectMany(s => s.Props).All(p => p.Scene != null));
+        CheckItemList();
 
         List<string> order = RipWindow.ScenesToRip(new[] { "MainMenu_Empty", "Abrassar_Dungeon1", "Monsoon", "Levant", "Berg", "LowMemory_TransitionScene" }, new[] { "Monsoon" });
         Check("Rip All does regions before dungeons, and only what's missing", order.SequenceEqual(new[] { "Levant", "Berg", "Abrassar_Dungeon1" }), string.Join(", ", order.ToArray()));

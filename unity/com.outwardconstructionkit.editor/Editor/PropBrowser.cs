@@ -37,7 +37,7 @@ internal partial class PropBrowser : EditorWindow
     private string m_status = "";
     private bool m_showPaths;
 
-    private bool ShowsProps { get { return m_tab == Tab.Enemies || m_tab == Tab.Props || m_tab == Tab.Items; } }
+    private bool ShowsProps { get { return m_tab == Tab.Enemies || m_tab == Tab.Props; } }
 
     [MenuItem("Construction Kit/Prop Browser")]
     public static void Open()
@@ -106,7 +106,13 @@ internal partial class PropBrowser : EditorWindow
 
     private void UpdateCategories()
     {
-        m_categories = new[] { ALL_CATEGORIES }.Concat(m_loaded.SelectMany(s => s.Props).Where(p => InTab(p, m_tab)).Select(p => p.Category).Distinct().OrderBy(c => c)).ToArray();
+        if (m_tab == Tab.Items)
+        {
+            UpdateItemCategories();
+            Filter();
+            return;
+        }
+        m_categories =new[] { ALL_CATEGORIES }.Concat(m_loaded.SelectMany(s => s.Props).Where(p => InTab(p, m_tab)).Select(p => p.Category).Distinct().OrderBy(c => c)).ToArray();
         m_categoryIndex = 0;
         Filter();
     }
@@ -122,8 +128,10 @@ internal partial class PropBrowser : EditorWindow
             string category = m_categoryIndex > 0 && m_categoryIndex < m_categories.Length ? m_categories[m_categoryIndex] : null;
             m_visible = PropsFor(m_tab, m_loaded, category, m_search);
         }
+        else if (m_tab == Tab.Items)
+            FilterItems();
         else if (m_tab == Tab.Water)
-            m_visibleWater = m_loaded.Where(s => s.HasWater && Matches(s.SceneName, m_search)).ToList();
+            m_visibleWater =m_loaded.Where(s => s.HasWater && Matches(s.SceneName, m_search)).ToList();
         else
             m_visibleTextures = TexturesFor(m_loaded, m_search);
     }
@@ -218,9 +226,10 @@ internal partial class PropBrowser : EditorWindow
             case Tab.Ground:
                 DrawGroundTab();
                 break;
+            case Tab.Items:
+                DrawItemsTab();
+                break;
             default:
-                if (m_tab == Tab.Items)
-                    EditorGUILayout.HelpBox("Items can't be picked up yet, so for now they're only for show.", MessageType.None);
                 DrawRows(m_visible.Count, i => DrawPropRow(m_visible[i]));
                 break;
         }
@@ -291,7 +300,7 @@ internal partial class PropBrowser : EditorWindow
             }
 
             EditorGUI.BeginChangeCheck();
-            if (ShowsProps)
+            if (ShowsProps || m_tab == Tab.Items)
                 m_categoryIndex = EditorGUILayout.Popup(m_categoryIndex, m_categories, GUILayout.Width(120));
             m_search = EditorGUILayout.TextField(m_search, EditorStyles.toolbarSearchField);
             if (EditorGUI.EndChangeCheck())

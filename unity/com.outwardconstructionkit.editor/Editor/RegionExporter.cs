@@ -108,6 +108,7 @@ internal static class RegionExporter
         string manifest = BuildManifest(scene, info);
         int referenced = manifest.Split('\n').Count(l => l.StartsWith("prop "));
         int enemies = manifest.Split('\n').Count(l => l.StartsWith("enemy "));
+        int items = manifest.Split('\n').Count(l => l.StartsWith("item "));
         string workPath = WORK_FOLDER + "/" + info.BuiltSceneName + ".unity";
         Directory.CreateDirectory(WORK_FOLDER);
         AssetDatabase.Refresh();
@@ -121,6 +122,7 @@ internal static class RegionExporter
             var altered = new HashSet<GameObject>(PropRef.FindIn(work).Where(p => !p.Value.IsEnemy && PropRef.IsAltered(p.Key)).Select(p => p.Key));
             GroundTools.PrepareForExport(work, WORK_FOLDER); // before the bake, so nothing walks on a water marker
             DoorTools.RemoveMarkers(work);
+            ItemTools.RemoveMarkers(work);
             RemoveCameras(work);
             // Also before the bake, because enemies stand on the NavMesh and aren't part of it.
             foreach (KeyValuePair<GameObject, PropRef> enemy in PropRef.FindIn(work).Where(p => p.Value.IsEnemy))
@@ -164,7 +166,7 @@ internal static class RegionExporter
             File.Copy(Path.Combine(buildFolder, info.Id), bundleOut, true);
             File.WriteAllText(bundleOut + ".refs.txt", manifest);
 
-            string summary = $"Exported '{info.DisplayName}' ({info.Id}, from {sceneName}): {new FileInfo(bundleOut).Length / 1024} KB bundle, {referenced} vanilla props referenced, {embedded} altered props embedded, {enemies} enemies, NavMesh {navMeshTriangles} triangles, entrance {(string.IsNullOrEmpty(info.DoorScene) ? "not set" : info.DoorScene)}, to {outputFolder}";
+            string summary = $"Exported '{info.DisplayName}' ({info.Id}, from {sceneName}): {new FileInfo(bundleOut).Length / 1024} KB bundle, {referenced} vanilla props referenced, {embedded} altered props embedded, {enemies} enemies, {items} items, NavMesh {navMeshTriangles} triangles, entrance {(string.IsNullOrEmpty(info.DoorScene) ? "not set" : info.DoorScene)}, to {outputFolder}";
             foreach (string warning in placementWarnings)
                 summary += "\nWARNING: " + warning;
             if (embedded > 0)
@@ -306,7 +308,7 @@ internal static class RegionExporter
                 .Append(p.x.ToString("0.###", ci)).Append(',').Append(p.y.ToString("0.###", ci)).Append(',').Append(p.z.ToString("0.###", ci)).Append(" | ")
                 .Append(enemy.Key.transform.eulerAngles.y.ToString("0.###", ci)).Append('\n');
         }
-        foreach (KeyValuePair<GameObject, PropRef> prop in PropRef.FindIn(scene).Where(p => !p.Value.IsEnemy && !PropRef.IsAltered(p.Key)).OrderBy(p => p.Key.name))
+        foreach (KeyValuePair<GameObject, PropRef> prop in PropRef.FindIn(scene).Where(p => !p.Value.IsEnemy && !PropRef.IsAltered(p.Key) && !ItemTools.IsItemProp(p)).OrderBy(p => p.Key.name))
         {
             Vector3 p = prop.Key.transform.position;
             Vector3 turn = (prop.Key.transform.rotation * Quaternion.Inverse(prop.Value.SourceRotation)).eulerAngles;
@@ -321,6 +323,7 @@ internal static class RegionExporter
         }
         GroundTools.AppendManifest(scene, text);
         DoorTools.AppendManifest(scene, text);
+        ItemTools.AppendManifest(scene, text);
         return text.ToString();
     }
 

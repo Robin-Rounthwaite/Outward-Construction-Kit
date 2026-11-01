@@ -15,6 +15,9 @@ Closes the game inside the last region rather than travelling back, to test what
 .PARAMETER DieInRegion
 Kills the character in the last region, to test that they come back where they entered from.
 
+.PARAMETER TakeItems
+Picks up the items each region placed, as the game's take prompt does, and reports whether they reached the bag.
+
 .PARAMETER StartIn
 A scene to travel to first, if the character's save is somewhere else.
 
@@ -29,6 +32,7 @@ param(
     [switch]$Stay,
     [switch]$EndInRegion,
     [switch]$DieInRegion,
+    [switch]$TakeItems,
     [string]$StartIn,
     [string]$Visit,
     [string]$Character = 'Jim of the Doors',
@@ -68,6 +72,7 @@ if ($Visit) {
 if ($Stay) { $request += 'stay' }
 if ($EndInRegion) { $request += 'endinregion' }
 if ($DieInRegion) { $request += 'dieinregion' }
+if ($TakeItems) { $request += 'takeitems' }
 if ($StartIn) { $request += "startin $StartIn" }
 Set-Content -Path (Join-Path $bepinex 'OCK_AutoTest.txt') -Value $request -Encoding ASCII
 
