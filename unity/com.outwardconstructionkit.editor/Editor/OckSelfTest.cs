@@ -369,7 +369,7 @@ internal static class OckSelfTest
             using (var reader = new StreamReader(archive.GetEntry("manifest.json").Open()))
             {
                 string manifest = reader.ReadToEnd();
-                Check("its manifest depends on the kit", manifest.Contains("\"Catalysten-Outward_Construction_Kit-" + RegionPackager.KitVersion + "\""), manifest);
+                Check("its manifest depends on the kit", manifest.Contains("\"Cat_and_Community-Outward_Construction_Kit-" + RegionPackager.KitVersion + "\""), manifest);
                 Check("its manifest escapes quotes", manifest.Contains("A \\\"quoted\\\" test."), manifest);
             }
         }
