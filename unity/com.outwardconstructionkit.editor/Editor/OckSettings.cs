@@ -8,16 +8,31 @@ using UnityEditor;
 /// <summary>Per-machine paths, kept in EditorPrefs so they never end up in a shared project.</summary>
 internal static class OckSettings
 {
+    /// <summary>Set once the person has checked the paths in the paths window. Nothing guesses without them seeing it.</summary>
+    public static bool PathsConfirmed
+    {
+        get { return EditorPrefs.GetBool("OCK.PathsConfirmed", false); }
+        set { EditorPrefs.SetBool("OCK.PathsConfirmed", value); }
+    }
+
     public static string RipFolder
     {
-        get { return EditorPrefs.GetString("OCK.RipFolder", @"T:\OutwardConstructionKit_Rip"); }
+        get { return EditorPrefs.GetString("OCK.RipFolder", ""); }
         set { EditorPrefs.SetString("OCK.RipFolder", value); }
+    }
+
+    public static string PluginsFolder
+    {
+        get { return EditorPrefs.GetString("OCK.PluginsFolder", ""); }
+        set { EditorPrefs.SetString("OCK.PluginsFolder", value); }
     }
 
     /// <summary>Each AssetRipper export under the rip folder, or the folder itself if it's one export.</summary>
     public static IEnumerable<string> RipRoots()
     {
         string folder = RipFolder;
+        if (string.IsNullOrEmpty(folder))
+            return new string[0];
         if (Directory.Exists(Path.Combine(folder, "Assets", "Scenes")))
             return new[] { folder };
         if (!Directory.Exists(folder))
@@ -28,7 +43,7 @@ internal static class OckSettings
 
     public static string GameData
     {
-        get { return EditorPrefs.GetString("OCK.GameData", @"T:\SteamLibrary\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data"); }
+        get { return EditorPrefs.GetString("OCK.GameData", ""); }
         set { EditorPrefs.SetString("OCK.GameData", value); }
     }
 

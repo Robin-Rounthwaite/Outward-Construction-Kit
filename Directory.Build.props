@@ -1,7 +1,6 @@
 <Project>
-  <PropertyGroup>
-    <!-- Where the game and the r2modman test profile live. Change these if you move things. -->
-    <OutwardManaged>T:\SteamLibrary\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data\Managed</OutwardManaged>
-    <ProfileDir>$(APPDATA)\r2modmanPlus-local\OutwardDe\profiles\modding-experiments</ProfileDir>
-  </PropertyGroup>
+  <Import Project="$(MSBuildThisFileDirectory)Directory.Build.user.props" Condition="Exists('$(MSBuildThisFileDirectory)Directory.Build.user.props')" />
+  <Target Name="CheckKitPaths" BeforeTargets="ResolveAssemblyReferences" Condition="'$(OutwardManaged)' == '' Or '$(ProfileDir)' == ''">
+    <Error Text="Building the kit needs to know where the game is. Copy Directory.Build.user.props.example to Directory.Build.user.props and fill it in." />
+  </Target>
 </Project>

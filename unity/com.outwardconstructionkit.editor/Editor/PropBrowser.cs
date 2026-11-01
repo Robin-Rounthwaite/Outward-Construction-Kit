@@ -90,8 +90,22 @@ internal class PropBrowser : EditorWindow
             && (m_search.Length == 0 || p.BaseName.IndexOf(m_search, StringComparison.OrdinalIgnoreCase) >= 0)));
     }
 
+    /// <summary>The paths window calls this when they change.</summary>
+    public void OnPathsChanged()
+    {
+        s_scenes.Clear();
+        Refresh();
+    }
+
     private void OnGUI()
     {
+        if (!OckSettings.PathsConfirmed)
+        {
+            EditorGUILayout.HelpBox("First, the kit needs to know where the game and your mods are on this PC.", MessageType.Info);
+            if (GUILayout.Button("Set Up Paths"))
+                PathsWindow.Open();
+            return;
+        }
         DrawSettings();
         if (m_scene == null)
         {

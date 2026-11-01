@@ -2,6 +2,7 @@
 bin/
 obj/
 *.user
+Directory.Build.user.props
 .vs/
 TestResults/
 

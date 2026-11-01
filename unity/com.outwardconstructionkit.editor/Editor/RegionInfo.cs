@@ -55,7 +55,7 @@ internal class RegionInfo
     /// </summary>
     public bool TryCopyDoorFromGame()
     {
-        string config = Path.Combine(RegionExporter.PluginsFolder, "..", "config", RegionExporter.PLUGIN_CONFIG);
+        string config = Path.Combine(OckSettings.PluginsFolder, "..", "config", RegionExporter.PLUGIN_CONFIG);
         if (!File.Exists(config))
             return false;
 

@@ -26,20 +26,16 @@ internal static class RegionExporter
     public static string[] LastDependencies = new string[0];
     public static Bounds LastNavMeshBounds;
 
-    public static string PluginsFolder
-    {
-        get
-        {
-            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "r2modmanPlus-local", "OutwardDe", "profiles", "modding-experiments", "BepInEx", "plugins");
-        }
-    }
-
     /// <summary>Each region gets its own mod folder, so it can be installed and removed on its own.</summary>
     public static string ExportToProfile()
     {
+        if (!OckSettings.PathsConfirmed)
+        {
+            PathsWindow.Open();
+            throw new InvalidOperationException("Please confirm where the game and your plugins folder are, then export again.");
+        }
         string id = RegionInfo.For(SceneManager.GetActiveScene().path).Id;
-        return Export(Path.Combine(PluginsFolder, "OCK-Region-" + id));
+        return Export(Path.Combine(OckSettings.PluginsFolder, "OCK-Region-" + id));
     }
 
     [MenuItem("Construction Kit/New Region Scene")]

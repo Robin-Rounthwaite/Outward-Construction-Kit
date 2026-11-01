@@ -18,9 +18,14 @@ param(
     [string]$Character = 'Jim of the Doors',
     [int]$TimeoutSeconds = 600,
     [int]$AppId = 1758860,
-    [string]$GameFolder = 'T:\SteamLibrary\steamapps\common\Outward\Outward_Defed',
-    [string]$Profile = "$env:APPDATA\r2modmanPlus-local\OutwardDe\profiles\modding-experiments"
+    [string]$GameFolder,
+    [string]$Profile
 )
+
+# Not as parameter defaults, because $PSScriptRoot is empty there in a script with mandatory parameters.
+$paths = & "$PSScriptRoot\..\dev\dev-paths.ps1"
+if (-not $GameFolder) { $GameFolder = Split-Path $paths.GameData }
+if (-not $Profile) { $Profile = $paths.Profile }
 
 $bepinex = Join-Path $Profile 'BepInEx'
 $log = Join-Path $bepinex 'LogOutput.log'

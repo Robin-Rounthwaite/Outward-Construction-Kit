@@ -49,8 +49,12 @@ internal static class OckSelfTest
         string output = Environment.GetEnvironmentVariable("OCK_TEST_OUT");
         s_report = new StringBuilder();
         bool originalMode = OckSettings.FastImport;
+        string originalRips = OckSettings.RipFolder;
+        string originalGameData = OckSettings.GameData;
         try
         {
+            OckSettings.RipFolder = Environment.GetEnvironmentVariable("OCK_TEST_RIP_FOLDER");
+            OckSettings.GameData = Environment.GetEnvironmentVariable("OCK_TEST_GAME_DATA");
             Run(output);
         }
         catch (Exception e)
@@ -58,6 +62,8 @@ internal static class OckSelfTest
             Check("the run finished", false, e.ToString());
         }
         OckSettings.FastImport = originalMode;
+        OckSettings.RipFolder = originalRips;
+        OckSettings.GameData = originalGameData;
         s_report.AppendLine($"{s_passed} passed, {s_failed} failed.");
         File.WriteAllText(Path.Combine(output, "selftest.txt"), s_report.ToString());
         EditorApplication.Exit(s_failed == 0 ? 0 : 1);
@@ -72,9 +78,23 @@ internal static class OckSelfTest
         s_report.AppendLine((ok ? "PASS " : "FAIL ") + name + (ok || detail.Length == 0 ? "" : ": " + detail));
     }
 
+    private static void CheckPathDetection()
+    {
+        List<string> libraries = PathDetector.ParseLibraries("\"0\"\n{\n\t\"path\"\t\t\"C:\\\\Games\\\\Steam\"\n}\n\"1\"\n{\n\t\"path\"\t\t\"T:\\\\SteamLibrary\"\n\t\"apps\" { }\n}");
+        Check("Steam's library list can be read", libraries.SequenceEqual(new[] { @"C:\Games\Steam", @"T:\SteamLibrary" }), string.Join(", ", libraries.ToArray()));
+        Check("the game is detected in its Steam library", PathDetector.GameDataFolders().Any(f => Path.GetFullPath(f) == Path.GetFullPath(OckSettings.GameData)), string.Join(", ", PathDetector.GameDataFolders().ToArray()));
+        Check("a game folder is recognised", PathDetector.IsGameData(OckSettings.GameData) && !PathDetector.IsGameData(Path.GetTempPath()));
+        PathsWindow.Open();
+        PathsWindow window = EditorWindow.GetWindow<PathsWindow>();
+        window.Repaint();
+        Check("the paths window opens", window != null);
+        window.Close();
+    }
+
     private static void Run(string output)
     {
         CheckSetup();
+        CheckPathDetection();
 
         Dictionary<string, string> ripped = OckSettings.RippedScenes();
         RipScene first = RipScene.Load(FIRST_RIP, ripped[FIRST_RIP]);

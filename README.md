@@ -8,7 +8,7 @@ A toolkit for adding new regions to Outward: Definitive Edition, built from the 
 
 | Folder | What it is |
 |---|---|
-| `src/OCK.Runtime` | BepInEx plugin that loads regions. Building it deploys it to the r2modman profile named in `Directory.Build.props`. |
+| `src/OCK.Runtime` | BepInEx plugin that loads regions. Building it deploys it to the r2modman profile named in `Directory.Build.user.props` (copy it from the `.example` file). |
 | `unity/com.outwardconstructionkit.editor` | Unity package with the Prop Browser and exporter. |
 | `tests` | Automated tests. |
 | `docs` | Guides, listed below. |

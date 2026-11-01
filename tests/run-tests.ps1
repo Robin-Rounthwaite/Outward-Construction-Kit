@@ -11,10 +11,12 @@ The region project to test.
 
 .PARAMETER UnityEditor
 The editor to run it with, which must be the game's Unity version.
+
+Paths default to those in Directory.Build.user.props, as dev/dev-paths.ps1 explains.
 #>
 param(
     [switch]$Unity,
-    [string]$UnityProject = 'T:\OutwardConstructionKit\RegionProject',
+    [string]$UnityProject = (& "$PSScriptRoot\..\dev\dev-paths.ps1").RegionProject,
     [string]$UnityEditor = 'C:\Program Files\Unity 2020.3.26f1\Editor\Unity.exe'
 )
 
@@ -28,6 +30,9 @@ if ($Unity) {
     $results = Join-Path ([IO.Path]::GetTempPath()) ('ock-tests-' + [Guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Force $results | Out-Null
     $env:OCK_TEST_OUT = $results
+    $paths = & "$PSScriptRoot\..\dev\dev-paths.ps1"
+    $env:OCK_TEST_RIP_FOLDER = $paths.RipFolder
+    $env:OCK_TEST_GAME_DATA = $paths.GameData
     Write-Host "Running the Unity suite. Results go to $results"
     $editor = Start-Process $UnityEditor -ArgumentList "-projectPath `"$UnityProject`" -ockSelfTest -logFile `"$results\unity.log`"" -PassThru
     $editor.WaitForExit()

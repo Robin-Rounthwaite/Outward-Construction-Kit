@@ -12,7 +12,7 @@ A region names vanilla objects by scene and path, and nothing of the game's ship
 
 It works on objects (props and enemies, by path), a scene's main water plane and first water source (found by their scripts), its sky, camera and audio rigs (with the scene's terrain and props left out), ground textures (by name) and shaders (by name, the first time one is needed and isn't in memory).
 
-`src/OCK.Extractor/template/ock_template` is a bundle built by Unity, which supplies the descriptions of Unity's built-in classes. A class it lacks makes the extractor refuse that object. To add one, add it to `tools/template-maker` and run `tools/make-template.ps1`.
+`src/OCK.Extractor/template/ock_template` is a bundle built by Unity, which supplies the descriptions of Unity's built-in classes. A class it lacks makes the extractor refuse that object. To add one, add it to `dev/template-maker` and run `dev/make-template.ps1`.
 
 ### Donor scenes
 

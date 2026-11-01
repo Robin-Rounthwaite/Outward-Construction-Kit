@@ -1,0 +1,12 @@
+<Project>
+  <!-- Only needed to build the kit itself, not to make regions. Copy to Directory.Build.user.props and fill in. -->
+  <PropertyGroup>
+    <!-- The game's Managed folder. -->
+    <OutwardManaged>C:\Program Files (x86)\Steam\steamapps\common\Outward\Outward_Defed\Outward Definitive Edition_Data\Managed</OutwardManaged>
+    <!-- A mod manager profile with BepInEx in it, which each build deploys the plugin to. -->
+    <ProfileDir>C:\Users\you\AppData\Roaming\r2modmanPlus-local\OutwardDe\profiles\Default</ProfileDir>
+    <!-- For tests/run-tests.ps1 -Unity and dev/make-template.ps1: a copy of unity/RegionProjectTemplate, and your rips. -->
+    <OckRegionProject>D:\OutwardRegions\RegionProject</OckRegionProject>
+    <OckRipFolder>D:\OutwardRegions\Rips</OckRipFolder>
+  </PropertyGroup>
+</Project>
