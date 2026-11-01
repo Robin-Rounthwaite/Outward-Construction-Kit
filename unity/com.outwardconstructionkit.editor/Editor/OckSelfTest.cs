@@ -209,7 +209,7 @@ internal static class OckSelfTest
         Place(second, HOUND, new Vector3(0f, 0f, 20f));
 
         GameObject door = DoorTools.Add();
-        door.transform.position = new Vector3(-6f, 0f, 6f);
+        door.transform.position = new Vector3(-1.8f, 0f, 1.8f); // about as far as the automatic door stands
         door.transform.rotation = Quaternion.Euler(0f, 135f, 0f); // facing the spawn at the middle
 
         Render(Path.Combine(output, "ground.png"), new Vector3(0f, 22f, -48f), new Vector3(-8f, 2f, 15f));
@@ -224,7 +224,7 @@ internal static class OckSelfTest
         Check("all four ground layers are references", manifest.Count(l => l.StartsWith("ground ")) == 4);
         Check("ground layers name their textures", manifest.Any(l => l == "ground | Monsoon | Ground_Grass | tex_env_masterGroundGrassFull | tex_env_masterGroundGrassFull_n"));
         Check("both waters are listed with their donors", manifest.Contains("water | Monsoon | -35,-1.5,0 | 40,1,40 | 0") && manifest.Contains("water | ChersoneseNewTerrain | 35,-1.5,0 | 40,1,40 | 0"));
-        Check("the return door is listed", manifest.Contains("returndoor | -6,0,6 | 135"));
+        Check("the return door is listed", manifest.Contains("returndoor | -1.8,0,1.8 | 135"));
         Check("the second rip's enemy has its real path", manifest.Any(l => l.StartsWith("enemy | ChersoneseNewTerrain | AISquadManagerStructure/")));
 
         string[] art = RegionExporter.LastDependencies.Where(d => d.StartsWith(PropImporter.LIBRARY)).ToArray();
