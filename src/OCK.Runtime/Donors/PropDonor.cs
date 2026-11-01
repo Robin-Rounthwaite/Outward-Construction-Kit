@@ -101,7 +101,7 @@ namespace OutwardConstructionKit.Runtime
                 // One bad prop mustn't stop the rest of the scene setup, or the loading screen never closes.
                 try
                 {
-                    PlaceCopy(scene, template.Object, template.SourcePosition, template.SourceRotation, reference.position, reference.rotation);
+                    PlaceCopy(scene, template.Object, template.SourcePosition, template.SourceRotation, reference.position, reference.rotation, reference.scale);
                     placed++;
                 }
                 catch (System.Exception e)
@@ -144,7 +144,7 @@ namespace OutwardConstructionKit.Runtime
             return new Template { Object = template, SourcePosition = cached.transform.position, SourceRotation = cached.transform.rotation };
         }
 
-        internal static GameObject PlaceCopy(Scene scene, GameObject source, Vector3 sourcePosition, Quaternion sourceRotation, Vector3 position, Vector3 rotation)
+        internal static GameObject PlaceCopy(Scene scene, GameObject source, Vector3 sourcePosition, Quaternion sourceRotation, Vector3 position, Vector3 rotation, float scale = 1f)
         {
             GameObject prop = Object.Instantiate(source);
             prop.name = source.name;
@@ -153,6 +153,7 @@ namespace OutwardConstructionKit.Runtime
             Quaternion turn = Quaternion.Euler(rotation);
             prop.transform.position = position;
             prop.transform.rotation = turn * sourceRotation;
+            prop.transform.localScale *= scale;
 
             Transform batchRoot = null;
             int batched = 0;
@@ -168,7 +169,8 @@ namespace OutwardConstructionKit.Runtime
                     batchRoot = new GameObject(prop.name + "_BatchRoot").transform;
                     SceneManager.MoveGameObjectToScene(batchRoot.gameObject, scene);
                     batchRoot.rotation = turn;
-                    batchRoot.position = position - turn * sourcePosition;
+                    batchRoot.localScale = Vector3.one * scale;
+                    batchRoot.position = position - turn * (sourcePosition * scale);
                 }
                 // Exists on Renderer but isn't public.
                 AccessTools.Property(typeof(Renderer), "staticBatchRootTransform").SetValue(renderer, batchRoot, null);
@@ -179,7 +181,7 @@ namespace OutwardConstructionKit.Runtime
                 batched++;
             }
 
-            KitPlugin.Log.LogMessage($"Prop '{prop.name}' placed at {prop.transform.position}, turned {rotation}: {renderers.Length} renderers ({batched} batched), {prop.GetComponentsInChildren<Collider>(true).Length} colliders, LOD group {prop.GetComponent<LODGroup>() != null}.");
+            KitPlugin.Log.LogMessage($"Prop '{prop.name}' placed at {prop.transform.position}, turned {rotation}, scale {scale}:{renderers.Length} renderers ({batched} batched), {prop.GetComponentsInChildren<Collider>(true).Length} colliders, LOD group {prop.GetComponent<LODGroup>() != null}.");
             return prop;
         }
 

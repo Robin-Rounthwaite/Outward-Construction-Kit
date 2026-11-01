@@ -14,6 +14,8 @@ internal class PropRef
     /// <summary>Raised when the importer changes what a library prefab contains, so older ones get rebuilt.</summary>
     public const int CURRENT_FORMAT = 4;
 
+    private const float SCALE_TOLERANCE = 0.001f;
+
     public int Format;
     public string DonorScene;
     public string Path;
@@ -51,11 +53,33 @@ internal class PropRef
 
     /// <summary>
     /// A stand-in with changes can't be a reference, because the game would load the unchanged original.
-    /// Moving and rotating don't count, since a reference can do those.
+    /// Moving, rotating and scaling evenly don't count, since a reference can do those. Stretching does, because
+    /// a static-batched prop's geometry can only take one transform, which can't stretch along the prop's own axes.
     /// </summary>
     public static bool IsAltered(GameObject instance)
     {
-        return PrefabUtility.HasPrefabInstanceAnyOverrides(instance, false);
+        if (!PrefabUtility.HasPrefabInstanceAnyOverrides(instance, false))
+            return false;
+
+        GameObject prefab = PrefabUtility.GetCorrespondingObjectFromSource(instance);
+        if (instance.GetComponentsInChildren<Component>(true).Length != prefab.GetComponentsInChildren<Component>(true).Length)
+            return true;
+        foreach (PropertyModification change in PrefabUtility.GetPropertyModifications(instance))
+            if (!PrefabUtility.IsDefaultOverride(change) && !(change.target == prefab.transform && change.propertyPath.StartsWith("m_LocalScale")))
+                return true;
+        return !IsEvenScale(instance.transform.localScale, prefab.transform.localScale);
+    }
+
+    /// <summary>How much bigger an unaltered stand-in is than the original.</summary>
+    public static float ScaleOf(GameObject instance)
+    {
+        return instance.transform.localScale.x / PrefabUtility.GetCorrespondingObjectFromSource(instance).transform.localScale.x;
+    }
+
+    private static bool IsEvenScale(Vector3 scale, Vector3 original)
+    {
+        float x = scale.x / original.x;
+        return x > 0f && Mathf.Abs(scale.y / original.y - x) < x * SCALE_TOLERANCE && Mathf.Abs(scale.z / original.z - x) < x * SCALE_TOLERANCE;
     }
 
     private static void Collect(Transform t, List<KeyValuePair<GameObject, PropRef>> found)

@@ -15,7 +15,7 @@ namespace OutwardConstructionKit.Runtime
     ///   ground | scene | terrain layer name | diffuse texture | normal texture, or blank
     ///   water | scene | x,y,z | width,1,length | rotationY
     ///   returndoor | x,y,z | rotationY, replacing the automatic door beside the arrival point
-    ///   prop | scene | hierarchy path | x,y,z | rotation, as x,y,z degrees or just y | optional check
+    ///   prop | scene | hierarchy path | x,y,z | rotation, as x,y,z degrees or just y | optional check | optional even scale
     /// The check is "first drawn object's name:number of drawn objects", to catch a path finding the wrong object.
     /// Not JSON, because JsonUtility dropped the nested prop list when running from a plugin DLL.
     /// </summary>
@@ -28,6 +28,7 @@ namespace OutwardConstructionKit.Runtime
             public Vector3 position;
             public Vector3 rotation;
             public string check;
+            public float scale = 1f;
         }
 
         public class EnemyReference
@@ -126,6 +127,7 @@ namespace OutwardConstructionKit.Runtime
                 Vector3 position;
                 Vector3 rotation;
                 float rotationY;
+                float scale = 1f;
                 if (parts[0] == "environment" && parts.Length == 2)
                     manifest.environmentDonor = parts[1];
                 else if (parts[0] == "region" && parts.Length == 3)
@@ -159,8 +161,9 @@ namespace OutwardConstructionKit.Runtime
                     manifest.gameFingerprint = parts[1];
                 else if (parts[0] == "prop" && parts.Length >= 5
                     && KitPlugin.TryParseVector(parts[3], out position)
-                    && TryParseRotation(parts[4], out rotation))
-                    manifest.props.Add(new PropReference { scene = parts[1], path = parts[2], position = position, rotation = rotation, check = parts.Length > 5 ? parts[5] : null });
+                    && TryParseRotation(parts[4], out rotation)
+                    && (parts.Length < 7 || (float.TryParse(parts[6], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out scale) && scale > 0f)))
+                    manifest.props.Add(new PropReference { scene = parts[1], path = parts[2], position = position, rotation = rotation, check = parts.Length > 5 ? parts[5] : null, scale = scale });
                 else if (parts[0].Length > 0 && !parts[0].StartsWith("#"))
                     KitPlugin.Log.LogError("Can't read manifest line: " + line);
             }

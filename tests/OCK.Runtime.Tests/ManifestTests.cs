@@ -117,6 +117,25 @@ namespace OutwardConstructionKit.Tests
         }
 
         [Test]
+        public void ReadsAPropsScaleWhenItHasOne()
+        {
+            List<string> errors;
+            RegionManifest manifest = Parse(new[] { "prop | Monsoon | a/b | 1,2,3 | 0 | c:1 | 0.75", "prop | Monsoon | a/c | 1,2,3 | 0 | c:1" }, out errors);
+            Assert.That(errors, Is.Empty);
+            Assert.That(manifest.props[0].scale, Is.EqualTo(0.75f));
+            Assert.That(manifest.props[1].scale, Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void RefusesAScaleThatIsntPositive()
+        {
+            List<string> errors;
+            RegionManifest manifest = Parse(new[] { "prop | Monsoon | a/b | 1,2,3 | 0 | c:1 | -2" }, out errors);
+            Assert.That(errors.Count, Is.EqualTo(1));
+            Assert.That(manifest.props, Is.Empty);
+        }
+
+        [Test]
         public void NeedsNoDonorSceneWhenEverythingIsCached()
         {
             Assert.That(ParseSample().DonorScenes((scene, path) => true), Is.Empty);

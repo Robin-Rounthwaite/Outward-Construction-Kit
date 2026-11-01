@@ -245,7 +245,11 @@ internal static class RegionExporter
             text.Append("prop | ").Append(prop.Value.DonorScene).Append(" | ").Append(prop.Value.Path).Append(" | ")
                 .Append(p.x.ToString("0.###", ci)).Append(',').Append(p.y.ToString("0.###", ci)).Append(',').Append(p.z.ToString("0.###", ci)).Append(" | ")
                 .Append(turn.x.ToString("0.###", ci)).Append(',').Append(turn.y.ToString("0.###", ci)).Append(',').Append(turn.z.ToString("0.###", ci)).Append(" | ")
-                .Append(prop.Value.Check).Append('\n');
+                .Append(prop.Value.Check);
+            float scale = PropRef.ScaleOf(prop.Key);
+            if (!Mathf.Approximately(scale, 1f))
+                text.Append(" | ").Append(scale.ToString("0.###", ci));
+            text.Append('\n');
         }
         GroundTools.AppendManifest(scene, text);
         DoorTools.AppendManifest(scene, text);

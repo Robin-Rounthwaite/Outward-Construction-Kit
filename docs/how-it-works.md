@@ -20,7 +20,7 @@ Anything that can't be cached falls back to its scene, and the log says why. `Sc
 
 ## Props
 
-A prop reference names the whole prop, so its LODs and colliders come with it. Most props are static-batched, sharing an unreadable combined mesh with their neighbours. The plugin moves those with a batch root rather than through their own transform, and gives each its own material copies so Unity can't draw repeats at one position.
+A prop reference names the whole prop, so its LODs and colliders come with it. Most props are static-batched, sharing an unreadable combined mesh with their neighbours. The plugin moves and evenly scales those with a batch root rather than through their own transform, and gives each its own material copies so Unity can't draw repeats at one position.
 
 Embedded props use exact copies of the vanilla materials. Their placeholder shaders have the real shaders' names, so `ShaderSwap` puts the real ones back at load, finding them in memory or else through the cache. Only the most detailed mesh is embedded, so embedded props have no LODs yet. Editing a library material itself isn't detected as a change, so make any material changes on an instance.
 

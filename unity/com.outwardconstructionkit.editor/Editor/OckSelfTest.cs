@@ -154,12 +154,16 @@ internal static class OckSelfTest
         Place(rip, LIGHT, new Vector3(1f, 0f, 6f));
         GameObject scaled = Place(rip, STATUE, new Vector3(-12f, 0f, -12f));
         scaled.transform.localScale *= 0.75f;
+        GameObject stretched = Place(rip, STATUE, new Vector3(-20f, 0f, -12f));
+        stretched.transform.localScale = Vector3.Scale(stretched.transform.localScale, new Vector3(1f, 2f, 1f));
         Place(rip, SHELL_HORROR, new Vector3(8f, 0f, -8f));
         // The editor's own tools record changes as they're made, but changes from code have to ask.
         PrefabUtility.RecordPrefabInstancePropertyModifications(moved.transform);
         PrefabUtility.RecordPrefabInstancePropertyModifications(scaled.transform);
+        PrefabUtility.RecordPrefabInstancePropertyModifications(stretched.transform);
         Check("moving and rotating doesn't count as altering", !PropRef.IsAltered(moved));
-        Check("scaling counts as altering", PropRef.IsAltered(scaled));
+        Check("scaling evenly doesn't count as altering", !PropRef.IsAltered(scaled));
+        Check("stretching counts as altering", PropRef.IsAltered(stretched));
 
         EditorSceneManager.SaveScene(scene);
         string folder = Path.Combine(output, "OCK-Region-" + id);
@@ -170,11 +174,12 @@ internal static class OckSelfTest
         Check("the region's identity is in the manifest", manifest.Contains("region | " + id + " | Test Region Alpha"));
         Check("a moved prop is a reference", manifest.Any(l => l.StartsWith("prop ") && l.Contains(BARRELS) && l.Contains("-15,0,6")));
         Check("a rotated prop records its turn", manifest.Any(l => l.StartsWith("prop ") && l.Contains(BARRELS) && l.Contains("0,30,0")));
-        Check("a scaled prop isn't a reference", !manifest.Any(l => l.StartsWith("prop ") && l.Contains(STATUE)));
+        Check("an evenly scaled prop is a reference that records its scale", manifest.Any(l => l.StartsWith("prop ") && l.Contains(STATUE) && l.Contains("-12,0,-12") && l.EndsWith("| 0.75")));
+        Check("a stretched prop isn't a reference", !manifest.Any(l => l.StartsWith("prop ") && l.Contains("-20,0,-12")));
         Check("the enemy is a reference", manifest.Any(l => l.StartsWith("enemy ") && l.Contains("8,0,-8")));
-        Check("references each carry a check", manifest.Where(l => l.StartsWith("prop ")).All(l => l.Split('|').Length == 6 && l.Split('|')[5].Contains(":")));
+        Check("references each carry a check", manifest.Where(l => l.StartsWith("prop ")).All(l => l.Split('|').Length >= 6 && l.Split('|')[5].Contains(":")));
         Check("the summary counts one embedded prop", summary.Contains("1 altered props embedded"), summary);
-        Check("the scaled prop's art is in the bundle", RegionExporter.LastDependencies.Any(d => d.Contains("mdl_env_propStatueTripleLadies")));
+        Check("the stretched prop's art is in the bundle",RegionExporter.LastDependencies.Any(d => d.Contains("mdl_env_propStatueTripleLadies")));
         Check("referenced props' art stays out", !RegionExporter.LastDependencies.Any(d => d.Contains("BarrelGroup") || d.Contains("LightHolder")), string.Join(", ", RegionExporter.LastDependencies.Where(d => d.Contains("BarrelGroup") || d.Contains("LightHolder")).ToArray()));
         Check("the enemy marker stays out", !RegionExporter.LastDependencies.Any(d => d.Contains("ShellHorror")));
 
