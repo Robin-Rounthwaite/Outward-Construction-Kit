@@ -36,6 +36,7 @@ try {
 
     Copy-Item (Join-Path $repo 'docs\getting-started.md'), (Join-Path $repo 'docs\making-a-region.md') (Join-Path $project 'Guides')
     Copy-Item (Join-Path $repo 'LICENSE') $project
+    Copy-Item (Join-Path $repo 'unity\starter\*') $project -Exclude 'licence-repair-report.txt' # it holds that PC's paths
     [IO.File]::WriteAllText((Join-Path $project 'START HERE.txt'), "Open Guides\getting-started.md and follow it.`r`n")
 
     $bad = Get-ChildItem $project -Recurse -File | Where-Object { $_.Extension -in '.assets', '.resS', '.bundle' -or $_.Name -like 'level*' }

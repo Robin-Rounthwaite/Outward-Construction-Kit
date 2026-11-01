@@ -20,7 +20,7 @@ Using r2modman or the Thunderstore app, install Outward_Construction_Kit into a 
 2. In the Hub, click **Open** (**Add** on some versions), and choose the `OutwardRegionProject` folder. The first opening takes a few minutes.
 3. The **Construction Kit Paths** window appears. It suggests the game folder and each mod profile it can find on your PC, looking without changing anything. Check them, pick the profile from step 2, and click **Confirm**. You can reopen it from **Construction Kit > Paths**.
 
-If the Hub says the licence can't be validated, sign out of the Hub and back in, and check **Preferences > Licenses** again.
+If Unity closes again by itself after a few seconds, with "No valid Unity Editor license found" in its log, you probably have the Microsoft Store version of the Hub. It keeps your licence in a private folder that Unity 2020 doesn't look in. Close Unity, double-click `Repair Unity Licence.cmd` in the project folder from File Explorer, and open the project from the Hub again. The file copy goes stale after about a month, so run it again if the error comes back, with the Hub having been open recently.
 
 The project's settings matter, so leave them as they are: Color Space has to be Linear like the game's, because Unity compiles that into every shader a bundle carries, and shaders keep only the variants the game's scenes use, which keeps exports quick.
 
