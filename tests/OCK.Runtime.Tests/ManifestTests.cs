@@ -152,6 +152,34 @@ namespace OutwardConstructionKit.Tests
         }
 
         [Test]
+        public void ReadsAWaterType()
+        {
+            List<string> errors;
+            RegionManifest manifest = Parse(new[] { "water | Monsoon | 1,2,3 | 10,1,10 | 0 | Salt", "water | Monsoon | 1,2,3 | 10,1,10 | 0" }, out errors);
+            Assert.That(errors, Is.Empty);
+            Assert.That(manifest.water[0].waterType, Is.EqualTo("Salt"));
+            Assert.That(manifest.water[1].waterType, Is.Null);
+        }
+
+        [Test]
+        public void ReturnsADefeatedPlayerWhereTheyCameFrom()
+        {
+            Assert.That(DeathReturn.Destination("Berg", "CierzoNewTerrain"), Is.EqualTo("Berg"));
+        }
+
+        [Test]
+        public void ReturnsADefeatedPlayerToTheEntranceIfTheyLoadedInThere()
+        {
+            Assert.That(DeathReturn.Destination(null, "Berg"), Is.EqualTo("Berg"));
+        }
+
+        [Test]
+        public void ReturnsADefeatedPlayerSomewhereSafeWithNothingElseToGoOn()
+        {
+            Assert.That(DeathReturn.Destination(null, ""), Is.EqualTo("CierzoNewTerrain"));
+        }
+
+        [Test]
         public void ReadsADoorModel()
         {
             List<string> errors;

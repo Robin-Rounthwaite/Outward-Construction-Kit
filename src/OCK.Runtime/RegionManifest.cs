@@ -13,7 +13,7 @@ namespace OutwardConstructionKit.Runtime
     ///   enemy | scene | hierarchy path | x,y,z | rotationY
     ///   game | fingerprint of the game build it was made against
     ///   ground | scene | terrain layer name | diffuse texture | normal texture, or blank
-    ///   water | scene | x,y,z | width,1,length | rotationY
+    ///   water | scene | x,y,z | width,1,length | rotationY | optional water type, or else the scene's own
     ///   returndoor | x,y,z | rotationY, replacing the automatic door beside the arrival point
     ///   prop | scene | hierarchy path | x,y,z | rotation, as x,y,z degrees or just y | optional check | optional even scale
     ///   doormodel | scene | hierarchy path | rotation as x,y,z degrees, with the door's front along +Z | even scale
@@ -54,6 +54,7 @@ namespace OutwardConstructionKit.Runtime
             public Vector3 position;
             public Vector3 size;
             public float rotationY;
+            public string waterType;
         }
 
         public class ReturnDoor
@@ -164,11 +165,11 @@ namespace OutwardConstructionKit.Runtime
                     manifest.returnDoors.Add(new ReturnDoor { position = position, rotationY = rotationY });
                 else if (parts[0] == "ground" && parts.Length == 5)
                     manifest.groundLayers.Add(new GroundLayer { scene = parts[1], layer = parts[2], diffuse = parts[3], normal = parts[4] });
-                else if (parts[0] == "water" && parts.Length == 5
+                else if (parts[0] == "water" && (parts.Length == 5 || parts.Length == 6)
                     && KitPlugin.TryParseVector(parts[2], out position)
                     && KitPlugin.TryParseVector(parts[3], out rotation)
                     && float.TryParse(parts[4], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out rotationY))
-                    manifest.water.Add(new WaterReference { scene = parts[1], position = position, size = rotation, rotationY = rotationY });
+                    manifest.water.Add(new WaterReference { scene = parts[1], position = position, size = rotation, rotationY = rotationY, waterType = parts.Length == 6 ? parts[5] : null });
                 else if (parts[0] == "doormodel" && parts.Length == 5
                     && KitPlugin.TryParseVector(parts[3], out rotation)
                     && float.TryParse(parts[4], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out scale) && scale > 0f)

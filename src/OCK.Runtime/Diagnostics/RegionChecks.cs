@@ -133,6 +133,8 @@ namespace OutwardConstructionKit.Runtime
 
             int sources = roots.SelectMany(r => r.GetComponentsInChildren<WaterSource>(true)).Count();
             check("every water can be drunk from", sources == region.Manifest.water.Count, $"{sources} of {region.Manifest.water.Count}");
+            foreach (RegionManifest.WaterReference asked in region.Manifest.water.Where(w => !string.IsNullOrEmpty(w.waterType)))
+                check($"water asking to be {asked.waterType} is", roots.SelectMany(r => r.GetComponentsInChildren<WaterSource>(true)).Any(w => w.WaterType.ToString().Equals(asked.waterType, System.StringComparison.OrdinalIgnoreCase)), string.Join(", ", roots.SelectMany(r => r.GetComponentsInChildren<WaterSource>(true)).Select(w => w.WaterType.ToString()).ToArray()));
         }
 
         private static void CheckReturnDoors(Region region, System.Action<string, bool, string> check)

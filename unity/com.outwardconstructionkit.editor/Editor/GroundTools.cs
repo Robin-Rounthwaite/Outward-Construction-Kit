@@ -24,7 +24,13 @@ internal static class GroundTools
     private const float EDGE_THICKNESS = 2f;
     private const float PLANE_SIZE = 10f; // Unity's plane primitive
     private const string WATER_PREFIX = "OCK Water ";
-    private static readonly Regex s_waterName = new Regex(@"^OCK Water \(([^)]+)\)");
+    private static readonly Regex s_waterName = new Regex(@"^OCK Water \(([^)]+)\)(?: \[(\w+)\])?");
+    private static readonly Regex s_groundTexture = new Regex(@"^tex_env_(master(Ground|Rock|Sand|Mud)|ground)", RegexOptions.IgnoreCase);
+    private static readonly Regex s_notColour = new Regex(@"_(n|g|s|sc|h|ao|mask|detail)$", RegexOptions.IgnoreCase);
+    private const float ADDED_LAYER_TILE = 6f;
+
+    /// <summary>The types of water in the game, after the choice of keeping the scene's own.</summary>
+    public static readonly string[] WaterTypes = { "The scene's own", "Clean", "Fresh", "Salt", "Rancid", "Magic", "Pure", "Healing" };
     private static readonly Regex s_librarySource = new Regex("^" + PropImporter.LIBRARY + @"/([^/]+)/Textures/");
     private static readonly string[] s_starterBoxes = { "Floor", "Wall_N", "Wall_S", "Wall_E", "Wall_W" };
 
@@ -174,6 +180,94 @@ internal static class GroundTools
         return water;
     }
 
+    /// <summary>True if this object is a water marker. Markers carry no scripts, so what they hold is in their names.</summary>
+    public static bool IsWater(GameObject marker)
+    {
+        return marker != null && s_waterName.IsMatch(marker.name);
+    }
+
+    public static int WaterTypeIndex(GameObject marker)
+    {
+        return Mathf.Max(0, System.Array.IndexOf(WaterTypes, s_waterName.Match(marker.name).Groups[2].Value));
+    }
+
+    /// <summary>Which type of water it is: drinking from it and filling a waterskin use this. Index 0 keeps the scene's own.</summary>
+    public static void SetWaterType(GameObject marker, int type)
+    {
+        Undo.RecordObject(marker, "Set Water Type");
+        marker.name = WATER_PREFIX + "(" + s_waterName.Match(marker.name).Groups[1].Value + ")" + (type > 0 ? " [" + WaterTypes[type] + "]" : "");
+        EditorSceneManager.MarkSceneDirty(marker.scene);
+    }
+
+    /// <summary>The vanilla ground textures a scene's rip offers, by name.</summary>
+    public static List<string> GroundTexturesIn(string ripRoot)
+    {
+        string folder = Path.Combine(ripRoot, "Assets", "Texture2D");
+        if (!Directory.Exists(folder))
+            return new List<string>();
+        return Directory.GetFiles(folder, "*.png").Select(Path.GetFileNameWithoutExtension)
+            .Where(n => s_groundTexture.IsMatch(n) && !s_notColour.IsMatch(n)).OrderBy(n => n).ToList();
+    }
+
+    /// <summary>Adds a vanilla texture as a new layer to paint with, shipping as a reference like the starting four.</summary>
+    public static TerrainLayer AddLayer(Terrain ground, string scene, string texture)
+    {
+        string folder = PropImporter.LIBRARY + "/Ground";
+        PropImporter.EnsureFolder(folder);
+        string name = "Ground_" + texture.Replace("tex_env_", "");
+        string path = folder + "/" + name + ".terrainlayer";
+        var layer = AssetDatabase.LoadAssetAtPath<TerrainLayer>(path);
+        if (layer == null)
+        {
+            string normal = NormalFor(texture);
+            layer = new TerrainLayer
+            {
+                diffuseTexture = PropImporter.ImportTextureByName(scene, texture, false),
+                normalMapTexture = normal == null ? null : PropImporter.ImportTextureByName(scene, normal, true),
+                tileSize = new Vector2(ADDED_LAYER_TILE, ADDED_LAYER_TILE),
+            };
+            AssetDatabase.CreateAsset(layer, path);
+        }
+
+        TerrainData data = ground.terrainData;
+        if (!data.terrainLayers.Contains(layer))
+        {
+            Undo.RecordObject(data, "Add Ground Texture");
+            data.terrainLayers = data.terrainLayers.Concat(new[] { layer }).ToArray();
+            EditorUtility.SetDirty(data);
+        }
+        return layer;
+    }
+
+    // A normal map is named like its texture, with or without the texture's own _d ending.
+    private static string NormalFor(string texture)
+    {
+        string plain = Regex.Replace(texture, "_d$", "");
+        return OckSettings.RipRoots().Select(root => Path.Combine(root, "Assets", "Texture2D"))
+            .SelectMany(folder => new[] { plain + "_n" }.Where(n => File.Exists(Path.Combine(folder, n + ".png")))).FirstOrDefault();
+    }
+
+    /// <summary>Paints a layer in a soft circle, for what's made from code rather than with the Paint tool.</summary>
+    public static void PaintCircle(Terrain ground, TerrainLayer layer, Vector3 center, float radius)
+    {
+        TerrainData data = ground.terrainData;
+        int index = System.Array.IndexOf(data.terrainLayers, layer);
+        float[,,] paint = data.GetAlphamaps(0, 0, data.alphamapWidth, data.alphamapHeight);
+        for (int z = 0; z < data.alphamapHeight; z++)
+            for (int x = 0; x < data.alphamapWidth; x++)
+            {
+                Vector3 world = ground.transform.position + new Vector3(x / (data.alphamapWidth - 1f) * data.size.x, 0f, z / (data.alphamapHeight - 1f) * data.size.z);
+                float amount = Mathf.Clamp01(1f - new Vector2(world.x - center.x, world.z - center.z).magnitude / radius);
+                if (amount <= 0f)
+                    continue;
+                for (int l = 0; l < data.alphamapLayers; l++)
+                    paint[z, x, l] *= 1f - amount;
+                paint[z, x, index] += amount;
+            }
+        data.SetAlphamaps(0, 0, paint);
+        EditorUtility.SetDirty(data);
+    }
+
     private static Material GetWaterMaterial()
     {
         string folder = PropImporter.LIBRARY + "/Ground";
@@ -214,7 +308,11 @@ internal static class GroundTools
             text.Append("water | ").Append(s_waterName.Match(water.name).Groups[1].Value).Append(" | ")
                 .Append(p.x.ToString("0.###", ci)).Append(',').Append(p.y.ToString("0.###", ci)).Append(',').Append(p.z.ToString("0.###", ci)).Append(" | ")
                 .Append((scale.x * PLANE_SIZE).ToString("0.###", ci)).Append(",1,").Append((scale.z * PLANE_SIZE).ToString("0.###", ci)).Append(" | ")
-                .Append(water.transform.eulerAngles.y.ToString("0.###", ci)).Append('\n');
+                .Append(water.transform.eulerAngles.y.ToString("0.###", ci));
+            string type = s_waterName.Match(water.name).Groups[2].Value;
+            if (type.Length > 0)
+                text.Append(" | ").Append(type);
+            text.Append('\n');
         }
     }
 

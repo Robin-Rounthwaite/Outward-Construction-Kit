@@ -12,6 +12,12 @@ Leaves the game open at the end, for a person to take over.
 .PARAMETER EndInRegion
 Closes the game inside the last region rather than travelling back, to test what happens to a save left there.
 
+.PARAMETER DieInRegion
+Kills the character in the last region, to test that they come back where they entered from.
+
+.PARAMETER StartIn
+A scene to travel to first, if the character's save is somewhere else.
+
 .PARAMETER TimeoutSeconds
 How long to wait before stopping the game and reporting that it hung.
 #>
@@ -19,6 +25,8 @@ param(
     [string[]]$Regions = @(),
     [switch]$Stay,
     [switch]$EndInRegion,
+    [switch]$DieInRegion,
+    [string]$StartIn,
     [string]$Character = 'Jim of the Doors',
     [int]$TimeoutSeconds = 600,
     [int]$AppId = 1758860,
@@ -50,6 +58,8 @@ Write-Host "Saves backed up to $backup"
 $request = @("character $Character") + @($Regions -split ',' | Where-Object { $_.Trim() } | ForEach-Object { "region $($_.Trim())" })
 if ($Stay) { $request += 'stay' }
 if ($EndInRegion) { $request += 'endinregion' }
+if ($DieInRegion) { $request += 'dieinregion' }
+if ($StartIn) { $request += "startin $StartIn" }
 Set-Content -Path (Join-Path $bepinex 'OCK_AutoTest.txt') -Value $request -Encoding ASCII
 
 # How r2modman starts a modded game: through Steam, with the Definitive Edition's ID, pointed at the profile's BepInEx.

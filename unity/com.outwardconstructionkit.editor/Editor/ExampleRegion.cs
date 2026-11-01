@@ -14,6 +14,8 @@ internal static class ExampleRegion
     private const string BARRELS = "mdl_env_propBarrelGroupA";
     private const string STATUE = "mdl_env_propStatueTripleLadies_c";
     private const string HOUND = "Enemy Hound";
+    private const string PEBBLE = "tex_env_masterGroundPebble";
+    private const string FOREST_FLOOR = "tex_env_masterMuddyForestFloor_d";
     private const string ENTRANCE_SCENE = "CierzoNewTerrain";
     private const string ENTRANCE_POSITION = "1236,27.9,1684"; // beside the scene's first spawn point
     private static readonly Vector3 s_hill = new Vector3(0f, 0f, 45f);
@@ -49,8 +51,18 @@ internal static class ExampleRegion
         if (ripped.ContainsKey(ENEMY_RIP))
             Place(RipScene.Load(ENEMY_RIP, ripped[ENEMY_RIP]), HOUND, new Vector3(10f, 0f, 30f), 180f, 1f);
 
+        // A fifth and sixth texture, beyond the starting four, from each scene's own ground.
+        TerrainLayer pebble = GroundTools.AddLayer(ground, GROUND_RIP, PEBBLE);
+        GroundTools.PaintCircle(ground, pebble, new Vector3(24f, 0f, 8f), 22f);
+        if (ripped.ContainsKey(ENEMY_RIP))
+        {
+            TerrainLayer forest = GroundTools.AddLayer(ground, ENEMY_RIP, FOREST_FLOOR);
+            GroundTools.PaintCircle(ground, forest, new Vector3(-4f, 0f, 8f), 22f);
+        }
+
         GameObject water = GroundTools.AddWater(GROUND_RIP);
         water.transform.position = new Vector3(s_pond.x, -1.5f, s_pond.z);
+        GroundTools.SetWaterType(water, System.Array.IndexOf(GroundTools.WaterTypes, "Salt"));
 
         GameObject door = DoorTools.Add();
         door.transform.position = new Vector3(-1.8f, 0f, -1.8f);

@@ -108,11 +108,17 @@ namespace OutwardConstructionKit.Runtime
             // A run that ended in a fight can save its character close to death, and they'd die on the next arrival.
             Player().Stats.RestoreAllVitals();
             yield return new WaitForSecondsRealtime(3f);
+            string startIn = request.Where(l => l.StartsWith("startin ")).Select(l => l.Substring(8).Trim()).FirstOrDefault();
+            if (startIn != null && startIn != SceneManager.GetActiveScene().name)
+            {
+                yield return Travel(startIn, 0, result);
+                if (!ok)
+                    yield break;
+                yield return new WaitForSecondsRealtime(3f);
+            }
             string home = SceneManager.GetActiveScene().name;
             Log($"Started in {home}, at memory {SceneExtractor.PrivateMemory() / (1024 * 1024)} MB.");
-            Vector3 feet = Player().transform.position;
-            Log(Physics.Raycast(feet + Vector3.up, Vector3.down, GROUND_SEARCH_DISTANCE, Global.FullEnvironmentMask, QueryTriggerInteraction.Ignore)
-                ? $"Standing on the ground at {feet}." : $"FAIL not standing on anything at {feet}.");
+            CheckStanding();
             if (KitPlugin.Instance.UseCache.Value)
             {
                 Shader rareShader = AssetCache.LoadShader(TEST_SHADER);
@@ -143,6 +149,25 @@ namespace OutwardConstructionKit.Runtime
                 yield return Screenshot(id);
             }
 
+            if (regions.Length > 0 && request.Contains("dieinregion"))
+            {
+                string died = SceneManager.GetActiveScene().name;
+                Log($"Dying in {died}.");
+                Player().Invincible = false;
+                Player().Stats.ReceiveDamage(Player().Stats.MaxHealth * 10f); // as an enemy would, which sets off the defeat
+                bool returned = false;
+                yield return WaitFor(() => SceneManager.GetActiveScene().name == home && Player() != null && Loaded(), "arriving back in " + home, r => returned = r);
+                if (!returned)
+                    yield break;
+                yield return PressAnyKey(result);
+                if (!ok)
+                    yield break;
+                yield return new WaitForSecondsRealtime(3f);
+                Log($"Died in {died} and came back in {SceneManager.GetActiveScene().name}, alive: {Player().IsDead == false}, health {Player().Stats.CurrentHealth:0}.");
+                CheckStanding();
+                Player().Stats.RestoreAllVitals();
+            }
+
             if (regions.Length > 0 && !request.Contains("endinregion"))
             {
                 yield return Travel(home, 0, result);
@@ -156,6 +181,13 @@ namespace OutwardConstructionKit.Runtime
             Log(quit ? "FINISHED, closing the game." : "FINISHED, staying open for a person to take over.");
             if (quit)
                 Application.Quit();
+        }
+
+        private static void CheckStanding()
+        {
+            Vector3 feet = Player().transform.position;
+            Log(Physics.Raycast(feet + Vector3.up, Vector3.down, GROUND_SEARCH_DISTANCE, Global.FullEnvironmentMask, QueryTriggerInteraction.Ignore)
+                ? $"Standing on the ground at {feet}." : $"FAIL not standing on anything at {feet}.");
         }
 
         private static Character Player()

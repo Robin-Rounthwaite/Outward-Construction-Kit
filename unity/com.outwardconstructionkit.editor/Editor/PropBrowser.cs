@@ -23,6 +23,9 @@ internal class PropBrowser : EditorWindow
     private List<RipScene.Prop> m_visible = new List<RipScene.Prop>();
     private RipScene m_scene;
     private string m_status = "";
+    private string m_groundTexturesScene;
+    private string[] m_groundTextures = new string[0];
+    private int m_groundTextureIndex;
     private bool m_showPaths;
 
     [MenuItem("Construction Kit/Prop Browser")]
@@ -252,6 +255,16 @@ internal class PropBrowser : EditorWindow
             }
         }
 
+        if (GroundTools.IsWater(Selection.activeGameObject))
+        {
+            int waterType = GroundTools.WaterTypeIndex(Selection.activeGameObject);
+            int chosenType = EditorGUILayout.Popup(new GUIContent("Water type", "What players get from drinking this water or filling a waterskin with it."), waterType, GroundTools.WaterTypes);
+            if (chosenType != waterType)
+                GroundTools.SetWaterType(Selection.activeGameObject, chosenType);
+        }
+
+        DrawGroundTextures();
+
         if (!RegionExporter.HasSpawnPoint(UnityEngine.SceneManagement.SceneManager.GetActiveScene()))
         {
             EditorGUILayout.HelpBox("This scene has no spawn point, so it can't be exported yet. Players arrive at it.", MessageType.Warning);
@@ -350,6 +363,35 @@ internal class PropBrowser : EditorWindow
             }
             if (GUILayout.Button(new GUIContent("Package", "Makes a zip to upload to Thunderstore."), GUILayout.Width(70)))
                 PackageWindow.Open();
+        }
+    }
+
+    // Only with ground to add to. The list is read once per scene, because it means searching a folder of the rip.
+    private void DrawGroundTextures()
+    {
+        Terrain ground = UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Terrain>(true)).FirstOrDefault();
+        if (ground == null || m_scene == null)
+            return;
+
+        if (m_groundTexturesScene != m_scene.SceneName)
+        {
+            m_groundTexturesScene = m_scene.SceneName;
+            string root = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(m_ripped[m_scene.SceneName])));
+            m_groundTextures = GroundTools.GroundTexturesIn(root).ToArray();
+            m_groundTextureIndex = 0;
+        }
+        if (m_groundTextures.Length == 0)
+            return;
+
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            EditorGUILayout.LabelField("Ground texture", GUILayout.Width(90));
+            m_groundTextureIndex = EditorGUILayout.Popup(m_groundTextureIndex, m_groundTextures);
+            if (GUILayout.Button(new GUIContent("Add", "Adds this vanilla texture to the Terrain's Paint Texture layers. It ships as a reference, so it adds nothing to your mod."), GUILayout.Width(44)))
+            {
+                GroundTools.AddLayer(ground, m_scene.SceneName, m_groundTextures[m_groundTextureIndex]);
+                m_status = "Texture added. Select the Terrain, and paint with it using Paint Texture.";
+            }
         }
     }
 

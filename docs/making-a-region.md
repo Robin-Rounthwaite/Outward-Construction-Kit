@@ -35,9 +35,15 @@ Your entrance door ships with the region too: after placing it in game with **Ct
 
 **Add Ground** in the Prop Browser (or the Construction Kit menu) replaces the starter room with a flat 200 by 200 m terrain at height 0, with invisible walls around its edge. It's Unity's own Terrain, so select it and use the Inspector's Paint Terrain tool: **Raise or Lower Terrain** and **Smooth Height** make hills and hollows, and **Paint Texture** paints the four layers: grass, dirt, sand and rock. Move the spawn point and props to sit on the shapes you make. Heights and paint ship in the mod, and vanilla textures are references, so they add almost nothing to it. A layer using your own texture ships that texture.
 
+To paint with more of the game's ground, choose a scene in the browser, pick from its **Ground texture** list and click **Add**. The texture joins the Terrain's Paint Texture layers, and ships as a reference. More than four layers costs the game an extra drawing pass, so keep to what you need.
+
 It starts with room for 10 m below 0 and 50 m above. For more, raise **Terrain Height** in the Terrain's settings, which stretches existing hills in proportion, or lower the object and add the same amount to the height. Resize `Ground_Edges` to match, because the invisible walls don't follow.
 
-**Add Water** adds a blue marker for the scene chosen in the browser, whose own water it will use in game. Move it to the water's height and scale it to size. It only looks like water in game. Standing in or over it lets players drink and fill waterskins, with the water type of that scene's first water source, and shallow water (about 1.2 m or less) splashes underfoot. Enemies walk on the ground beneath it, since the NavMesh ignores water, and it has no collision.
+**Add Water** adds a blue marker for the scene chosen in the browser, whose own water it will use in game. Move it to the water's height and scale it to size. It only looks like water in game. Standing in or over it lets players drink and fill waterskins. It has the water type of that scene's first water source, unless you select the marker and choose another under **Water type** in the Prop Browser: clean, fresh, salt, rancid, magic, pure or healing. Shallow water (about 1.2 m or less) splashes underfoot. Enemies walk on the ground beneath it, since the NavMesh ignores water, and it has no collision.
+
+## Dying in a region
+
+Players defeated in a region come back where they loaded into it from, alive, rather than beside what killed them. If they loaded a save made inside the region, that's where its entrance is.
 
 ## Return doors
 

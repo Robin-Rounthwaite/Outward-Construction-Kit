@@ -154,6 +154,20 @@ namespace OutwardConstructionKit.Runtime
             GameObject source = Object.Instantiate(template, Holder().transform);
             source.SetActive(true); // stays asleep under the holder
             source.name = template.name + "_" + index;
+            if (!string.IsNullOrEmpty(reference.waterType))
+            {
+                try
+                {
+                    var type = (WaterType)System.Enum.Parse(typeof(WaterType), reference.waterType, true);
+                    foreach (WaterSource water in source.GetComponentsInChildren<WaterSource>(true))
+                        water.WaterType = type;
+                }
+                catch (System.ArgumentException)
+                {
+                    KitPlugin.Log.LogError($"'{reference.waterType}' isn't a type of water, so the water at {reference.position} keeps its scene's own.");
+                }
+            }
+
             string suffix = "_ock_" + region.Id + "_water" + index;
             foreach (MonoBehaviour script in source.GetComponentsInChildren<MonoBehaviour>(true))
             {

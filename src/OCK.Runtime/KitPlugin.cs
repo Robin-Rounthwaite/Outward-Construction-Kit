@@ -87,6 +87,14 @@ namespace OutwardConstructionKit.Runtime
             {
                 Logger.LogError("Couldn't set up the guard for saves left in removed regions: " + e);
             }
+            try
+            {
+                DeathReturn.Patch(harmony);
+            }
+            catch (System.Exception e)
+            {
+                Logger.LogError("Couldn't set up returning from a defeat in a region: " + e);
+            }
             if (AreaManager.Instance != null)
                 RegisterAll(AreaManager.Instance);
 
@@ -121,6 +129,7 @@ namespace OutwardConstructionKit.Runtime
             KitPlugin.Detail($"Scene {scene.name} loaded, process memory {SceneExtractor.PrivateMemory() / (1024 * 1024)} MB.");
             try
             {
+                DeathReturn.OnSceneLoaded(scene.name);
                 Region here = Region.ForScene(scene.name);
                 if (here != null)
                     here.PrepareScene(scene);
