@@ -25,7 +25,7 @@ To try the zip first, use **Settings > Import local mod** in r2modman. Remove yo
 
 ## Enemies and the entrance door
 
-Export bakes a NavMesh from the scene and its stand-ins, so enemies can walk the region. To place an enemy, add it from the **Enemies** category: it shows as a red capsule, with a small box marking its facing. Enemies are always references, built from the player's own game files and given their own identity.
+Export bakes a NavMesh from the scene and its stand-ins, so enemies can walk the region. To place an enemy, add it from the **Enemies** category: it shows as its real model in a default pose, or a red capsule if the model isn't in the rip. Enemies are always references, built from the player's own game files and given their own identity.
 
 Your entrance door ships with the region too: after placing it in game with **Ctrl+F10**, click **Use door placed in game** in the Prop Browser, then export. A door a player places themselves overrides the shipped one.
 

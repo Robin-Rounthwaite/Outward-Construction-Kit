@@ -30,4 +30,4 @@ The Prop Browser shows models extracted from your own copy of the game. Open **C
 
 ## 5. Make a region
 
-Continue with [Making a region](making-a-region.md).
+Continue with [Your first region](tutorial.md). Rip Monsoon first, because the ground uses its textures.

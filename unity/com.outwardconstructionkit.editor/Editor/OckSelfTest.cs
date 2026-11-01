@@ -109,6 +109,7 @@ internal static class OckSelfTest
         CheckMissingSpawnIsRefused(output);
         CheckReferencesAndAlterations(first, output);
         CheckGroundWaterAndDoors(first, second, output);
+        CheckExampleRegion(output);
     }
 
     private static void CheckSetup()
@@ -253,7 +254,7 @@ internal static class OckSelfTest
         Check("ground starts level with the spawn point", Mathf.Abs(ground.SampleHeight(Vector3.zero) + ground.transform.position.y) < 0.01f, ground.SampleHeight(Vector3.zero).ToString());
         Check("adding ground twice keeps one terrain", GroundTools.AddGround() == ground);
 
-        SculptAndPaint(ground);
+        ExampleRegion.SculptAndPaint(ground, new Vector3(0f, 0f, 45f), new[] { new Vector3(-35f, 0f, 0f), new Vector3(35f, 0f, 0f) });
 
         GameObject water = GroundTools.AddWater(FIRST_RIP);
         water.transform.position = new Vector3(-35f, -1.5f, 0f);
@@ -315,42 +316,22 @@ internal static class OckSelfTest
         AssetDatabase.DeleteAsset(dataPath);
     }
 
-    private static void SculptAndPaint(Terrain ground)
+    private static void CheckExampleRegion(string output)
     {
-        TerrainData data = ground.terrainData;
-        int size = data.heightmapResolution;
-        float[,] heights = data.GetHeights(0, 0, size, size);
-        for (int z = 0; z < size; z++)
-            for (int x = 0; x < size; x++)
-            {
-                Vector3 world = ground.transform.position + new Vector3(x / (size - 1f) * data.size.x, 0f, z / (size - 1f) * data.size.z);
-                heights[z, x] += Bump(world, new Vector3(0f, 0f, 45f), 28f, 12f) / data.size.y; // the hill
-                heights[z, x] -= Bump(world, new Vector3(-35f, 0f, 0f), 18f, 4f) / data.size.y; // the pond's bed
-                heights[z, x] -= Bump(world, new Vector3(35f, 0f, 0f), 18f, 4f) / data.size.y; // the other pond's
-            }
-        data.SetHeights(0, 0, heights);
+        Scene scene = ExampleRegion.Create();
+        string path = scene.path;
+        string dataPath = AssetDatabase.GetAssetPath(scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Terrain>(true)).First().terrainData);
+        string folder = Path.Combine(output, "OCK-Region-" + ExampleRegion.ID);
+        s_report.AppendLine(RegionExporter.Export(folder));
+        string[] manifest = File.ReadAllLines(Path.Combine(folder, ExampleRegion.ID + ".refs.txt"));
+        Check("the example lists its props as references", manifest.Count(l => l.StartsWith("prop ")) == 3, string.Join(" / ", manifest));
+        Check("the example's scaled barrels stay a reference", manifest.Any(l => l.StartsWith("prop ") && l.EndsWith("| 1.5")));
+        Check("the example has an enemy, water, ground and a door", manifest.Any(l => l.StartsWith("enemy ")) && manifest.Any(l => l.StartsWith("water ")) && manifest.Any(l => l.StartsWith("ground ")) && manifest.Any(l => l.StartsWith("returndoor ")));
+        Check("the example ships no vanilla art", !RegionExporter.LastDependencies.Any(d => d.StartsWith(PropImporter.LIBRARY)), string.Join(", ", RegionExporter.LastDependencies.Where(d => d.StartsWith(PropImporter.LIBRARY)).ToArray()));
 
-        float[,,] paint = data.GetAlphamaps(0, 0, data.alphamapWidth, data.alphamapHeight);
-        for (int z = 0; z < data.alphamapHeight; z++)
-            for (int x = 0; x < data.alphamapWidth; x++)
-            {
-                Vector3 world = ground.transform.position + new Vector3(x / (data.alphamapWidth - 1f) * data.size.x, 0f, z / (data.alphamapHeight - 1f) * data.size.z);
-                float pond = Mathf.Clamp01(Bump(world, new Vector3(-35f, 0f, 0f), 24f, 1f) + Bump(world, new Vector3(35f, 0f, 0f), 24f, 1f));
-                float path = Mathf.Clamp01(1f - Mathf.Abs(world.x - Mathf.Sin(world.z * 0.1f) * 6f) / 4f) * (world.z > -5f ? 1f : 0f);
-                float rock = Mathf.Clamp01(Bump(world, new Vector3(0f, 0f, 45f), 14f, 1f));
-                paint[z, x, 0] = Mathf.Clamp01(1f - pond - path - rock);
-                paint[z, x, 1] = path;
-                paint[z, x, 2] = pond;
-                paint[z, x, 3] = rock;
-            }
-        data.SetAlphamaps(0, 0, paint);
-    }
-
-    // A smooth dome, full height at the centre and nothing beyond the radius.
-    private static float Bump(Vector3 world, Vector3 center, float radius, float height)
-    {
-        float t = Mathf.Clamp01(1f - new Vector2(world.x - center.x, world.z - center.z).magnitude / radius);
-        return height * t * t * (3f - 2f * t);
+        AssetDatabase.DeleteAsset(path + ".region.json");
+        AssetDatabase.DeleteAsset(path);
+        AssetDatabase.DeleteAsset(dataPath);
     }
 
     private static void RenderModes(RipScene rip, string output)

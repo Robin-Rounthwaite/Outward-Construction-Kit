@@ -34,7 +34,7 @@ try {
     if ($kept.Count -ne $manifest.Count - 1) { throw "Expected the manifest to name the kit once." }
     [IO.File]::WriteAllLines((Join-Path $project 'Packages\manifest.json'), [string[]]$kept)
 
-    Copy-Item (Join-Path $repo 'docs\getting-started.md'), (Join-Path $repo 'docs\making-a-region.md') (Join-Path $project 'Guides')
+    Copy-Item (Join-Path $repo 'docs\getting-started.md'), (Join-Path $repo 'docs\tutorial.md'), (Join-Path $repo 'docs\making-a-region.md') (Join-Path $project 'Guides')
     Copy-Item (Join-Path $repo 'LICENSE') $project
     Copy-Item (Join-Path $repo 'unity\starter\*') $project -Exclude 'licence-repair-report.txt' # it holds that PC's paths
     [IO.File]::WriteAllText((Join-Path $project 'START HERE.txt'), "Open Guides\getting-started.md and follow it.`r`n")

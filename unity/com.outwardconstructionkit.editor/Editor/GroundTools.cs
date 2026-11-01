@@ -66,6 +66,11 @@ internal static class GroundTools
             EditorUtility.DisplayDialog("Construction Kit", "Save the scene before adding ground.", "OK");
             return null;
         }
+        if (!OckSettings.RippedScenes().ContainsKey(GROUND_SCENE))
+        {
+            EditorUtility.DisplayDialog("Construction Kit", $"Ground uses textures from {GROUND_SCENE}, so rip that scene first, with Construction Kit > Rip a Scene.", "OK");
+            return null;
+        }
 
         Terrain existing = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Terrain>(true)).FirstOrDefault();
         if (existing != null)

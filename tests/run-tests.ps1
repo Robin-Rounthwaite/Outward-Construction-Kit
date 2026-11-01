@@ -45,8 +45,16 @@ if ($Unity) {
     $env:OCK_TEST_MANIFESTS = $results
 }
 
-dotnet test (Join-Path $PSScriptRoot 'OCK.Runtime.Tests\OCK.Runtime.Tests.csproj') -c Release --nologo
-if ($LASTEXITCODE -ne 0) { $failed = $true }
+# Windows Defender can briefly lock a file the build is writing, especially just after Unity has closed.
+for ($attempt = 1; $attempt -le 3; $attempt++) {
+    $output = dotnet test (Join-Path $PSScriptRoot 'OCK.Runtime.Tests\OCK.Runtime.Tests.csproj') -c Release --nologo
+    $code = $LASTEXITCODE
+    $output | Write-Host
+    if ($code -eq 0 -or -not ($output -match 'CS2012|being used by another process|cannot access the file')) { break }
+    Write-Host "A build file was locked. Trying again, attempt $($attempt + 1)."
+    Start-Sleep 15
+}
+if ($code -ne 0) { $failed = $true }
 
 if ($failed) {
     Write-Host 'Some tests FAILED.'

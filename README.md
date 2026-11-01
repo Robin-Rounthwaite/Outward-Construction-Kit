@@ -18,6 +18,7 @@ A toolkit for adding new regions to Outward: Definitive Edition, built from the 
 ## Guides
 
 - [Getting started](docs/getting-started.md)
+- [Your first region](docs/tutorial.md)
 - [Making a region](docs/making-a-region.md)
 - [How it works](docs/how-it-works.md)
 - [Testing](docs/testing.md)
