@@ -26,7 +26,7 @@ The project's settings matter, so leave them as they are: Color Space has to be 
 
 ## 4. Rip the scenes you want props from
 
-The Prop Browser shows models extracted from your own copy of the game, using [AssetRipper](https://github.com/AssetRipper/AssetRipper). Export each scene into its own folder under one rip folder, then set that folder in the Prop Browser. A scene takes a while and several gigabytes. An automated way to do this is planned.
+The Prop Browser shows models extracted from your own copy of the game. Open **Construction Kit > Rip a Scene** and click **Rip** beside a scene. The first time, this downloads [AssetRipper](https://github.com/AssetRipper/AssetRipper) from GitHub, about 42 MB, into your rip folder. A scene usually takes 10 to 30 minutes and several gigabytes, up to about 15, and runs in its own window. When it finishes, click **Refresh** in the Prop Browser.
 
 ## 5. Make a region
 

@@ -12,7 +12,7 @@ using UnityEngine.SceneManagement;
 internal class PropRef
 {
     /// <summary>Raised when the importer changes what a library prefab contains, so older ones get rebuilt.</summary>
-    public const int CURRENT_FORMAT = 4;
+    public const int CURRENT_FORMAT = 5;
 
     private const float SCALE_TOLERANCE = 0.001f;
 

@@ -19,6 +19,7 @@ internal static class RegionExporter
 {
     public const string PLUGIN_CONFIG = "catalysten.outwardconstructionkit.cfg";
     private const string SPAWN_ROOT = "SpawnPointManager"; // the plugin finds it by this exact name
+    private const float SPAWN_HEIGHT = 0.1f;
     private const string REGIONS_FOLDER = "Assets/Regions";
     private const string WORK_FOLDER = "Assets/OCK/_Export";
 
@@ -116,6 +117,10 @@ internal static class RegionExporter
             var altered = new HashSet<GameObject>(PropRef.FindIn(work).Where(p => !p.Value.IsEnemy && PropRef.IsAltered(p.Key)).Select(p => p.Key));
             GroundTools.PrepareForExport(work, WORK_FOLDER); // before the bake, so nothing walks on a water marker
             DoorTools.RemoveMarkers(work);
+            RemoveCameras(work);
+            // Also before the bake, because enemies stand on the NavMesh and aren't part of it.
+            foreach (KeyValuePair<GameObject, PropRef> enemy in PropRef.FindIn(work).Where(p => p.Value.IsEnemy))
+                UnityEngine.Object.DestroyImmediate(enemy.Key);
             int navMeshTriangles = BakeNavMesh(work);
             int embedded = 0;
             var embeddedShaders = new HashSet<string>();
@@ -210,11 +215,43 @@ internal static class RegionExporter
         }
     }
 
-    private static void Validate(Scene scene)
+    public static bool HasSpawnPoint(Scene scene)
     {
         GameObject spawns = scene.GetRootGameObjects().FirstOrDefault(r => r.name == SPAWN_ROOT);
-        if (spawns == null || spawns.transform.childCount == 0)
-            throw new InvalidOperationException($"The scene needs a root object named '{SPAWN_ROOT}' with at least one child as a spawn point.");
+        return spawns != null && spawns.transform.childCount > 0;
+    }
+
+    /// <summary>Adds where players arrive, for a scene that didn't start from New Region.</summary>
+    public static GameObject AddSpawnPoint(Vector3 position)
+    {
+        Scene scene = SceneManager.GetActiveScene();
+        GameObject spawns = scene.GetRootGameObjects().FirstOrDefault(r => r.name == SPAWN_ROOT);
+        if (spawns == null)
+        {
+            spawns = new GameObject(SPAWN_ROOT);
+            Undo.RegisterCreatedObjectUndo(spawns, "Add Spawn Point");
+        }
+        var spawn = new GameObject("Spawn" + spawns.transform.childCount);
+        Undo.RegisterCreatedObjectUndo(spawn, "Add Spawn Point");
+        spawn.transform.SetParent(spawns.transform, false);
+        spawn.transform.position = position + Vector3.up * SPAWN_HEIGHT;
+        EditorSceneManager.MarkSceneDirty(scene);
+        return spawn;
+    }
+
+    private static void Validate(Scene scene)
+    {
+        if (!HasSpawnPoint(scene))
+            throw new InvalidOperationException("This scene has no spawn point, so players would have nowhere to arrive. Click Add Spawn Point in the Prop Browser, or start from New Region.");
+    }
+
+    // A scene made with Unity's own New Scene brings a camera, which would compete with the one the game borrows.
+    private static int RemoveCameras(Scene scene)
+    {
+        Camera[] cameras = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Camera>(true)).ToArray();
+        foreach (Camera camera in cameras)
+            UnityEngine.Object.DestroyImmediate(camera.gameObject);
+        return cameras.Length;
     }
 
     private static string BuildManifest(Scene scene, RegionInfo info)

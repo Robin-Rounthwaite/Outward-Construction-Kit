@@ -89,6 +89,7 @@ internal static class OckSelfTest
         window.Repaint();
         Check("the paths window opens", window != null);
         window.Close();
+        Check("the rip script ships with the package", File.Exists(Path.GetFullPath(RipWindow.SCRIPT)), Path.GetFullPath(RipWindow.SCRIPT));
     }
 
     private static void Run(string output)
@@ -201,7 +202,7 @@ internal static class OckSelfTest
         Check("the summary counts one embedded prop", summary.Contains("1 altered props embedded"), summary);
         Check("the stretched prop's art is in the bundle",RegionExporter.LastDependencies.Any(d => d.Contains("mdl_env_propStatueTripleLadies")));
         Check("referenced props' art stays out", !RegionExporter.LastDependencies.Any(d => d.Contains("BarrelGroup") || d.Contains("LightHolder")), string.Join(", ", RegionExporter.LastDependencies.Where(d => d.Contains("BarrelGroup") || d.Contains("LightHolder")).ToArray()));
-        Check("the enemy marker stays out", !RegionExporter.LastDependencies.Any(d => d.Contains("ShellHorror")));
+        Check("the enemy marker stays out", !RegionExporter.LastDependencies.Any(d => d.Contains("ShellHorror") || d.Contains("mdl_cha_")));
 
         AssetDatabase.DeleteAsset(path + ".region.json");
         AssetDatabase.DeleteAsset(path);
@@ -231,7 +232,17 @@ internal static class OckSelfTest
 
         Place(first, STATUE, new Vector3(0f, 12f, 45f));
         Place(second, second.Props.First(p => !p.IsEnemy && p.Batched && p.BaseName.Contains("Rock")).BaseName, new Vector3(15f, 0f, -15f));
-        Place(second, HOUND, new Vector3(0f, 0f, 20f));
+        GameObject hound = Place(second, HOUND, new Vector3(0f, 0f, 20f));
+        Renderer[] houndParts = hound.GetComponentsInChildren<Renderer>(true);
+        Check("an enemy shows its real model", houndParts.Length > 0 && houndParts.All(r => r.name != "Marker"));
+        if (houndParts.Length > 0)
+        {
+            Bounds size = houndParts[0].bounds;
+            foreach (Renderer part in houndParts)
+                size.Encapsulate(part.bounds);
+            Check("an enemy's model is about the right size", size.size.y > 0.3f && size.size.y < 4f && size.size.z < 6f, size.size.ToString());
+            Check("an enemy's model stands by its position", Vector3.Distance(size.center, hound.transform.position) < 3f, size.center + " from " + hound.transform.position);
+        }
 
         GameObject door = DoorTools.Add();
         door.transform.position = new Vector3(-1.8f, 0f, 1.8f); // about as far as the automatic door stands

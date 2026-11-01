@@ -109,7 +109,9 @@ internal class PropBrowser : EditorWindow
         DrawSettings();
         if (m_scene == null)
         {
-            EditorGUILayout.HelpBox("No ripped scenes found. Set the rip folder to the folder holding your AssetRipper exports.", MessageType.Info);
+            EditorGUILayout.HelpBox("No ripped scenes found. Rip one, or set the rip folder to the folder holding your AssetRipper exports.", MessageType.Info);
+            if (GUILayout.Button("Rip a Scene"))
+                RipWindow.Open();
             return;
         }
         DrawFilters();
@@ -137,6 +139,10 @@ internal class PropBrowser : EditorWindow
                 s_scenes.Clear();
                 Refresh();
             }
+            if (GUILayout.Button(new GUIContent("Refresh", "Looks for newly finished rips."), GUILayout.Width(60)))
+                OnPathsChanged();
+            if (GUILayout.Button("Rip a Scene", GUILayout.Width(85)))
+                RipWindow.Open();
         }
 
         using (new EditorGUILayout.HorizontalScope())
@@ -241,6 +247,19 @@ internal class PropBrowser : EditorWindow
             {
                 DoorTools.AddFromMenu();
                 m_status = "Return door added. Stand it on the ground, with the small box facing the way players will approach.";
+            }
+        }
+
+        if (!RegionExporter.HasSpawnPoint(UnityEngine.SceneManagement.SceneManager.GetActiveScene()))
+        {
+            EditorGUILayout.HelpBox("This scene has no spawn point, so it can't be exported yet. Players arrive at it.", MessageType.Warning);
+            if (GUILayout.Button("Add Spawn Point"))
+            {
+                SceneView view = SceneView.lastActiveSceneView;
+                Vector3 spot = view != null ? view.pivot : Vector3.zero;
+                Vector3 ground;
+                Selection.activeGameObject = RegionExporter.AddSpawnPoint(TryFindGround(new Ray(spot + Vector3.up * 50f, Vector3.down), out ground) ? ground : spot);
+                m_status = "Spawn point added at the middle of your view. It's selected, so you can move it with the Move tool.";
             }
         }
 

@@ -42,7 +42,7 @@ internal static partial class PropImporter
         return AssetDatabase.LoadAssetAtPath<Material>(CopyWithMeta(file, folder));
     }
 
-    private static Material GetMaterial(string guid, string folder)
+    internal static Material GetMaterial(string guid, string folder)
     {
         string file = RipFile(guid);
         if (file == null)

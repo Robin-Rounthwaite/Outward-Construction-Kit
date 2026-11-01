@@ -21,7 +21,7 @@ internal static partial class PropImporter
         { 10210, "Quad.fbx" },
     };
 
-    private static Mesh CopyMesh(string guid, string folder, long fileId = 0)
+    internal static Mesh CopyMesh(string guid, string folder, long fileId = 0)
     {
         if (guid == BUILTIN_RESOURCES)
         {

@@ -45,6 +45,10 @@ internal class RipScene
         public List<string> MaterialGuids = new List<string>();
         public int FirstSubMesh;
         public int SubMeshCount;
+        public string SkinnedMeshGuid;
+        public long SkinnedMeshFileId;
+        public bool SkinnedEnabled;
+        public List<string> SkinnedMaterialGuids = new List<string>();
         public List<Node> Children = new List<Node>();
         public Node ParentNode;
 
@@ -130,7 +134,7 @@ internal class RipScene
                 int space = line.IndexOf(' ', 7);
                 string classId = space > 0 ? line.Substring(7, space - 7) : line.Substring(7);
                 bool isCollider = classId == "65" || classId == "136" || classId == "135" || classId == "64";
-                bool wanted = isCollider || classId == "1" || classId == "4" || classId == "224" || classId == "33" || classId == "23" || classId == "205" || classId == "114";
+                bool wanted = isCollider || classId == "1" || classId == "4" || classId == "224" || classId == "33" || classId == "23" || classId == "137" || classId == "205" || classId == "114";
                 type = wanted ? classId : null;
                 current = null;
                 collider = isCollider ? new ColliderInfo { ClassId = classId } : null;
@@ -209,6 +213,29 @@ internal class RipScene
                             current.MeshFileId = FileId(line);
                         }
                     }
+                    break;
+                case "137":
+                    if (line.StartsWith("  m_Enabled:"))
+                        current.SkinnedEnabled = line.EndsWith("1");
+                    else if (line.StartsWith("  m_Mesh:"))
+                    {
+                        Match guid = s_guid.Match(line);
+                        if (guid.Success)
+                        {
+                            current.SkinnedMeshGuid = guid.Groups[1].Value;
+                            current.SkinnedMeshFileId = FileId(line);
+                        }
+                    }
+                    else if (line.StartsWith("  m_Materials:"))
+                        inMaterials = true;
+                    else if (inMaterials && line.StartsWith("  - "))
+                    {
+                        Match guid = s_guid.Match(line);
+                        if (guid.Success)
+                            current.SkinnedMaterialGuids.Add(guid.Groups[1].Value);
+                    }
+                    else if (inMaterials)
+                        inMaterials = false;
                     break;
                 case "23":
                     if (line.StartsWith("  m_Enabled:"))
