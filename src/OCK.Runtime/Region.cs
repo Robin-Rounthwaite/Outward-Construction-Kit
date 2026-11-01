@@ -210,6 +210,7 @@ namespace OutwardConstructionKit.Runtime
             Transform aiRoot = AddAIManagers(scene);
             EnvironmentDonor.Place(scene, Manifest.environmentDonor);
             EnemyDonor.Place(scene, this, aiRoot);
+            ExtractTest.PlaceEnemy(scene, this, aiRoot);
 
             foreach (string missing in SceneProbe.MissingRequired())
                 KitPlugin.Log.LogWarning("Region scene has no " + missing + ".");

@@ -114,6 +114,29 @@ namespace OutwardConstructionKit.Runtime
             Object.Destroy(waiting);
         }
 
+        // For an enemy from an extracted bundle, which unlike a donor scene's has never woken, so its AI needs no repair.
+        internal static void PlaceExtracted(Scene scene, GameObject prefab, Region region, Vector3 position, int index, Transform parent)
+        {
+            if (s_holder == null)
+            {
+                s_holder = new GameObject("OCK_EnemyDonor");
+                s_holder.SetActive(false);
+                Object.DontDestroyOnLoad(s_holder);
+            }
+
+            GameObject template = Object.Instantiate(prefab, s_holder.transform);
+            template.name = prefab.name;
+            template.SetActive(true); // stays asleep under the holder
+            RemoveDonorTies(template);
+
+            var waiting = new GameObject("OCK_EnemiesWaking");
+            waiting.SetActive(false);
+            SceneManager.MoveGameObjectToScene(waiting, scene);
+            PlaceOne(template, new RegionManifest.EnemyReference { position = position }, region, index, waiting.transform, parent);
+            Object.Destroy(waiting);
+            Object.Destroy(template);
+        }
+
         private static void PlaceOne(GameObject template, RegionManifest.EnemyReference reference, Region region, int index, Transform waiting, Transform parent)
         {
             GameObject enemy = Object.Instantiate(template, waiting);
