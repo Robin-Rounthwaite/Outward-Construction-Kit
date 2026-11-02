@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using UnityEditor;
@@ -29,8 +30,11 @@ internal static class GroundTools
     private static readonly Regex s_notColour = new Regex(@"_(n|g|s|sc|h|ao|mask|detail)$", RegexOptions.IgnoreCase);
     private const float ADDED_LAYER_TILE = 6f;
 
-    /// <summary>The types of water in the game, after the choice of keeping the scene's own.</summary>
-    public static readonly string[] WaterTypes = { "The scene's own", "Clean", "Fresh", "Salt", "Rancid", "Magic", "Pure", "Healing" };
+    /// <summary>The types of water in the game. The first is what water is unless chosen otherwise.</summary>
+    public static readonly string[] WaterTypes = { "Clean", "Fresh", "Salt", "Rancid", "Magic", "Pure", "Healing" };
+    private const float WATER_BELOW_GROUND = 0.5f;
+    private const float GROUND_SEARCH_HEIGHT = 50f;
+    private const float GROUND_SEARCH_DISTANCE = 5000f;
     private static readonly Regex s_librarySource = new Regex("^" + PropImporter.LIBRARY + @"/([^/]+)/Textures/");
     private static readonly string[] s_starterBoxes = { "Floor", "Wall_N", "Wall_S", "Wall_E", "Wall_W" };
 
@@ -162,22 +166,57 @@ internal static class GroundTools
             normalMapTexture = source.Normal == null ? null : PropImporter.ImportTextureByName(GROUND_SCENE, source.Normal, true),
             tileSize = new Vector2(source.Tile, source.Tile),
         };
+        ShowWholeTexture(layer);
         AssetDatabase.CreateAsset(layer, path);
         return layer;
     }
 
-    /// <summary>A flat marker to move and scale. Its name carries the donor scene, which sets how the water looks.</summary>
+    // Game textures keep other data in their alpha, mostly near zero, and Unity's Terrain Layers previews draw it as
+    // transparency. Leaving it out affects only this working copy, because the game uses its own.
+    private static void ShowWholeTexture(TerrainLayer layer)
+    {
+        var importer = AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(layer.diffuseTexture)) as TextureImporter;
+        if (importer == null || importer.alphaSource == TextureImporterAlphaSource.None)
+            return;
+        importer.alphaSource = TextureImporterAlphaSource.None;
+        importer.SaveAndReimport();
+    }
+
+    /// <summary>Fixes the previews of layers made before ShowWholeTexture existed.</summary>
+    public static void ShowWholeTexturesInLibrary()
+    {
+        foreach (string guid in AssetDatabase.FindAssets("t:TerrainLayer", new[] { PropImporter.LIBRARY + "/Ground" }))
+        {
+            var layer = AssetDatabase.LoadAssetAtPath<TerrainLayer>(AssetDatabase.GUIDToAssetPath(guid));
+            if (layer != null && layer.diffuseTexture != null)
+                ShowWholeTexture(layer);
+        }
+    }
+
+    /// <summary>A flat marker to move and scale, at the middle of the view. Its name carries the donor scene, which sets how the water looks, and its type.</summary>
     public static GameObject AddWater(string donorScene)
     {
         GameObject water = GameObject.CreatePrimitive(PrimitiveType.Plane);
-        water.name = WATER_PREFIX + "(" + donorScene + ")";
+        water.name = WATER_PREFIX + "(" + donorScene + ") [" + WaterTypes[0] + "]";
         Object.DestroyImmediate(water.GetComponent<Collider>());
-        water.transform.position = new Vector3(0f, -1f, 0f);
+        water.transform.position = SpotForNewWater();
         water.transform.localScale = new Vector3(4f, 1f, 4f);
         water.GetComponent<Renderer>().sharedMaterial = GetWaterMaterial();
         Undo.RegisterCreatedObjectUndo(water, "Add Water");
         EditorSceneManager.MarkSceneDirty(water.scene);
         return water;
+    }
+
+    private static Vector3 SpotForNewWater()
+    {
+        SceneView view = SceneView.lastActiveSceneView;
+        if (view == null)
+            return new Vector3(0f, -1f, 0f);
+        Vector3 spot = view.pivot;
+        RaycastHit hit;
+        if (Physics.Raycast(spot + Vector3.up * GROUND_SEARCH_HEIGHT, Vector3.down, out hit, GROUND_SEARCH_DISTANCE))
+            spot.y = hit.point.y - WATER_BELOW_GROUND;
+        return spot;
     }
 
     /// <summary>True if this object is a water marker. Markers carry no scripts, so what they hold is in their names.</summary>
@@ -191,11 +230,11 @@ internal static class GroundTools
         return Mathf.Max(0, System.Array.IndexOf(WaterTypes, s_waterName.Match(marker.name).Groups[2].Value));
     }
 
-    /// <summary>Which type of water it is: drinking from it and filling a waterskin use this. Index 0 keeps the scene's own.</summary>
+    /// <summary>Which type of water it is: drinking from it and filling a waterskin use this.</summary>
     public static void SetWaterType(GameObject marker, int type)
     {
         Undo.RecordObject(marker, "Set Water Type");
-        marker.name = WATER_PREFIX + "(" + s_waterName.Match(marker.name).Groups[1].Value + ")" + (type > 0 ? " [" + WaterTypes[type] + "]" : "");
+        marker.name = WATER_PREFIX + "(" + s_waterName.Match(marker.name).Groups[1].Value + ") [" + WaterTypes[type] + "]";
         EditorSceneManager.MarkSceneDirty(marker.scene);
     }
 
@@ -226,6 +265,7 @@ internal static class GroundTools
                 normalMapTexture = normal == null ? null : PropImporter.ImportTextureByName(scene, normal, true),
                 tileSize = new Vector2(ADDED_LAYER_TILE, ADDED_LAYER_TILE),
             };
+            ShowWholeTexture(layer);
             AssetDatabase.CreateAsset(layer, path);
         }
 
@@ -237,6 +277,80 @@ internal static class GroundTools
             EditorUtility.SetDirty(data);
         }
         return layer;
+    }
+
+    /// <summary>The ground's layer using this texture, if it has one yet.</summary>
+    public static TerrainLayer FindLayer(Terrain ground, string texture)
+    {
+        return ground.terrainData.terrainLayers.FirstOrDefault(l => l != null && l.diffuseTexture != null && l.diffuseTexture.name == texture);
+    }
+
+    // Unity has no public way to choose a Terrain's tool or the layer it paints with. These are for Unity 2020.3, and
+    // the self-test notices if a version doesn't have them. Without them, the Prop Browser's message gives the steps.
+    private const BindingFlags ANY_MEMBER = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
+    private const double SECONDS_TO_WAIT_FOR_INSPECTOR = 2.0;
+    private static readonly System.Type s_paintTool = typeof(Editor).Assembly.GetType("UnityEditor.Experimental.TerrainAPI.PaintTextureTool");
+    private static readonly FieldInfo s_activeInspector = typeof(Editor).Assembly.GetType("UnityEditor.TerrainInspector")?.GetField("s_activeTerrainInspectorInstance", ANY_MEMBER);
+    private static readonly MethodInfo s_selectPaintTool = typeof(Editor).Assembly.GetType("UnityEditor.TerrainInspector")?.GetMethod("SelectPaintTool", new[] { typeof(System.Type) });
+
+    private static object PaintToolInstance()
+    {
+        return s_paintTool?.GetProperty("instance", ANY_MEMBER | BindingFlags.FlattenHierarchy)?.GetValue(null);
+    }
+
+    public static bool CanSwitchTerrainTools
+    {
+        get
+        {
+            return s_paintTool != null && s_activeInspector != null && s_selectPaintTool != null && PaintToolInstance() != null
+                && s_paintTool.GetField("m_SelectedTerrainLayer", ANY_MEMBER) != null && s_paintTool.GetField("m_SelectedTerrainLayerIndex", ANY_MEMBER) != null;
+        }
+    }
+
+    /// <summary>
+    /// Selects the ground, with its Paint Texture tool on and this layer chosen, so the next stroke paints with it.
+    /// Says whether that could be done. The Inspector only appears once the selection has changed, so the tool waits for it.
+    /// </summary>
+    public static bool ReadyToPaint(Terrain ground, TerrainLayer layer)
+    {
+        Selection.activeGameObject = ground.gameObject;
+        if (!CanSwitchTerrainTools)
+            return false;
+        try
+        {
+            object tool = PaintToolInstance();
+            s_paintTool.GetField("m_SelectedTerrainLayer", ANY_MEMBER).SetValue(tool, layer);
+            s_paintTool.GetField("m_SelectedTerrainLayerIndex", ANY_MEMBER).SetValue(tool, -1); // worked out again from the layer
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning("[OCK] Couldn't choose the layer to paint with: " + e);
+            return false;
+        }
+
+        double giveUpAt = EditorApplication.timeSinceStartup + SECONDS_TO_WAIT_FOR_INSPECTOR;
+        EditorApplication.CallbackFunction waitForInspector = null;
+        waitForInspector = () =>
+        {
+            var inspector = s_activeInspector.GetValue(null) as Editor;
+            bool ready = inspector != null && inspector.target == ground;
+            if (!ready && EditorApplication.timeSinceStartup < giveUpAt)
+                return;
+            EditorApplication.update -= waitForInspector;
+            if (!ready)
+                return;
+            try
+            {
+                s_selectPaintTool.Invoke(inspector, new object[] { s_paintTool });
+                inspector.Repaint();
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning("[OCK] Couldn't switch the Terrain to Paint Texture: " + e);
+            }
+        };
+        EditorApplication.update += waitForInspector;
+        return true;
     }
 
     // A normal map is named like its texture, with or without the texture's own _d ending.
@@ -309,10 +423,9 @@ internal static class GroundTools
                 .Append(p.x.ToString("0.###", ci)).Append(',').Append(p.y.ToString("0.###", ci)).Append(',').Append(p.z.ToString("0.###", ci)).Append(" | ")
                 .Append((scale.x * PLANE_SIZE).ToString("0.###", ci)).Append(",1,").Append((scale.z * PLANE_SIZE).ToString("0.###", ci)).Append(" | ")
                 .Append(water.transform.eulerAngles.y.ToString("0.###", ci));
+            // Older markers have no type, and count as the default.
             string type = s_waterName.Match(water.name).Groups[2].Value;
-            if (type.Length > 0)
-                text.Append(" | ").Append(type);
-            text.Append('\n');
+            text.Append(" | ").Append(type.Length > 0 ? type : WaterTypes[0]).Append('\n');
         }
     }
 

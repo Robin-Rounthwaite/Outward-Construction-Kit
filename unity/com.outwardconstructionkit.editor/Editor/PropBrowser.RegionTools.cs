@@ -7,19 +7,16 @@ internal partial class PropBrowser
 {
     private void DrawRegionTools()
     {
-        if (!string.IsNullOrEmpty(m_status))
-            EditorGUILayout.HelpBox(m_status, MessageType.None);
-
         if (GUILayout.Button(new GUIContent("Add Return Door", "Adds a marker for a door back to where players entered. The small box shows the side they walk up to. With none, a door appears beside the arrival point.")))
         {
             DoorTools.AddFromMenu();
-            m_status = "Return door added. Stand it on the ground, with the small box facing the way players will approach.";
+            Say("Return door added", "Return door added. Stand it on the ground, with the small box facing the way players will approach.");
         }
 
         if (!RegionExporter.HasSpawnPoint(UnityEngine.SceneManagement.SceneManager.GetActiveScene()))
         {
             EditorGUILayout.HelpBox("This scene has no spawn point, so it can't be exported yet. Players arrive at it.", MessageType.Warning);
-            if (GUILayout.Button("Add Spawn Point"))
+            if (GUILayout.Button(new GUIContent("Add Spawn Point", "Adds where players arrive, at the middle of your view.")))
             {
                 SceneView view = SceneView.lastActiveSceneView;
                 Vector3 spot = view != null ? view.pivot : Vector3.zero;
@@ -47,7 +44,12 @@ internal partial class PropBrowser
             {
                 bool custom = !string.IsNullOrEmpty(info.DoorModelPath);
                 EditorGUILayout.LabelField("Door looks like: " + (custom ? System.IO.Path.GetFileName(info.DoorModelPath) : "the kit's default door"), EditorStyles.miniLabel);
-                if (GUILayout.Button(new GUIContent("Use selected prop", "Doors will look like the prop selected in the scene, at its scale. Turn it first so its front faces along the blue axis, away from the wall it would sit in."), GUILayout.Width(120)))
+                if (DoorTools.ModelMissing && GUILayout.Button(new GUIContent("Show Door Model", "Your return door marker is a plain box until this door's model is brought in from its rip, which takes a few seconds."), GUILayout.Width(120)))
+                {
+                    DoorTools.ImportMissingModel();
+                    GUIUtility.ExitGUI();
+                }
+                if (GUILayout.Button(new GUIContent("Use Selected Prop as Door Model", "All this region's doors, entrance and return, will look like the prop selected in the scene, at its scale, from your next export. Turn it first so its front faces along the blue axis, away from the wall it would sit in. The prop itself stays where it is."), GUILayout.Width(205)))
                 {
                     GameObject selected = Selection.activeGameObject;
                     PropRef chosen = selected != null ? PropRef.Of(selected) : null;
@@ -60,15 +62,17 @@ internal partial class PropBrowser
                         info.DoorModelRotation = selected.transform.eulerAngles;
                         info.DoorModelScale = PropRef.ScaleOf(selected);
                         info.SaveFor(scenePath);
-                        m_status = "Doors will look like " + selected.name + " on your next export.";
+                        DoorTools.Refresh();
+                        Say("Door model chosen", "Doors will look like " + selected.name + " on your next export. Return door markers show it now.");
                     }
                 }
                 using (new EditorGUI.DisabledScope(!custom))
                 {
-                    if (GUILayout.Button("Reset", GUILayout.Width(50)))
+                    if (GUILayout.Button(new GUIContent("Reset", "Goes back to the kit's default door."), GUILayout.Width(50)))
                     {
                         info.DoorModelScene = info.DoorModelPath = null;
                         info.SaveFor(scenePath);
+                        DoorTools.Refresh();
                     }
                 }
             }
@@ -98,9 +102,9 @@ internal partial class PropBrowser
             if (EditorGUI.EndChangeCheck())
                 OckSettings.EnvironmentDonor = m_sceneNames[picked];
 
-            if (GUILayout.Button("New Region", GUILayout.Width(90)))
+            if (GUILayout.Button(new GUIContent("New Region Scene", "Makes a new scene with a walled room, a sun and a spawn point, which is already enough to load in the game."), GUILayout.Width(125)))
                 RegionExporter.NewRegionScene();
-            if (GUILayout.Button("Export Region", GUILayout.Width(100)))
+            if (GUILayout.Button(new GUIContent("Export Region", "Builds this region into your r2modman profile, so it's there the next time you start the game."), GUILayout.Width(100)))
             {
                 try
                 {
@@ -116,11 +120,12 @@ internal partial class PropBrowser
                 PackageWindow.Open();
         }
 
+        GameLauncher.DrawCharacterChoice(150);
+        EditorGUILayout.LabelField("Testing plays and saves as this character, so its save changes. A character kept just for testing is safest.", EditorStyles.wordWrappedMiniLabel);
         using (new EditorGUILayout.HorizontalScope())
         {
-            EditorGUILayout.LabelField(new GUIContent("Test as", "The character Test Region loads. Leave it empty for the first one the game lists."), GUILayout.Width(50));
-            GameLauncher.TestCharacter = EditorGUILayout.TextField(GameLauncher.TestCharacter);
-            if (GUILayout.Button(new GUIContent("Test Region", "Exports this region, starts the game with your mods, and takes your character straight there. It plays and saves as normal."), GUILayout.Width(90)))
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button(new GUIContent("Test Region In-Game", "Exports this region, starts the game with your mods, and takes the chosen character straight there. It plays and saves as normal."), GUILayout.Width(135)))
             {
                 m_status = GameLauncher.TestRegion();
                 GUIUtility.ExitGUI();

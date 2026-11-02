@@ -49,7 +49,7 @@ internal class FirstStepsWindow : EditorWindow
 
         if (Step(1, "Tell the kit where things are", paths, true, "The game, your r2modman profile, and a folder with room for what you rip."))
         {
-            if (GUILayout.Button(paths ? "Change Paths" : "Set Up Paths"))
+            if (GUILayout.Button(new GUIContent(paths ? "Change Paths" : "Set Up Paths", "Opens the window that says where the game, your mods and your rips are.")))
                 PathsWindow.Open();
         }
 
@@ -59,10 +59,10 @@ internal class FirstStepsWindow : EditorWindow
             {
                 using (new EditorGUI.DisabledScope(m_ripped))
                 {
-                    if (GUILayout.Button("Rip Monsoon"))
+                    if (GUILayout.Button(new GUIContent("Rip Monsoon", "Copies Monsoon's models out of your own game files, in its own window, so you can keep working.")))
                         RipWindow.RipByName(ExampleRegion.GROUND_RIP);
                 }
-                if (GUILayout.Button("Rip All Scenes"))
+                if (GUILayout.Button(new GUIContent("Rip All Scenes", "Rips every scene not yet ripped, one after another. It says how much that takes before starting.")))
                 {
                     RipWindow.RipAll();
                     GUIUtility.ExitGUI();
@@ -74,7 +74,7 @@ internal class FirstStepsWindow : EditorWindow
 
         if (Step(3, "Make the example region", example, m_ripped, "A small finished region, to look around and take apart."))
         {
-            if (GUILayout.Button(example ? "Open Example Region" : "Create Example Region"))
+            if (GUILayout.Button(new GUIContent(example ? "Open Example Region" : "Create Example Region", "A small finished region, to look around and take apart. It's kept apart from your own regions.")))
             {
                 if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
                 {
@@ -89,8 +89,8 @@ internal class FirstStepsWindow : EditorWindow
 
         if (Step(4, "Try it in the game", false, example, "Exports the example, starts the game with your mods, and takes your character straight there. It plays and saves as normal."))
         {
-            GameLauncher.TestCharacter = EditorGUILayout.TextField(new GUIContent("Character", "Who to load. Leave it empty for the first one the game lists."), GameLauncher.TestCharacter);
-            if (GUILayout.Button("Visit the Example Region"))
+            GameLauncher.DrawCharacterChoice(170f);
+            if (GUILayout.Button(new GUIContent("Visit the Example Region", "Exports the example, starts the game with your mods, and takes the chosen character straight there.")))
             {
                 if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
                 {
@@ -106,9 +106,9 @@ internal class FirstStepsWindow : EditorWindow
         {
             using (new EditorGUILayout.HorizontalScope())
             {
-                if (File.Exists(TUTORIAL) && GUILayout.Button("Open the Tutorial"))
+                if (File.Exists(TUTORIAL) && GUILayout.Button(new GUIContent("Open the Tutorial", "Opens the guide that builds a region from nothing.")))
                     EditorUtility.OpenWithDefaultApp(Path.GetFullPath(TUTORIAL));
-                if (GUILayout.Button("Open the Prop Browser"))
+                if (GUILayout.Button(new GUIContent("Open the Prop Browser", "Opens the window where you add what goes in a region, and export and test it.")))
                     PropBrowser.Open();
             }
         }

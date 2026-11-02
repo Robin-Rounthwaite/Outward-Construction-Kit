@@ -2,7 +2,7 @@
 
 This builds a small region and walks into it in the game. It assumes you've finished [Getting started](getting-started.md) and ripped **Monsoon**, whose textures the ground uses. If you also rip **Chersonese**, you'll have hyenas to add.
 
-Before starting, you can run **Construction Kit > Create Example Region** to see a finished one. Click **Test Region** to visit it. Its entrance is already placed, in Cierzo, near where you arrive from the first spawn point.
+Before starting, you can run **Construction Kit > Create Example Region** to see a finished one. Click **Test Region In-Game** to visit it. Its entrance is already placed, in Cierzo, near where you arrive from the first spawn point.
 
 ## 1. Make the scene
 
@@ -48,7 +48,7 @@ Click **Export Region**. The message at the top of the browser's tools says what
 
 ## 9. Visit it
 
-Click **Test Region** in the browser, which exports your region again, starts the game with your mods, loads your character and takes you straight there. It's normal play from then on, so your character takes damage and saves as usual. Name the character to use in the box beside the button, or leave it empty for the first one the game lists.
+Click **Test Region In-Game** in the browser, which exports your region again, starts the game with your mods, loads your character and takes you straight there. It's normal play from then on, so your character takes damage and saves as usual. Name the character to use in the box beside the button, or leave it empty for the first one the game lists.
 
 To see the way in that players will use, click **Launch Game** instead, or start the game from the profile you chose with r2modman's **Start modded**. Then, in a town or anywhere else outdoors:
 
