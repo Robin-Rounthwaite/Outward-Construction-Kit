@@ -10,6 +10,64 @@ A toolkit for adding new regions to Outward: Definitive Edition, built from the 
 - **To make a region:** follow [Getting started](docs/getting-started.md), then [Your first region](docs/tutorial.md).
 - **To work on the kit itself:** see [Working on the kit](#working-on-the-kit).
 
+## Features
+
+**Building in Unity**
+- Rip any of the game's scenes from your own copy, from inside Unity, one at a time or all together.
+- Browse what you've ripped in the Prop Browser, by tab (Enemies, Water, Ground, Props and Items), location, category and name.
+- Add things with a click, or drag them into the scene.
+- Sculpt terrain, and paint it with the game's ground textures.
+- Add water that looks like any ripped location's, and set what type it is: Clean, Fresh, Salt, Rancid, Magic, Pure or Healing.
+- Place the game's enemies, which fight as they do in the game.
+- Move, rotate and evenly scale props, and alter them further if you need to.
+- Choose the region's sky and audio from any ripped location.
+- Add return doors, and use any prop as your doors' model.
+
+**In the game**
+- Regions load through a door and a loading screen, like the game's own areas.
+- Doors and interaction prompts come from the game itself, and the door's location is set from inside the game.
+- Water can be drunk from and collected, where the location it's copied from has a water source.
+- A defeat in a region shows a message, and returns you to where you came from.
+- Removing a region is safe: a save left inside it moves to its entrance or to Cierzo.
+- A region that can't load, or a broken one, says so and doesn't stop the game.
+
+**Sharing**
+- Package a region as a Thunderstore mod, with the kit as its dependency.
+- Unaltered props, enemies, water and ground ship as references to the game's assets, so mods stay small and contain no game art.
+- Everything needed from the game is read from each player's own copy, and kept in a cache.
+
+**Help along the way**
+- A starter project and a First Steps window, a setup check, and a guide from installing Unity to your first region.
+- A Create Example Region command.
+- Test Region In-Game and Launch Game buttons, with a choice of which character to test as.
+
+## Planned features
+
+Not promises, and in no fixed order.
+
+**For the beta**
+- Filling the Items tab with the game's full item list.
+- Items that can be placed and picked up.
+
+**Afterwards**
+- Talking NPCs, then quest givers, then merchants, with dialogue written by modders.
+- Telling NPCs where to walk and when, for quests or daily schedules, with animations.
+- Animation options for NPCs, plus sound effects and other special effects.
+- New quests with item or skill rewards and flags, able to change who's hostile, in their own window.
+- Setting up death scenarios for a region: spawn points, penalties and messages.
+- Props that work, such as gathering spots and chests.
+- Choosing per enemy or item whether it respawns, and checking how resets treat them.
+- Opening the game's existing worldspaces in Unity for editing.
+- Connected and multi-part regions.
+- Patrols, squads and spawn areas for enemies, and items and loot.
+- Environment settings in Unity: sky, weather, ambient audio and lighting.
+- A region map and loading screen.
+- Distant scenery at region edges, and grass and ground clutter.
+- Baked lighting and performance tools, and lighting in Unity that matches the game.
+- Previews in the Prop Browser, and more filters, including dungeons or exteriors only.
+- Making a new test character from the character dropdown.
+- Co-op testing, both splitscreen and online.
+
 ## Current limitations
 
 - Co-op hasn't been tested yet.
