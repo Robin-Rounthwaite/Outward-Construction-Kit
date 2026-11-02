@@ -18,6 +18,11 @@ internal static class GameLauncher
     private const string REQUEST_FILE = "OCK_AutoTest.txt"; // the plugin's AutoTest reads this
     private const string CHARACTER_PREF = "OCK.TestCharacterId";
     private const string OLD_CHARACTER_NAME_PREF = "OCK.TestCharacter"; // a name, from before characters were chosen from a list
+    private const double SECONDS_TO_APPEAR = 60d;
+    private const double SECONDS_BETWEEN_LOOKS = 3d;
+
+    private static double s_startedAt;
+    private static double s_nextLook;
 
     /// <summary>The save ID of who a test plays as: the last one chosen, or else whoever's top of the list.</summary>
     public static string TestCharacterId
@@ -133,8 +138,8 @@ internal static class GameLauncher
             PathsWindow.Open();
             return "Please confirm where the game and your mods are first.";
         }
-        if (Process.GetProcesses().Any(p => p.ProcessName.StartsWith("Outward", StringComparison.OrdinalIgnoreCase)))
-            return "The game is already running. Close it first, because it holds on to what it's loaded.";
+        if (IsGameRunning())
+            return "The game wasn't started, because it's still running or still closing. Close it, wait a moment, and try again.";
         if (!File.Exists(Path.Combine(BepInExFolder(), "core", "BepInEx.Preloader.dll")))
             return "BepInEx isn't in the profile you chose in Construction Kit > Paths. Install the kit into that profile with r2modman, and click Start modded there once.";
         return null;
@@ -146,6 +151,38 @@ internal static class GameLauncher
         if (string.IsNullOrEmpty(steam) || !File.Exists(steam))
             return "Steam wasn't found, so the game wasn't started. Use Start modded in r2modman instead.";
         Process.Start(new ProcessStartInfo(steam, SteamArguments(BepInExFolder())) { UseShellExecute = true });
+        s_startedAt = EditorApplication.timeSinceStartup;
+        EditorApplication.update -= WatchForGame;
+        EditorApplication.update += WatchForGame;
         return message + " If Steam asks whether to allow the launch options, allow them.";
+    }
+
+    // Steam gives no answer when it's asked to start a game, so the only way to know is to look for it.
+    private static void WatchForGame()
+    {
+        double waited = EditorApplication.timeSinceStartup - s_startedAt;
+        if (waited < s_nextLook)
+            return;
+        s_nextLook = waited + SECONDS_BETWEEN_LOOKS;
+        if (IsGameRunning())
+        {
+            StopWatching();
+            return;
+        }
+        if (waited < SECONDS_TO_APPEAR)
+            return;
+        StopWatching();
+        EditorUtility.DisplayDialog("Construction Kit", $"The game hasn't appeared after {SECONDS_TO_APPEAR:0} seconds. Check whether Steam is waiting for an answer behind another window, then try again, or use Start modded in r2modman.", "OK");
+    }
+
+    private static void StopWatching()
+    {
+        EditorApplication.update -= WatchForGame;
+        s_nextLook = 0d;
+    }
+
+    private static bool IsGameRunning()
+    {
+        return Process.GetProcesses().Any(p => p.ProcessName.StartsWith("Outward", StringComparison.OrdinalIgnoreCase));
     }
 }

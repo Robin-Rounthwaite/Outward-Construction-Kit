@@ -6,6 +6,7 @@ licence-repair-report.txt
 *.user
 Directory.Build.user.props
 .vs/
+.claude/worktrees/
 TestResults/
 
 # Third-party tools are downloaded, not committed. The README links to them.
