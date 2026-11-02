@@ -29,6 +29,7 @@ internal class PackageWindow : EditorWindow
         }
 
         RegionInfo info = RegionInfo.For(scenePath);
+        info.TryCopyDoorFromGame(); // a door placed in game counts, with nothing more to click
         if (string.IsNullOrEmpty(info.PackageName))
             info.PackageName = Regex.Replace(info.DisplayName ?? info.Id, "[^a-zA-Z0-9]+", "_").Trim('_');
         if (string.IsNullOrEmpty(info.PackageTeam))

@@ -2,7 +2,7 @@
 
 A toolkit for adding new regions to Outward: Definitive Edition, built from the game's own assets and authored in Unity. Exported regions contain references to vanilla assets, not copies of them.
 
-**Status: in development, not yet released.** Windows only.
+**Status: beta.** Windows only.
 
 ## Start here
 
@@ -10,7 +10,7 @@ A toolkit for adding new regions to Outward: Definitive Edition, built from the 
 - **To make a region:** follow [Getting started](docs/getting-started.md), then [Your first region](docs/tutorial.md).
 - **To work on the kit itself:** see [Working on the kit](#working-on-the-kit).
 
-**Tell us where the guides lose you.** If you ever feel stuck, or even briefly confused, let Cat know in the Catalysten-Workshop, so they can be made clearer.
+**Tell us where the guides lose you.** If you ever feel stuck, or feel like something could be explained more clearly, let Cat know in the Catalysten-Workshop, so they can be made clearer.
 
 ## Quick answers
 
@@ -79,11 +79,15 @@ Not promises, and in no fixed order.
 - Dying in a region always returns you to where you entered it.
 - A game update can stop a region's references from matching.
 
+## I could use some help
+
+This toolkit was made by Catalysten, but he can't maintain this alone! That's why I named this team "Blue Chamber Collective." I'm hoping to add others to my Thunderstore team, so that we can process pull requests and requests for more features, and continue to improve our documentation and tools. Please let me know on the Catalysten workshop on the Outward modding discord, and we can talk about it!
+
 ## What you need to make a region
 
 - Outward: Definitive Edition, and [r2modman](https://thunderstore.io/package/ebkr/r2modman/)
 - Unity 2020.3.26f1, which must match the game's version exactly
-- Space for what you rip from the game: 15 GB to start with
+- Space for what you rip from the game: not yet measured, so use a drive with plenty of room
 
 The kit downloads [AssetRipper](https://github.com/AssetRipper/AssetRipper) by itself when it's first needed. AssetRipper is a separate project under the GPL, and isn't included with the kit.
 
@@ -111,6 +115,10 @@ You'll also need the .NET SDK, to build the plugin.
 | `docs` | Guides, listed above. |
 
 No game files are included here, and none should ever be committed. Everything that uses the game's art reads it from your own copy of the game.
+
+## Use of AI
+
+Claude Code was used in the making of this mod.
 
 ## Licence
 

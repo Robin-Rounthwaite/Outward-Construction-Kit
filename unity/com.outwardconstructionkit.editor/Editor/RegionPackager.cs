@@ -37,6 +37,8 @@ internal static class RegionPackager
             problems.Add($"The description is {info.Description.Length} characters, and Thunderstore allows {MAX_DESCRIPTION}.");
         if (!string.IsNullOrEmpty(info.WebsiteUrl) && !Regex.IsMatch(info.WebsiteUrl, "^https?://"))
             problems.Add("The website needs to start with https://, or be left empty.");
+        if (string.IsNullOrEmpty(info.DoorScene))
+            problems.Add("This region has no entrance yet, so players would have no door to reach it. Place one in game: press Ctrl+F8 until this region is named, then Ctrl+F10. It's picked up by itself.");
         string iconProblem = IconProblem(IconFor(info));
         if (iconProblem != null)
             problems.Add(iconProblem);

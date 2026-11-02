@@ -2,7 +2,7 @@
 
 This builds a small region and walks into it in the game. It assumes you've finished [Getting started](getting-started.md) and ripped **Monsoon**, whose textures the ground uses. If you also rip **Chersonese**, you'll have hyenas to add.
 
-**Tell us where this guide loses you.** If you ever feel stuck, or even briefly confused, let Cat know in the Catalysten-Workshop, so it can be made clearer.
+**Tell us where this guide loses you.** If you ever feel stuck, or feel like something could be explained more clearly, let Cat know in the Catalysten-Workshop, so it can be made clearer.
 
 Before starting, you can run **Construction Kit > Create Example Region** to see a finished one. Click **Test Region In-Game** to visit it. Its entrance is already placed, in Cierzo, near where you arrive from the first spawn point.
 

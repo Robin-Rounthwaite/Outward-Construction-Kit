@@ -59,7 +59,7 @@ Items 18 to 31 are built, except where noted below.
 
 - **Why the Paths settings changed (24):** Unity started from the Hub keeps its own settings, apart from Unity started by me. The settings my Unity sees still say `modding-experiments`, while your Hub-started Unity exported to `Catalysten Modlist`. Modders always start it the same way, so this should only affect this PC's mix of the two.
 - **Team name (31):** Thunderstore's guide lists no team in `manifest.json` or the zip. It doesn't say where the team is chosen, so the upload page is still my understanding.
-- **Entrance warning (28):** removed at your request, so **Make Upload Zip** no longer stops without an entrance. The export details still say "entrance not set".
+- **Entrance warning (28):** Package Region picks up a door placed in game by itself. It only warns, and stops the zip, when no door has been placed.
 - **Bush door (29):** you found your door, so there's nothing more to check.
 
 ### Findings

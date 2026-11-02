@@ -12,6 +12,8 @@ The version must match the game's exactly, because bundles built with any other 
 2. Open the Hub, sign in, and add a licence under **Preferences > Licenses**. The free Personal licence is fine if it fits you. Unity won't open a project without one.
 3. Paste this link into your browser, which opens the install in the Hub: `unityhub://2020.3.26f1/7298b473bc1a`. You don't need any extra modules.
 
+The Hub may warn that this version of Unity is dangerous. That warning doesn't apply here, because we're not making executables, and Outward already has its own patch.
+
 ## 2. Install the mod
 
 1. Install [r2modman](https://thunderstore.io/package/ebkr/r2modman/), choose Outward: Definitive Edition, and create a profile. This is the profile you'll test your regions in.
@@ -23,7 +25,7 @@ The version must match the game's exactly, because bundles built with any other 
 1. Download the starter project and unzip it to a folder of its own with a short path, such as `D:\OutwardRegions`. In testing, a copy under a very long path sat idle after opening. Keep it off OneDrive and similar services too: they lock Unity's working files, which breaks exports.
 2. In the Hub, click **Open** (**Add** on some versions), and choose the `OutwardRegionProject` folder. The first opening takes a few minutes.
 3. The **Construction Kit Paths** window appears. It suggests the game folder and each mod profile it can find on your PC, looking without changing anything. Check them, and pick the profile from step 2.
-4. For **Rip folder**, choose or make a folder on a drive with plenty of space, and off OneDrive. Rips hold game art that shouldn't sync anywhere. It doesn't have to be empty: each rip gets a new folder of its own, nothing already there is overwritten, and earlier rips are picked up. See step 4 for how much space.
+4. For **Rip folder**, choose or make a folder on a drive with plenty of space, and off OneDrive. Rips hold game art that shouldn't sync anywhere. It doesn't have to be empty: each rip gets a new folder of its own, nothing already there is overwritten, and earlier rips are picked up.
 5. Click **Confirm**. You can reopen this window from **Construction Kit > Paths**.
 
 The **First Steps** window then opens, and takes you through the rest. You can reopen it from **Construction Kit > First Steps**.
@@ -43,17 +45,11 @@ Leave the project's settings as they are. Color Space has to be Linear like the 
 
 ## 4. Choose what to rip
 
-The Prop Browser shows models extracted ("ripped") from your own copy of the game. You have two choices:
+The Prop Browser shows models extracted ("ripped") from your own copy of the game.
 
-| | Monsoon only | Rip all scenes |
-|---|---|---|
-| **Gives you** | Everything the tutorial needs, including its ground textures | All 79 of the game's scenes except two empty ones, so every prop and enemy |
-| **Disk space** | 15 GB | **Probably about 100 to 170 GB** |
-| **Time** | About 18 minutes | **About a day** |
+If you want to start small, try Monsoon, which has everything the tutorial needs, including its ground textures. Alternatively, you can rip all scenes: all 79 of the game's scenes except two empty ones, so every prop and enemy. You can rip more scenes at any time.
 
-Start with Monsoon unless you have the space and want everything from the start. You can rip more scenes at any time.
-
-The figures for ripping everything are estimates. Each rip exports much the same shared game files, so the kit keeps one copy of what's identical. Measured so far, a second region added 1.7 GB and a small dungeon 1.1 GB, where a full rip of that dungeon would be 7.6 GB. Windows Explorer still shows each rip at its full size, because the files appear in each. Nobody has ripped the whole game yet. It stops before the drive fills up, with regions and towns done first, and carries on from where it stopped if you run it again.
+The time and disk space ripping takes are not yet measured, so use a drive with plenty of room. Each rip exports much the same shared game files, so the kit keeps one copy of what's identical. Windows Explorer still shows each rip at its full size, because the files appear in each. Ripping all scenes stops before the drive fills up, with regions and towns done first, and carries on from where it stopped if you run it again.
 
 To rip, use **First Steps**, or **Construction Kit > Rip a Scene**, which has a **Rip** button beside each scene and a **Rip All Scenes** button. The first time, this downloads [AssetRipper](https://github.com/AssetRipper/AssetRipper) from GitHub, about 42 MB, into your rip folder. Ripping runs in its own window, so you can keep working. When it finishes, it appears in the Prop Browser by itself. If you'd rather use an AssetRipper you already have, set its folder in **Construction Kit > Paths**; version 2.0.0 is the tested one.
 

@@ -78,7 +78,7 @@ internal class PathsWindow : EditorWindow
         else if (!KitIsInChosenPlugins())
             KitStyles.HelpBox("The kit isn't installed in this profile, so Test Region In-Game won't start with it. Install the kit there with r2modman, or pick the profile you test with.", MessageType.Warning);
 
-        m_ripFolder = PathRow("Rip folder", "Where your rips of the game go, on a drive with plenty of space and off OneDrive. A first rip takes about 15 GB. It's safe to use a folder with things in it: each rip gets a new folder of its own, nothing already there is overwritten, and earlier rips are picked up. The Prop Browser only lists rips of Outward, so anything else in the folder is left alone.", m_ripFolder, null);
+        m_ripFolder = PathRow("Rip folder", "Where your rips of the game go, on a drive with plenty of space and off OneDrive. It's safe to use a folder with things in it: each rip gets a new folder of its own, nothing already there is overwritten, and earlier rips are picked up. The Prop Browser only lists rips of Outward, so anything else in the folder is left alone.", m_ripFolder, null);
 
         m_ripper = PathRow("AssetRipper folder (optional)", "Leave empty and the kit downloads the version it's tested with, once. Only fill this in to use a copy you already have; version 2.0.0 is the tested one.", m_ripper, null);
         if (!string.IsNullOrEmpty(m_ripper) && (!Directory.Exists(m_ripper) || Directory.GetFiles(m_ripper, "AssetRipper*.exe", SearchOption.AllDirectories).Length == 0))

@@ -124,7 +124,7 @@ try {
     if (Test-Path $shared) { $body += '&path=' + (& $encode $shared) }
     & $post '/LoadFile' $body
 
-    Write-Host "Exporting $Scene. This usually takes 10 to 30 minutes, and several gigabytes..."
+    Write-Host "Exporting $Scene. This can take a while, and a lot of disk space..."
 
     # Its log says how this is going. The request is only what starts it, because one held open for this long can
     # drop while the export carries on perfectly well.

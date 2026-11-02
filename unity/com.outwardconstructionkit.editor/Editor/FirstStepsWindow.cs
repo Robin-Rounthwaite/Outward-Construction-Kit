@@ -53,7 +53,7 @@ internal class FirstStepsWindow : EditorWindow
                 PathsWindow.Open();
         }
 
-        if (Step(2, "Rip what you need from the game", m_ripped, paths, "Monsoon is enough to start with: about 15 GB and 18 minutes. Everything is probably about 100 to 170 GB and about a day, and you can always rip more later. Ripping runs in its own window."))
+        if (Step(2, "Rip what you need from the game", m_ripped, paths, "To start small, try Monsoon. Alternatively, you can rip all scenes. Time and disk space aren't yet measured, and you can always rip more later. Ripping runs in its own window."))
         {
             using (new EditorGUILayout.HorizontalScope())
             {

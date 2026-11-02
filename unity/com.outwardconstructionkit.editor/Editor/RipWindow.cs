@@ -16,13 +16,6 @@ internal class RipWindow : EditorWindow
     public const string RIP_ALL_SCRIPT = "Packages/com.outwardconstructionkit.editor/Tools~/rip-all-scenes.ps1";
     private const int LOW_DISK_GB = 20;
 
-    // Measured: every rip exports much the same shared assets, and later rips link to those, so only a first rip is big.
-    private const int FIRST_RIP_GB = 15;
-    private const int TYPICAL_LATER_SCENE_GB_LOW = 1;
-    private const int TYPICAL_LATER_SCENE_GB_HIGH = 2;
-    private const int TYPICAL_SCENE_MINUTES_LOW = 3;
-    private const int TYPICAL_SCENE_MINUTES_HIGH = 18;
-
     // The empty scenes the game passes through, going by their names.
     private static readonly string[] s_nothingToRip = { "MainMenu_Empty", "LowMemory_TransitionScene" };
 
@@ -63,8 +56,8 @@ internal class RipWindow : EditorWindow
             return;
         }
 
-        KitStyles.HelpBox("Ripping copies a scene's models out of your own game files, for the Prop Browser to show. A scene usually takes 10 to 30 minutes. A first rip takes up to about 15 gigabytes, and later ones much less, because they share what's the same. It runs in its own window, so you can keep working, and appears in the Prop Browser when it's done.", MessageType.Info);
-        if (GUILayout.Button(new GUIContent("Rip All Scenes", "Rips every scene not yet ripped, one after another. It says how much that takes before starting.")))
+        KitStyles.HelpBox("Ripping copies a scene's models out of your own game files, for the Prop Browser to show. Time and disk space aren't yet measured, so choose a drive with plenty of room. Later rips share what's the same with earlier ones. It runs in its own window, so you can keep working, and appears in the Prop Browser when it's done.", MessageType.Info);
+        if (GUILayout.Button(new GUIContent("Rip All Scenes", "Rips every scene not yet ripped, one after another. It asks before starting.")))
             RipAll();
         m_search = EditorGUILayout.TextField("Search", m_search);
         m_scroll = EditorGUILayout.BeginScrollView(m_scroll);
@@ -102,7 +95,7 @@ internal class RipWindow : EditorWindow
             PathsWindow.Open();
             return;
         }
-        string message = $"Rip {LocationNames.For(scene)}? It usually takes 10 to 30 minutes, in {OckSettings.RipFolder}. A first rip takes up to about {FIRST_RIP_GB} GB, and later ones much less, because they share what's the same.";
+        string message = $"Rip {LocationNames.For(scene)} into {OckSettings.RipFolder}? Time and disk space aren't yet measured. Later rips share what's the same with earlier ones.";
         if (WillDownloadRipper())
             message += "\n\nThis first time, it also downloads AssetRipper 2.0.0 from GitHub, about 42 MB, and keeps it in that folder.";
         long free = FreeGigabytes(OckSettings.RipFolder);
@@ -113,12 +106,6 @@ internal class RipWindow : EditorWindow
 
         string arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{Path.GetFullPath(SCRIPT)}\" -GameData \"{OckSettings.GameData}\" -Level {level} -Scene \"{scene}\" -RipFolder \"{OckSettings.RipFolder}\"" + RipperArgument();
         Process.Start(new ProcessStartInfo("powershell.exe", arguments) { UseShellExecute = true });
-    }
-
-    private static int EstimateGb(int scenes, int perLaterScene)
-    {
-        bool anyRipped = OckSettings.RippedScenes().Count > 0;
-        return anyRipped ? scenes * perLaterScene : FIRST_RIP_GB + (scenes - 1) * perLaterScene;
     }
 
     private static bool WillDownloadRipper()
@@ -148,7 +135,7 @@ internal class RipWindow : EditorWindow
         }
 
         string message = $"Rip the {remaining.Count} scenes not yet ripped, into {OckSettings.RipFolder}?\n\n"
-            + $"Rips share what's the same between them, so going by the scenes measured so far, that's roughly {EstimateGb(remaining.Count, TYPICAL_LATER_SCENE_GB_LOW)} to {EstimateGb(remaining.Count, TYPICAL_LATER_SCENE_GB_HIGH)} GB, and {remaining.Count * TYPICAL_SCENE_MINUTES_LOW / 60} to {remaining.Count * TYPICAL_SCENE_MINUTES_HIGH / 60} hours. Most modders only need a few scenes.\n\n"
+            + "This is a very large job, and its time and disk space aren't yet measured. Most modders only need a few scenes.\n\n"
             + "Regions and towns go first, then dungeons. It runs in its own window, stops before the drive fills up, and carries on from where it stopped if you run it again.";
         long free = FreeGigabytes(OckSettings.RipFolder);
         if (free >= 0)

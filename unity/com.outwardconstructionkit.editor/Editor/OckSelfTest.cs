@@ -403,10 +403,10 @@ internal static class OckSelfTest
 
     private static void CheckPackaging(RegionInfo info, string output)
     {
-        Check("packaging asks for a mod name and description", RegionPackager.Problems(new RegionInfo { PackageTeam = "Team", PackageName = "has spaces", PackageVersion = "1" }).Count == 3);
-        Check("packaging asks for a team", RegionPackager.Problems(new RegionInfo { PackageName = "Good", PackageVersion = "1.0.0", Description = "Fine." }).Count == 1);
-        Check("packaging doesn't make anyone copy the entrance by hand", RegionPackager.Problems(new RegionInfo { PackageTeam = "Team", PackageName = "Good", PackageVersion = "1.0.0", Description = "Fine." }).Count == 0);
-        Check("packaging refuses a long description", RegionPackager.Problems(new RegionInfo { PackageTeam = "Team", PackageName = "Good", PackageVersion = "1.0.0", Description = new string('x', 251) }).Count == 1);
+        Check("packaging asks for a mod name and description", RegionPackager.Problems(new RegionInfo { PackageTeam = "Team", PackageName = "has spaces", PackageVersion = "1", DoorScene = "Monsoon" }).Count == 3);
+        Check("packaging asks for a team", RegionPackager.Problems(new RegionInfo { PackageName = "Good", PackageVersion = "1.0.0", Description = "Fine.", DoorScene = "Monsoon" }).Count == 1);
+        Check("packaging warns when there's no entrance", RegionPackager.Problems(new RegionInfo { PackageTeam = "Team", PackageName = "Good", PackageVersion = "1.0.0", Description = "Fine." }).Count == 1);
+        Check("packaging refuses a long description", RegionPackager.Problems(new RegionInfo { PackageTeam = "Team", PackageName = "Good", PackageVersion = "1.0.0", Description = new string('x', 251), DoorScene = "Monsoon" }).Count == 1);
 
         var placed = new RegionInfo { Id = "placed" };
         Check("a door placed in game is read from the config", placed.TryReadDoor(new[] { "[Region other]", "DoorScene = Wrong", "[Region placed]", "DoorScene = Monsoon", "DoorPosition = 1,2,3", "DoorRotationY = 90" }) && placed.DoorScene == "Monsoon" && placed.DoorPosition == "1,2,3" && placed.DoorRotationY == 90f);
