@@ -14,6 +14,7 @@ namespace OutwardConstructionKit.Runtime
         private const string FALLBACK_SCENE = "CierzoNewTerrain";
         private const string TRANSITION_SCENE = "LowMemory_TransitionScene";
         private const string MENU_SCENE_PREFIX = "MainMenu";
+        private const string DEFEAT_TEXT = "You were injured badly, and left the space to nurse yourself to health.";
 
         private static string s_cameFrom;
         private static bool s_returning;
@@ -42,7 +43,10 @@ namespace OutwardConstructionKit.Runtime
         {
             private static void Prefix()
             {
-                s_returning = !PhotonNetwork.isNonMasterClientInRoom && Region.ForScene(SceneManager.GetActiveScene().name) != null;
+                bool inRegion = Region.ForScene(SceneManager.GetActiveScene().name) != null;
+                s_returning = !PhotonNetwork.isNonMasterClientInRoom && inRegion;
+                if (PhotonNetwork.isNonMasterClientInRoom && inRegion)
+                    ShowDefeatScreen(null); // the host's choice moves everyone, whether or not a guest has read this yet
             }
         }
 
@@ -63,8 +67,22 @@ namespace OutwardConstructionKit.Runtime
                 // The door's own spawn is beside it, and that only exists in the scene the door is in.
                 int spawnPoint = destination == region.EntranceScene && region.ReturnSpawnIndex.Value >= 0 ? region.ReturnSpawnIndex.Value : 0;
                 KitPlugin.Log.LogMessage($"Defeated in {scene}, so returning to {destination}, at spawn {spawnPoint}.");
-                __instance.RequestSwitchArea(destination, spawnPoint);
+                ShowDefeatScreen(() => __instance.RequestSwitchArea(destination, spawnPoint));
                 return false;
+            }
+        }
+
+        // The game's own context screen, which waits for a key press. A failure here mustn't strand anyone in a region.
+        private static void ShowDefeatScreen(UnityEngine.Events.UnityAction then)
+        {
+            try
+            {
+                MenuManager.Instance.ShowProloguePanel(new[] { new EventContextData.ContextScreen { DefaultText = DEFEAT_TEXT } }, then);
+            }
+            catch (System.Exception e)
+            {
+                KitPlugin.Log.LogError("Couldn't show the defeat screen: " + e);
+                then?.Invoke();
             }
         }
     }

@@ -15,6 +15,7 @@ namespace OutwardConstructionKit.Runtime
     {
         private const float SETTLE_SECONDS = 8f;
         private const float GROUND_SEARCH_DISTANCE = 5f;
+        private const int MAX_LISTED = 10;
         private const float PARKED_BELOW_HEIGHT = -1000f; // the game moves players far below the world as they leave
 
         public static IEnumerator Run(Region region, Scene scene, int propsPlaced)
@@ -50,6 +51,7 @@ namespace OutwardConstructionKit.Runtime
                 CheckGround(region, roots, check);
                 CheckWater(region, roots, check);
                 CheckReturnDoors(region, check);
+                CheckShaders(roots, check);
             }
             catch (System.Exception e)
             {
@@ -134,7 +136,21 @@ namespace OutwardConstructionKit.Runtime
             int sources = roots.SelectMany(r => r.GetComponentsInChildren<WaterSource>(true)).Count();
             check("every water can be drunk from", sources == region.Manifest.water.Count, $"{sources} of {region.Manifest.water.Count}");
             foreach (RegionManifest.WaterReference asked in region.Manifest.water.Where(w => !string.IsNullOrEmpty(w.waterType)))
-                check($"water asking to be {asked.waterType} is", roots.SelectMany(r => r.GetComponentsInChildren<WaterSource>(true)).Any(w => w.WaterType.ToString().Equals(asked.waterType, System.StringComparison.OrdinalIgnoreCase)), string.Join(", ", roots.SelectMany(r => r.GetComponentsInChildren<WaterSource>(true)).Select(w => w.WaterType.ToString()).ToArray()));
+            {
+                string[] types = roots.SelectMany(r => r.GetComponentsInChildren<IWaterSource>(true)).Select(w => w.WaterType.ToString()).Distinct().ToArray();
+                check($"water asking to be {asked.waterType} is", types.Any(t => t.Equals(asked.waterType, System.StringComparison.OrdinalIgnoreCase)), string.Join(", ", types));
+            }
+        }
+
+        // A missing or unsupported shader draws purple, and nothing else reports it.
+        private static void CheckShaders(GameObject[] roots, System.Action<string, bool, string> check)
+        {
+            var broken = new HashSet<string>();
+            foreach (Renderer renderer in roots.SelectMany(r => r.GetComponentsInChildren<Renderer>(true)))
+                foreach (Material material in renderer.sharedMaterials.Where(m => m != null))
+                    if (material.shader == null || !material.shader.isSupported || material.shader.name == "Hidden/InternalErrorShader")
+                        broken.Add($"{renderer.name} ({material.name}: {(material.shader != null ? material.shader.name : "no shader")})");
+            check("every material has a working shader", broken.Count == 0, string.Join(", ", broken.Take(MAX_LISTED).ToArray()));
         }
 
         private static void CheckReturnDoors(Region region, System.Action<string, bool, string> check)

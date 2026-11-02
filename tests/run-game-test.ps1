@@ -18,6 +18,9 @@ Kills the character in the last region, to test that they come back where they e
 .PARAMETER StartIn
 A scene to travel to first, if the character's save is somewhere else.
 
+.PARAMETER TryUsing
+With Visit: goes to the water and a return door, and uses them through the game's own interaction calls.
+
 .PARAMETER Visit
 A region to go straight to and stay in, as the Test Region button does. Leaves the game open.
 
@@ -31,6 +34,7 @@ param(
     [switch]$DieInRegion,
     [string]$StartIn,
     [string]$Visit,
+    [switch]$TryUsing,
     [string]$Character = 'Jim of the Doors',
     [int]$TimeoutSeconds = 600,
     [int]$AppId = 1758860,
@@ -63,6 +67,7 @@ $request = @("character $Character") + @($Regions -split ',' | Where-Object { $_
 if ($Visit) {
     # What the Unity kit's Test Region button asks for.
     $request = @("character $Character", "visit $Visit")
+    if ($TryUsing) { $request += 'trydoor' }
     $Stay = $true
 }
 if ($Stay) { $request += 'stay' }

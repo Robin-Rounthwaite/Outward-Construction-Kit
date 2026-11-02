@@ -235,15 +235,21 @@ namespace OutwardConstructionKit.Extractor
         }
 
         /// <summary>
-        /// Builds a bundle holding nothing but a pointer to a texture in the game's files, found by name among the
-        /// files the level uses, for textures a region uses directly rather than through an object.
+        /// Builds a bundle holding nothing but a pointer to a texture in the game's files, found by name, for textures a
+        /// region uses directly rather than through an object. It looks first among the files the level uses, then in
+        /// the rest, because a rip also offers what a level only reaches indirectly.
         /// </summary>
         public BuildReport BuildTexturePointer(string levelFile, string textureName, string outputFile)
         {
             LevelIndex level = LevelFor(levelFile);
+            List<AssetsFileExternal> candidates = level.File.Metadata.Externals.Where(e => e.PathName.EndsWith(".assets")).ToList();
+            foreach (string path in Directory.GetFiles(m_gameData, "*.assets").OrderBy(p => p))
+                if (!candidates.Any(c => c.PathName == Path.GetFileName(path)))
+                    candidates.Add(new AssetsFileExternal { PathName = Path.GetFileName(path), OriginalPathName = Path.GetFileName(path), VirtualAssetPathName = "", Type = AssetsFileExternalType.Normal });
+
             AssetsFileExternal external = null;
             long pathId = 0;
-            foreach (AssetsFileExternal candidate in level.File.Metadata.Externals.Where(e => e.PathName.EndsWith(".assets")))
+            foreach (AssetsFileExternal candidate in candidates)
             {
                 if (candidate.PathName == "globalgamemanagers.assets" || !File.Exists(Path.Combine(m_gameData, candidate.PathName)))
                     continue;
@@ -266,7 +272,7 @@ namespace OutwardConstructionKit.Extractor
                     break;
             }
             if (external == null)
-                throw new InvalidDataException($"No texture called {textureName} in the files {levelFile} uses.");
+                throw new InvalidDataException($"No texture called {textureName} in the game's files.");
             return BuildPointer(external, pathId, outputFile);
         }
 

@@ -13,6 +13,8 @@ namespace OutwardConstructionKit.Runtime
     /// </summary>
     internal static class ShaderSwap
     {
+        private const string ERROR_SHADER = "Hidden/InternalErrorShader";
+
         private static readonly Dictionary<string, Shader> s_shaders = new Dictionary<string, Shader>();
 
         public static void Collect()
@@ -22,7 +24,7 @@ namespace OutwardConstructionKit.Runtime
                     s_shaders[shader.name] = shader;
         }
 
-        public static void Apply(Scene scene)
+        public static void Apply(Scene scene, Region region)
         {
             var materials = new HashSet<Material>();
             foreach (GameObject root in scene.GetRootGameObjects())
@@ -37,7 +39,10 @@ namespace OutwardConstructionKit.Runtime
             {
                 // The room's own materials use Unity's Standard shader, which works as built.
                 string name = material.shader.name;
-                if (name == "Standard" || name == "Hidden/InternalErrorShader")
+                // A placeholder that didn't survive the bundle has lost its name, so the region says what it was.
+                if (name == ERROR_SHADER && !region.Manifest.embeddedShaders.TryGetValue(material.name, out name))
+                    continue;
+                if (name == "Standard")
                     continue;
 
                 Shader real;

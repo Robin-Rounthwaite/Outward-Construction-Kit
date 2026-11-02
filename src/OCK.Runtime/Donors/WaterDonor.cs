@@ -163,6 +163,9 @@ namespace OutwardConstructionKit.Runtime
                     var type = (WaterType)System.Enum.Parse(typeof(WaterType), reference.waterType, true);
                     foreach (WaterSource water in source.GetComponentsInChildren<WaterSource>(true))
                         water.WaterType = type;
+                    // WaterSource turns itself off in play, so it never passes its type on to what the player uses.
+                    foreach (IWaterSource water in source.GetComponentsInChildren<IWaterSource>(true))
+                        water.WaterType = type;
                 }
                 catch (System.ArgumentException)
                 {

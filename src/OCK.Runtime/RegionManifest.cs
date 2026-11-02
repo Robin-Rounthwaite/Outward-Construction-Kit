@@ -17,6 +17,7 @@ namespace OutwardConstructionKit.Runtime
     ///   returndoor | x,y,z | rotationY, replacing the automatic door beside the arrival point
     ///   prop | scene | hierarchy path | x,y,z | rotation, as x,y,z degrees or just y | optional check | optional even scale
     ///   doormodel | scene | hierarchy path | rotation as x,y,z degrees, with the door's front along +Z | even scale
+    ///   shader | material name | shader name, for embedded materials, whose placeholder shaders may not survive
     /// The check is "first drawn object's name:number of drawn objects", to catch a path finding the wrong object.
     /// Not JSON, because JsonUtility dropped the nested prop list when running from a plugin DLL.
     /// </summary>
@@ -131,6 +132,8 @@ namespace OutwardConstructionKit.Runtime
             return manifest;
         }
 
+        public readonly Dictionary<string, string> embeddedShaders = new Dictionary<string, string>();
+
         internal static RegionManifest Parse(IEnumerable<string> lines)
         {
             var manifest = new RegionManifest();
@@ -176,6 +179,8 @@ namespace OutwardConstructionKit.Runtime
                     manifest.doorModel = new PropReference { scene = parts[1], path = parts[2], rotation = rotation, scale = scale };
                 else if (parts[0] == "game" && parts.Length == 2)
                     manifest.gameFingerprint = parts[1];
+                else if (parts[0] == "shader" && parts.Length == 3)
+                    manifest.embeddedShaders[parts[1]] = parts[2];
                 else if (parts[0] == "prop" && parts.Length >= 5
                     && KitPlugin.TryParseVector(parts[3], out position)
                     && TryParseRotation(parts[4], out rotation)

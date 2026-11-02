@@ -319,6 +319,16 @@ internal static class RegionExporter
                 text.Append(" | ").Append(scale.ToString("0.###", ci));
             text.Append('\n');
         }
+        var embeddedShaders = new Dictionary<string, string>();
+        foreach (KeyValuePair<GameObject, PropRef> prop in PropRef.FindIn(scene).Where(p => !p.Value.IsEnemy && PropRef.IsAltered(p.Key)))
+            foreach (Material material in prop.Key.GetComponentsInChildren<Renderer>(true).SelectMany(r => r.sharedMaterials).Where(m => m != null))
+            {
+                string materialName, shaderName;
+                if (PropImporter.TryGetVanillaShader(material, out materialName, out shaderName))
+                    embeddedShaders[materialName] = shaderName;
+            }
+        foreach (KeyValuePair<string, string> shader in embeddedShaders.OrderBy(s => s.Key))
+            text.Append("shader | ").Append(shader.Key).Append(" | ").Append(shader.Value).Append('\n');
         GroundTools.AppendManifest(scene, text);
         DoorTools.AppendManifest(scene, text);
         return text.ToString();

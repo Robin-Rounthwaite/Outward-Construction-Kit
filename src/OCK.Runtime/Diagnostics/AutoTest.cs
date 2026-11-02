@@ -24,6 +24,7 @@ namespace OutwardConstructionKit.Runtime
         private const float CHECKS_SECONDS = 12f; // longer than the checks' own wait
         private const string TEST_SHADER = "Custom/Water/CustomWater";
         private const float GROUND_SEARCH_DISTANCE = 6f;
+        private const string TRANSITION_SCENE = "LowMemory_TransitionScene";
         private const string VISIT = "visit "; // the Test Region button: goes there, then it's normal play
 
         public static bool Begin(KitPlugin plugin)
@@ -79,6 +80,9 @@ namespace OutwardConstructionKit.Runtime
                 if (menu == null || SaveManager.Instance == null || !SaveManager.Instance.SaveRetrieved)
                     return false;
                 continueButton = (Button)AccessTools.Field(typeof(MainScreen), "m_btnContinue").GetValue(menu);
+                // Continuing under the startup video would stop it from ever bringing the HUD and menus back.
+                if (StartupVideo.StartupVideoWillPlay || MenuManager.Instance.IsStartupVideoActive)
+                    return false;
                 return continueButton != null && continueButton.gameObject.activeInHierarchy && continueButton.interactable;
             }, "the main menu is ready", result);
             if (!ok)
@@ -101,13 +105,14 @@ namespace OutwardConstructionKit.Runtime
             Log($"Choosing {chosen.MostRecentInstance.CharSave.PSave.Name}.");
             panel.OnCharacterClicked(chosen);
 
-            yield return WaitFor(() => Player() != null && Loaded(), "the character is in the world", result);
+            yield return WaitFor(() => Player() != null && Loaded() && SceneManager.GetActiveScene().name != TRANSITION_SCENE, "the character is in the world", result);
             if (!ok)
                 yield break;
             yield return PressAnyKey(result);
             if (!ok)
                 yield break;
 
+            string startScene = SceneManager.GetActiveScene().name;
             string visit = request.Where(l => l.StartsWith(VISIT)).Select(l => l.Substring(VISIT.Length).Trim()).FirstOrDefault();
             if (visit != null)
             {
@@ -122,6 +127,8 @@ namespace OutwardConstructionKit.Runtime
                 yield return Travel(visited.SceneName, 0, result);
                 if (ok)
                     Log($"FINISHED, in {visit}, for a person to play.");
+                if (ok && request.Contains("trydoor"))
+                    yield return TryUsing(startScene);
                 yield break;
             }
 
@@ -175,6 +182,14 @@ namespace OutwardConstructionKit.Runtime
                 Log($"Dying in {died}.");
                 Player().Invincible = false;
                 Player().Stats.ReceiveDamage(Player().Stats.MaxHealth * 10f); // as an enemy would, which sets off the defeat
+                ProloguePanel defeatScreen = null;
+                yield return WaitFor(() => (defeatScreen = Resources.FindObjectsOfTypeAll<ProloguePanel>().FirstOrDefault(p => p.IsDisplayed)) != null, "the defeat screen is showing", result);
+                if (!ok)
+                    yield break;
+                yield return new WaitForSecondsRealtime(2f);
+                yield return Screenshot("defeat_screen");
+                yield return new WaitForSecondsRealtime(1f);
+                defeatScreen.GoToNextPage();
                 bool returned = false;
                 yield return WaitFor(() => SceneManager.GetActiveScene().name == home && Player() != null && Loaded(), "arriving back in " + home, r => returned = r);
                 if (!returned)
@@ -201,6 +216,45 @@ namespace OutwardConstructionKit.Runtime
             Log(quit ? "FINISHED, closing the game." : "FINISHED, staying open for a person to take over.");
             if (quit)
                 Application.Quit();
+        }
+
+// What a player does on arriving, by the game's own routes: sees the HUD, walks up to the water and a return
+        // door, gets their prompts, and uses them. Only when asked, because it moves the character.
+        private static IEnumerator TryUsing(string home)
+        {
+            yield return new WaitForSecondsRealtime(4f);
+            Log(MenuManager.Instance.MasterCanvas.alpha == 1f && MenuManager.Instance.MasterCanvas.interactable && !Global.HideUI
+                ? "The HUD and menus are showing." : $"FAIL the HUD and menus are hidden: alpha {MenuManager.Instance.MasterCanvas.alpha}, interactable {MenuManager.Instance.MasterCanvas.interactable}, hidden {Global.HideUI}.");
+
+            WaterRender water = SceneManager.GetActiveScene().GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<WaterRender>(true)).FirstOrDefault();
+            if (water != null)
+            {
+                Player().Teleport(water.transform.position + Vector3.up * 0.2f, Player().transform.rotation);
+                yield return new WaitForSecondsRealtime(3f);
+                InteractionTriggerBase drink = Player().Interactable;
+                Log(drink != null && !string.IsNullOrEmpty(Player().PressText + Player().HoldText) ? $"In the water, the prompt says '{Player().PressText}' '{Player().HoldText}'." : "FAIL no prompt in the water.");
+                yield return Screenshot("try_water");
+                if (drink != null)
+                    drink.TryActivateBasicAction(Player());
+                yield return new WaitForSecondsRealtime(3f);
+            }
+
+            GameObject door = GameObject.Find("OCK_ReturnDoor");
+            if (door == null)
+            {
+                Log("FAIL no return door to try.");
+                yield break;
+            }
+            Player().Teleport(door.transform.position + door.transform.forward * 1.2f, Quaternion.LookRotation(-door.transform.forward));
+            yield return new WaitForSecondsRealtime(3f);
+            InteractionTriggerBase trigger = Player().Interactable;
+            Log(trigger != null ? $"Beside the return door, the prompt says '{Player().PressText}'." : "FAIL no prompt beside the return door.");
+            yield return Screenshot("try_door");
+            if (trigger == null)
+                yield break;
+            trigger.TryActivateBasicAction(Player());
+            bool back = false;
+            yield return WaitFor(() => SceneManager.GetActiveScene().name == home && Player() != null && Loaded(), "the return door led back to " + home, r => back = r);
         }
 
         private static void CheckStanding()

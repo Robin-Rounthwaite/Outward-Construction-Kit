@@ -152,6 +152,15 @@ namespace OutwardConstructionKit.Tests
         }
 
         [Test]
+        public void ReadsAnEmbeddedMaterialsShader()
+        {
+            List<string> errors;
+            RegionManifest manifest = Parse(new[] { "shader | ElderberryLeavesSummerF | Nature/SpeedTreeSeasons" }, out errors);
+            Assert.That(errors, Is.Empty);
+            Assert.That(manifest.embeddedShaders["ElderberryLeavesSummerF"], Is.EqualTo("Nature/SpeedTreeSeasons"));
+        }
+
+        [Test]
         public void ReadsAWaterType()
         {
             List<string> errors;

@@ -42,6 +42,26 @@ internal static partial class PropImporter
         return AssetDatabase.LoadAssetAtPath<Material>(CopyWithMeta(file, folder));
     }
 
+    /// <summary>What a stand-in's vanilla material and shader are called, so the plugin can put the shader back. False if it can't tell.</summary>
+    public static bool TryGetVanillaShader(Material displayMaterial, out string materialName, out string shaderName)
+    {
+        materialName = shaderName = null;
+        string guid = AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(displayMaterial))?.userData;
+        string file = string.IsNullOrEmpty(guid) ? null : RipFile(guid);
+        if (file == null)
+            return false;
+        string shaderGuid = File.ReadLines(file).Where(l => l.Contains("m_Shader:")).Select(l => Regex.Match(l, @"guid: (\w+)")).Where(m => m.Success).Select(m => m.Groups[1].Value).FirstOrDefault();
+        string shaderFile = shaderGuid == null ? null : RipFile(shaderGuid);
+        if (shaderFile == null)
+            return false;
+        Match name = Regex.Match(File.ReadLines(shaderFile).FirstOrDefault() ?? "", "Shader \"([^\"]+)\"");
+        if (!name.Success)
+            return false;
+        materialName = Path.GetFileNameWithoutExtension(file);
+        shaderName = name.Groups[1].Value;
+        return true;
+    }
+
     internal static Material GetMaterial(string guid, string folder)
     {
         string file = RipFile(guid);

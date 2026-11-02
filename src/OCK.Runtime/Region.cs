@@ -205,7 +205,7 @@ namespace OutwardConstructionKit.Runtime
         /// </summary>
         public void PrepareScene(Scene scene)
         {
-            ShaderSwap.Apply(scene); // first, so it only touches what came from the bundle
+            ShaderSwap.Apply(scene, this); // first, so it only touches what came from the bundle
             int propsPlaced = PropDonor.Place(scene, this); // before the layers, so its colliders get the ground layer below
             if (propsPlaced < Manifest.props.Count)
                 PlayerNotice.Add($"'{DisplayName}' is missing {Manifest.props.Count - propsPlaced} of its props, perhaps after a game update.");
