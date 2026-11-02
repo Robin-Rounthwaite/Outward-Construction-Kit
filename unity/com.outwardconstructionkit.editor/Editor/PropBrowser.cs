@@ -15,6 +15,8 @@ internal partial class PropBrowser : EditorWindow
     private const string DRAG_KEY = "OckProp";
     private const string ALL_LOCATIONS = "All locations";
     private const string ALL_CATEGORIES = "All";
+    private const string FAVOURITES = "Favourites";
+    private const string RECENT = "Recent";
     private const int STATUS_FONT_SIZE = 13;
 
     // In the order of the tabs.
@@ -58,6 +60,7 @@ internal partial class PropBrowser : EditorWindow
     private string m_report = "";
     private string m_reportBrief;
     private bool m_showReport;
+    private List<RegionExporter.PlacementProblem> m_reportProblems = new List<RegionExporter.PlacementProblem>();
     private string m_groundPromptShownFor;
     private string m_groundPromptDismissedFor;
     private bool m_showPaths;
@@ -207,7 +210,7 @@ internal partial class PropBrowser : EditorWindow
             Filter();
             return;
         }
-        m_categories =new[] { ALL_CATEGORIES }.Concat(m_loaded.SelectMany(s => s.Props).Where(p => InTab(p, m_tab)).Select(p => p.Category).Distinct().OrderBy(c => c)).ToArray();
+        m_categories = new[] { ALL_CATEGORIES, FAVOURITES, RECENT }.Concat(m_loaded.SelectMany(s => s.Props).Where(p => InTab(p, m_tab)).Select(p => p.Category).Distinct().OrderBy(c => c)).ToArray();
         m_categoryIndex = 0;
         Filter();
     }
@@ -221,7 +224,15 @@ internal partial class PropBrowser : EditorWindow
         if (ShowsProps)
         {
             string category = m_categoryIndex > 0 && m_categoryIndex < m_categories.Length ? m_categories[m_categoryIndex] : null;
-            m_visible = PropsFor(m_tab, m_loaded, category, m_search);
+            if (category == FAVOURITES)
+                m_visible = PropsFor(m_tab, m_loaded, null, m_search).Where(p => OckSettings.Favourites.Contains(p.BaseName)).ToList();
+            else if (category == RECENT)
+            {
+                List<string> recent = OckSettings.Recent;
+                m_visible = PropsFor(m_tab, m_loaded, null, m_search).Where(p => recent.Contains(p.BaseName)).OrderBy(p => recent.IndexOf(p.BaseName)).ToList();
+            }
+            else
+                m_visible = PropsFor(m_tab, m_loaded, category, m_search);
         }
         else if (m_tab == Tab.Items)
             FilterItems();
@@ -386,6 +397,15 @@ internal partial class PropBrowser : EditorWindow
         GUILayout.Label(m_status, s_statusStyle);
         if (m_status != m_reportBrief)
             return;
+        foreach (RegionExporter.PlacementProblem problem in m_reportProblems)
+        {
+            if (problem.Target != null && GUILayout.Button(new GUIContent("Select " + problem.Target.name, problem.Text)))
+            {
+                Selection.activeGameObject = problem.Target;
+                if (SceneView.lastActiveSceneView != null)
+                    SceneView.lastActiveSceneView.FrameSelected();
+            }
+        }
         m_showReport = EditorGUILayout.Foldout(m_showReport, "Details", true);
         if (m_showReport)
             EditorGUILayout.LabelField(m_report, KitStyles.WrappedNote);
@@ -398,6 +418,7 @@ internal partial class PropBrowser : EditorWindow
         m_report = report;
         m_reportBrief = m_status = RegionExporter.Brief(report);
         m_showReport = false;
+        m_reportProblems = RegionExporter.PlacementProblems(UnityEngine.SceneManagement.SceneManager.GetActiveScene());
         Repaint();
     }
 
@@ -595,12 +616,24 @@ internal partial class PropBrowser : EditorWindow
     private void DrawPropRow(RipScene.Prop prop)
     {
         Rect row = EditorGUILayout.BeginHorizontal(GUILayout.Height(ROW_HEIGHT));
+        bool favourite = OckSettings.Favourites.Contains(prop.BaseName);
+        if (GUILayout.Button(new GUIContent(favourite ? "★" : "☆", favourite ? "Remove from Favourites." : "Add to Favourites, which is in the dropdown beside the location."), GUIStyle.none, GUILayout.Width(16)))
+        {
+            OckSettings.ToggleFavourite(prop.BaseName);
+            if (m_categories[m_categoryIndex] == FAVOURITES)
+            {
+                EndAndFilter();
+                return;
+            }
+        }
         string label = prop.BaseName;
         if (m_showPaths)
             label = prop.Node.ScenePath;
         GUILayout.Label(new GUIContent(label, prop.Node.ScenePath));
         GUILayout.FlexibleSpace();
-        if (!prop.IsEnemy && prop.Node.SelfAndDescendants().Any(n => n.IsInteractive))
+        if (prop.Node.IsWorking)
+            GUILayout.Label(new GUIContent("works", "Players can really use this in your region. It stays a reference, so it adds no art to your mod. Stretching or changing it makes it decoration."), KitStyles.Note, GUILayout.Width(75));
+        else if (!prop.IsEnemy && prop.Node.SelfAndDescendants().Any(n => n.IsInteractive))
             GUILayout.Label(new GUIContent("decoration", "Players can use this in its own scene, but in a region it's only for show."), KitStyles.Note, GUILayout.Width(75));
         if (m_location == ALL_LOCATIONS)
             GUILayout.Label(new GUIContent(LocationNames.RegionsOf(prop.Locations), string.Join(", ", (prop.Locations ?? new List<string>()).Select(LocationNames.For).ToArray())), KitStyles.Note, GUILayout.Width(150));
@@ -618,6 +651,13 @@ internal partial class PropBrowser : EditorWindow
             DragAndDrop.StartDrag(prop.BaseName);
             e.Use();
         }
+    }
+
+    // The list can't change during a draw, so it waits for the next one.
+    private void EndAndFilter()
+    {
+        EditorGUILayout.EndHorizontal();
+        EditorApplication.delayCall += Filter;
     }
 
     private void PlaceAtViewCentre(RipScene.Prop prop)
@@ -681,6 +721,7 @@ internal partial class PropBrowser : EditorWindow
             Undo.RegisterCreatedObjectUndo(instance, "Add " + prop.BaseName);
             Selection.activeGameObject = instance;
             EditorSceneManager.MarkSceneDirty(instance.scene);
+            OckSettings.AddRecent(prop.BaseName);
             Say("Added", "Added " + prop.BaseName + ". It's selected, so you can move it with the Move tool.");
         }
         catch (Exception e)

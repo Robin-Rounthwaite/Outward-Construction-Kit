@@ -49,6 +49,7 @@ namespace OutwardConstructionKit.Runtime
                 CheckPlayerFooting(check);
                 CheckEnemies(region, roots, check);
                 RegionItems.AddChecks(region, check);
+                InteractiveDonor.AddChecks(region, check);
                 CheckGround(region, roots, check);
                 CheckWater(region, roots, check);
                 CheckReturnDoors(region, check);

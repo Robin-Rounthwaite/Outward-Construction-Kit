@@ -22,8 +22,6 @@ internal static class DoorTools
     private const string EXPORT_FOLDER = "Assets/OCK/_Export";
     private const string MARKER_MATERIAL = "/ReturnDoorMarker.mat";
     private const string MARKER_SHADER = "Sprites/Default"; // see-through, to show the model inside
-    private const float GROUND_SEARCH_HEIGHT = 50f;
-    private const float GROUND_SEARCH_DISTANCE = 500f;
     private static readonly Color s_markerColor = new Color(0.25f, 0.45f, 0.75f, 0.3f);
     private static readonly Vector3 s_doorSize = new Vector3(1.6f, 2.8f, 0.2f); // as the plugin builds it
 
@@ -190,18 +188,6 @@ internal static class DoorTools
         if (SceneView.lastActiveSceneView != null)
             SceneView.lastActiveSceneView.FrameSelected();
         return $"Return door {next + 1} of {doors.Count}, at {doors[next].position}. It's selected, so you can move it with the Move tool.";
-    }
-
-    /// <summary>Moves a return door up or down onto the ground, for one that's buried or floating. Returns false if there's no ground there.</summary>
-    public static bool StandOnGround(Transform door)
-    {
-        Physics.SyncTransforms();
-        RaycastHit hit;
-        if (!Physics.Raycast(door.position + Vector3.up * GROUND_SEARCH_HEIGHT, Vector3.down, out hit, GROUND_SEARCH_DISTANCE, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
-            return false;
-        Undo.RecordObject(door, "Stand Door on Ground");
-        door.position = hit.point;
-        return true;
     }
 
     public static void AppendManifest(Scene scene, StringBuilder text)

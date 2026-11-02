@@ -90,6 +90,11 @@ if (Test-Path $work) { Remove-Item $work -Recurse -Force -Confirm:$false }
 New-Item -ItemType Directory -Force (Split-Path $work) | Out-Null
 $logFile = Join-Path (Split-Path $work) "$Scene.log"
 
+# Unity's Rip a Scene window reads this to show how it's going.
+$progressFile = Join-Path $ripperHome "progress\$Scene.txt"
+New-Item -ItemType Directory -Force (Split-Path $progressFile) | Out-Null
+$progress = { param($stage, $percent) Set-Content -LiteralPath $progressFile -Value ("{0}|{1:0}" -f $stage, $percent) -ErrorAction SilentlyContinue }
+
 $port = Get-FreePort
 $timer = [Diagnostics.Stopwatch]::StartNew()
 $ripper = Start-Process $exe.FullName -ArgumentList "--headless --port $port --log-path `"$logFile`"" -PassThru -WindowStyle Hidden
@@ -119,6 +124,7 @@ try {
     $encode = { param($s) [uri]::EscapeDataString($s) }
 
     Write-Host "Reading $Scene from the game's files. This takes a few minutes..."
+    & $progress "Reading the game's files" 0
     $body = 'path=' + (& $encode $levelFile)
     $shared = Join-Path $GameData "sharedassets$Level.assets"
     if (Test-Path $shared) { $body += '&path=' + (& $encode $shared) }
@@ -150,7 +156,11 @@ try {
         if ($line -ne $lastLine) {
             $lastLine = $line
             $lastChange.Restart()
-            if ($line -match '\((\d+)/(\d+)\)') { Write-Host ("  {0:0}%" -f (100 * [int]$Matches[1] / [int]$Matches[2])) }
+            if ($line -match '\((\d+)/(\d+)\)') {
+                $percent = 100 * [int]$Matches[1] / [int]$Matches[2]
+                Write-Host ("  {0:0}%" -f $percent)
+                & $progress "Exporting" $percent
+            }
         }
         $finished = $line -match 'Finished post-export'
         if (-not $finished -and $lastChange.Elapsed.TotalSeconds -gt $STALLED_SECONDS) { throw "AssetRipper has stopped making progress. Its log is $logFile." }
@@ -164,6 +174,7 @@ if (-not (Test-Path (Join-Path $work "ExportedProject\Assets\Scenes\level$Level.
     throw "AssetRipper finished, but $Scene's scene isn't in what it made. Its log is $logFile."
 }
 Start-Sleep 2 # for it to let go of its files
+& $progress "Finishing" 100
 Move-Item $work $output
 
 $size = (Get-ChildItem $output -Recurse -File | Measure-Object Length -Sum).Sum / 1GB
@@ -174,5 +185,6 @@ catch {
     # The rip itself is fine, it just takes more space.
     Write-Host "Couldn't share files with your other rips: $_"
 }
+Remove-Item $progressFile -Force -Confirm:$false -ErrorAction SilentlyContinue
 Write-Host ("Done: $output, {0:0.0} GB before sharing, in {1:0} minutes. It appears in the Prop Browser by itself." -f $size, $timer.Elapsed.TotalMinutes)
 if (-not $NoPause) { Read-Host 'Press Enter to close' | Out-Null }

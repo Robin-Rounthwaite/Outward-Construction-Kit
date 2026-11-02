@@ -33,6 +33,12 @@ if ($Unity) {
     $paths = & "$PSScriptRoot\..\dev\dev-paths.ps1"
     $env:OCK_TEST_RIP_FOLDER = $paths.RipFolder
     $env:OCK_TEST_GAME_DATA = $paths.GameData
+    # A new project copies the layout Unity last saved, which can stop on a "second main window" popup with nobody there to click it.
+    $layout = Join-Path $UnityProject 'Library\CurrentLayout-default.dwlt'
+    if (-not (Test-Path $layout)) {
+        New-Item -ItemType Directory -Force (Split-Path $layout) | Out-Null
+        Copy-Item (Join-Path (Split-Path $UnityEditor) 'Data\Resources\Layouts\Default.wlt') $layout
+    }
     Write-Host "Running the Unity suite. Results go to $results"
     $editor = Start-Process $UnityEditor -ArgumentList "-projectPath `"$UnityProject`" -ockSelfTest -logFile `"$results\unity.log`"" -PassThru
     $editor.WaitForExit()

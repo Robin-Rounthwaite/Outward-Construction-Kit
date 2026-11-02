@@ -57,6 +57,7 @@ namespace OutwardConstructionKit.Runtime
             var wanted = Region.All.SelectMany(r => r.Manifest.props.Select(p => new { p.scene, p.path })
                 .Concat(new[] { r.Manifest.doorModel ?? RegionManifest.DefaultDoorModel }.Select(d => new { d.scene, d.path }))
                 .Concat(r.Manifest.enemies.Select(e => new { e.scene, e.path }))
+                .Concat(r.Manifest.interactives.Select(i => new { i.scene, i.path }))
                 .Concat(RegionManifest.EnvironmentParts.Where(_ => !string.IsNullOrEmpty(r.Manifest.environmentDonor)).Select(part => new { scene = r.Manifest.environmentDonor, path = part }))
                 .Concat(r.Manifest.water.Select(w => new { w.scene, path = RegionManifest.WATER_KEY }))
                 .Concat(r.Manifest.water.Select(w => new { w.scene, path = RegionManifest.WATER_SOURCE_KEY }))

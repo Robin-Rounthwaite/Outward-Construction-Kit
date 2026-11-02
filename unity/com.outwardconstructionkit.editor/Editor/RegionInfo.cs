@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using UnityEditor;
@@ -26,6 +27,78 @@ internal class RegionInfo
     public string DoorModelPath;
     public Vector3 DoorModelRotation;
     public float DoorModelScale = 1f;
+
+    public const string DEFEAT_RETURN_HERE = "here"; // as the plugin's DefeatSetup
+
+    // What a defeat does here. All left alone means where they came from, with no penalty.
+    public string DefeatReturn;
+    public int DefeatSpawn;
+    public int DefeatSilverPercent;
+    public int DefeatItemPercent;
+    public int DefeatVitalsPercent;
+    public string DefeatMessage;
+
+    /// <summary>The manifest line for this, or null if nothing's been changed.</summary>
+    public string DefeatLine()
+    {
+        if (string.IsNullOrEmpty(DefeatReturn) && DefeatSilverPercent == 0 && DefeatItemPercent == 0 && DefeatVitalsPercent == 0 && string.IsNullOrEmpty(DefeatMessage))
+            return null;
+        string message = (DefeatMessage ?? "").Replace('|', '/').Replace('\r', ' ').Replace('\n', ' ');
+        return $"defeat | {DefeatReturn} | {DefeatSpawn} | {DefeatSilverPercent} | {DefeatItemPercent} | {DefeatVitalsPercent} | {message}";
+    }
+
+    /// <summary>What a modder has chosen a chest to hold, kept here so nothing extra goes in the scene.</summary>
+    [Serializable]
+    public class ChestContent
+    {
+        public string ObjectId;
+        public string Contents;
+    }
+
+    public List<ChestContent> ChestContents = new List<ChestContent>();
+
+    private static string IdOf(UnityEngine.GameObject chest)
+    {
+        return GlobalObjectId.GetGlobalObjectIdSlow(chest).ToString();
+    }
+
+    /// <summary>Empty means it holds the game's own loot.</summary>
+    public string ContentsOf(UnityEngine.GameObject chest)
+    {
+        string id = IdOf(chest);
+        ChestContent found = ChestContents.Find(c => c.ObjectId == id);
+        return found != null ? found.Contents : "";
+    }
+
+    public void SetContents(UnityEngine.GameObject chest, string contents)
+    {
+        string id = IdOf(chest);
+        ChestContents.RemoveAll(c => c.ObjectId == id);
+        if (!string.IsNullOrEmpty(contents))
+            ChestContents.Add(new ChestContent { ObjectId = id, Contents = contents });
+    }
+
+    // Items and enemies a modder asked not to come back at a region reset.
+    public List<string> GoneForGood = new List<string>();
+
+    public bool StaysGone(UnityEngine.GameObject thing)
+    {
+        return GoneForGood.Contains(IdOf(thing));
+    }
+
+    public void SetStaysGone(UnityEngine.GameObject thing, bool staysGone)
+    {
+        string id = IdOf(thing);
+        GoneForGood.Remove(id);
+        if (staysGone)
+            GoneForGood.Add(id);
+    }
+
+    /// <summary>Whether this reads as, say, 5010100:2,silver:50, as the plugin expects.</summary>
+    public static bool ContentsAreValid(string contents)
+    {
+        return string.IsNullOrEmpty(contents) || Regex.IsMatch(contents, @"^\s*(\d+|silver)\s*:\s*[1-9]\d*\s*(,\s*(\d+|silver)\s*:\s*[1-9]\d*\s*)*$");
+    }
 
     // For sharing it, which Package Region uses. None of it affects the game.
     public string PackageTeam;

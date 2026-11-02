@@ -10,7 +10,7 @@ namespace OutwardConstructionKit.Runtime
     ///   environment | scene
     ///   region | unique ID | name shown to players
     ///   door | vanilla scene | x,y,z | rotationY, for the entrance shipped with the region
-    ///   enemy | scene | hierarchy path | x,y,z | rotationY
+    ///   enemy | scene | hierarchy path | x,y,z | rotationY | optional "norespawn", to stay dead after a reset
     ///   game | fingerprint of the game build it was made against
     ///   ground | scene | terrain layer name | diffuse texture | normal texture, or blank
     ///   water | scene | x,y,z | width,1,length | rotationY | optional water type, or else the scene's own
@@ -18,7 +18,9 @@ namespace OutwardConstructionKit.Runtime
     ///   prop | scene | hierarchy path | x,y,z | rotation, as x,y,z degrees or just y | optional check | optional even scale
     ///   doormodel | scene | hierarchy path | rotation as x,y,z degrees, with the door's front along +Z | even scale
     ///   shader | material name | shader name, for embedded materials, whose placeholder shaders may not survive
-    ///   item | the game's item ID | x,y,z | rotation, as x,y,z degrees or just y
+    ///   item | the game's item ID | x,y,z | rotation, as x,y,z degrees or just y | optional "once", to stay gone after a reset once taken
+    ///   interactive | scene | hierarchy path | x,y,z | rotation | optional contents, as 5010100:2,silver:50
+    ///   defeat | where to return, as a scene, "here", or blank for where they came from | spawn index for "here" | % silver lost | % items lost | % health and stamina left | message, or blank
     /// The check is "first drawn object's name:number of drawn objects", to catch a path finding the wrong object.
     /// Not JSON, because JsonUtility dropped the nested prop list when running from a plugin DLL.
     /// </summary>
@@ -40,6 +42,7 @@ namespace OutwardConstructionKit.Runtime
             public string path;
             public Vector3 position;
             public float rotationY;
+            public bool noRespawn;
         }
 
         public class GroundLayer
@@ -64,6 +67,59 @@ namespace OutwardConstructionKit.Runtime
             public int id;
             public Vector3 position;
             public Vector3 rotation;
+            public bool once;
+        }
+
+        /// <summary>What a modder has chosen a chest to hold, in place of the game's loot.</summary>
+        public class Contents
+        {
+            public readonly List<KeyValuePair<int, int>> items = new List<KeyValuePair<int, int>>();
+            public int silver;
+
+            /// <summary>Null if there's nothing there or any part of it can't be read.</summary>
+            public static Contents Parse(string text)
+            {
+                if (string.IsNullOrEmpty(text))
+                    return null;
+                var contents = new Contents();
+                foreach (string part in text.Split(','))
+                {
+                    string[] pair = part.Split(':');
+                    int amount;
+                    int id;
+                    if (pair.Length != 2 || !int.TryParse(pair[1].Trim(), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out amount) || amount <= 0)
+                        return null;
+                    if (pair[0].Trim() == "silver")
+                        contents.silver += amount;
+                    else if (int.TryParse(pair[0].Trim(), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out id) && id > 0)
+                        contents.items.Add(new KeyValuePair<int, int>(id, amount));
+                    else
+                        return null;
+                }
+                return contents;
+            }
+        }
+
+        public class InteractiveReference
+        {
+            public string scene;
+            public string path;
+            public Vector3 position;
+            public Vector3 rotation;
+            public Contents contents;
+        }
+
+        /// <summary>What a modder has asked a defeat in their region to do. A region without one has no penalties.</summary>
+        public class DefeatSetup
+        {
+            public const string RETURN_HERE = "here";
+
+            public string returnTo;
+            public int spawnIndex;
+            public int silverPercent;
+            public int itemPercent;
+            public int vitalsPercent;
+            public string message;
         }
 
         public class ReturnDoor
@@ -83,11 +139,13 @@ namespace OutwardConstructionKit.Runtime
         };
 
         public PropReference doorModel;
+        public DefeatSetup defeat;
         public List<ReturnDoor> returnDoors = new List<ReturnDoor>();
         public List<EnemyReference> enemies = new List<EnemyReference>();
         public List<GroundLayer> groundLayers = new List<GroundLayer>();
         public List<WaterReference> water = new List<WaterReference>();
         public List<ItemReference> items = new List<ItemReference>();
+        public List<InteractiveReference> interactives = new List<InteractiveReference>();
         public string doorScene;
         public string doorPosition;
         public float doorRotationY;
@@ -98,6 +156,8 @@ namespace OutwardConstructionKit.Runtime
         public List<PropReference> props = new List<PropReference>();
 
         // Cache keys for things found by what they are, rather than by a hierarchy path.
+        private const string NO_RESPAWN = "norespawn";
+        private const string ONCE = "once";
         public const string WATER_KEY = "#water";
         public const string WATER_SOURCE_KEY = "#watersource";
         public const string ENVIRONMENT_KEY = "#environment";
@@ -168,10 +228,10 @@ namespace OutwardConstructionKit.Runtime
                     manifest.doorPosition = parts[2];
                     manifest.doorRotationY = rotationY;
                 }
-                else if (parts[0] == "enemy" && parts.Length == 5
+                else if (parts[0] == "enemy" && (parts.Length == 5 || (parts.Length == 6 && parts[5] == NO_RESPAWN))
                     && KitPlugin.TryParseVector(parts[3], out position)
                     && float.TryParse(parts[4], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out rotationY))
-                    manifest.enemies.Add(new EnemyReference { scene = parts[1], path = parts[2], position = position, rotationY = rotationY });
+                    manifest.enemies.Add(new EnemyReference { scene = parts[1], path = parts[2], position = position, rotationY = rotationY, noRespawn = parts.Length == 6 });
                 else if (parts[0] == "returndoor" && parts.Length == 3
                     && KitPlugin.TryParseVector(parts[1], out position)
                     && float.TryParse(parts[2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out rotationY))
@@ -196,11 +256,19 @@ namespace OutwardConstructionKit.Runtime
                     && TryParseRotation(parts[4], out rotation)
                     && (parts.Length < 7 || (float.TryParse(parts[6], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out scale) && scale > 0f)))
                     manifest.props.Add(new PropReference { scene = parts[1], path = parts[2], position = position, rotation = rotation, check = parts.Length > 5 ? parts[5] : null, scale = scale });
-                else if (parts[0] == "item" && parts.Length == 4
+                else if (parts[0] == "item" && (parts.Length == 4 || (parts.Length == 5 && parts[4] == ONCE))
                     && int.TryParse(parts[1], System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out itemId) && itemId > 0
                     && KitPlugin.TryParseVector(parts[2], out position)
                     && TryParseRotation(parts[3], out rotation))
-                    manifest.items.Add(new ItemReference { id = itemId, position = position, rotation = rotation });
+                    manifest.items.Add(new ItemReference { id = itemId, position = position, rotation = rotation, once = parts.Length == 5 });
+                else if (parts[0] == "interactive" && (parts.Length == 5 || parts.Length == 6)
+                    && KitPlugin.TryParseVector(parts[3], out position)
+                    && TryParseRotation(parts[4], out rotation))
+                    manifest.interactives.Add(new InteractiveReference { scene = parts[1], path = parts[2], position = position, rotation = rotation, contents = parts.Length == 6 ? Contents.Parse(parts[5]) : null });
+                else if (parts[0] == "defeat" && parts.Length == 7
+                    && int.TryParse(parts[2], out int spawnIndex) && int.TryParse(parts[3], out int silverPercent)
+                    && int.TryParse(parts[4], out int itemPercent) && int.TryParse(parts[5], out int vitalsPercent))
+                    manifest.defeat = new DefeatSetup { returnTo = parts[1], spawnIndex = spawnIndex, silverPercent = silverPercent, itemPercent = itemPercent, vitalsPercent = vitalsPercent, message = parts[6] };
                 else if (parts[0].Length > 0 && !parts[0].StartsWith("#"))
                     KitPlugin.Log.LogError("Can't read manifest line: " + line);
             }

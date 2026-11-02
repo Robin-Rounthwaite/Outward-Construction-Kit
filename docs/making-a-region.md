@@ -12,7 +12,9 @@ Don't change a region's ID after sharing it, because saves and door placements d
 
 A scene made with **New Region Scene** has a sun and a spawn point, and opens the **Add Ground** window for you. If you start from your own, it needs a root object named exactly `SpawnPointManager`, with at least one child as a spawn point. Export refuses a scene with no spawn point, or one with nothing under its spawn point and no props.
 
-Props are decoration for now. Their scripts are left behind, so anything players can use in its own scene, such as a chest or gathering spot, is only for show in a region. The Prop Browser marks those **decoration**.
+Chests and gathering spots really work, and the Prop Browser marks them **works**. They keep their game scripts, stay references that add no art to your mod, and the game saves and syncs them as it does its own. A used gathering spot regrows on the game's timers. A chest holds the game's own loot unless you choose what it holds.
+
+Other props are decoration for now. Their scripts are left behind, so anything else players can use in its own scene is only for show in a region. The Prop Browser marks those **decoration**.
 
 ## Items
 

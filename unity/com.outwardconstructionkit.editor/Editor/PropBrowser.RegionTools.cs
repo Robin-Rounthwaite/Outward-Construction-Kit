@@ -1,10 +1,64 @@
 using System;
+using System.Collections.Generic;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 /// <summary>The part of the browser below the tabs, about the region being made rather than what's going in it.</summary>
 internal partial class PropBrowser
 {
+    private static Vector3? WhereTheViewIsLooking()
+    {
+        SceneView view = SceneView.lastActiveSceneView;
+        if (view == null)
+            return null;
+        Vector3 ground;
+        return TryFindGround(new Ray(view.camera.transform.position, view.camera.transform.forward), out ground) ? ground : view.pivot;
+    }
+
+    // Only for a selected item or enemy, which the game brings back when an area resets.
+    private void DrawComesBack(RegionInfo info, string scenePath, UnityEngine.SceneManagement.Scene scene)
+    {
+        GameObject selected = Selection.activeGameObject;
+        PropRef reference = selected != null ? PropRef.Of(selected) : null;
+        bool enemy = reference != null && reference.IsEnemy;
+        KeyValuePair<GameObject, PropRef> asProp = new KeyValuePair<GameObject, PropRef>(selected, reference);
+        if (!enemy && !ItemTools.IsMarker(selected) && (reference == null || !ItemTools.IsItemProp(asProp)))
+            return;
+        bool comesBack = !info.StaysGone(selected);
+        bool chosen = EditorGUILayout.ToggleLeft(new GUIContent(enemy ? "Comes back when the region resets" : "Comes back when the region resets, once taken", "Regions reset as the game's own areas do, after a few days in the game. Untick this and it stays gone for that character for good."), comesBack);
+        if (chosen != comesBack)
+        {
+            EditorSceneManager.SaveScene(scene); // its lasting ID only exists once the scene is saved
+            info.SetStaysGone(selected, !chosen);
+            info.SaveFor(scenePath);
+        }
+    }
+
+    // Only for a selected chest. A gathering spot's contents are the game's, regrowing on its timers.
+    private void DrawChestContents(RegionInfo info, string scenePath, UnityEngine.SceneManagement.Scene scene)
+    {
+        GameObject selected = Selection.activeGameObject;
+        PropRef reference = selected != null ? PropRef.Of(selected) : null;
+        if (reference == null || !reference.IsWorking || reference.Path.Substring(reference.Path.LastIndexOf('/') + 1).StartsWith("Gatherable"))
+            return;
+        string current = info.ContentsOf(selected);
+        EditorGUI.BeginChangeCheck();
+        string chosen = EditorGUILayout.DelayedTextField(new GUIContent("Chest holds", "Item numbers and how many, from the Items tab, then any silver, such as 5010100:2,silver:50. Empty uses the game's own loot for this chest."), current);
+        if (EditorGUI.EndChangeCheck())
+        {
+            if (!RegionInfo.ContentsAreValid(chosen))
+                m_status = "That chest wasn't changed. Write item numbers and how many, then any silver, such as 5010100:2,silver:50.";
+            else
+            {
+                EditorSceneManager.SaveScene(scene); // the chest's lasting ID only exists once the scene is saved
+                info.SetContents(selected, (chosen ?? "").Replace(" ", ""));
+                info.SaveFor(scenePath);
+                m_status = string.IsNullOrEmpty(chosen) ? "This chest holds the game's own loot." : "This chest holds what you chose, from your next export.";
+            }
+        }
+    }
+
     private void DrawRegionTools()
     {
         UnityEngine.SceneManagement.Scene activeScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
@@ -25,6 +79,8 @@ internal partial class PropBrowser
                 if (EditorGUI.EndChangeCheck())
                     info.SaveFor(scenePath);
             }
+            DrawChestContents(info, scenePath, activeScene);
+            DrawComesBack(info, scenePath, activeScene);
             bool custom = !string.IsNullOrEmpty(info.DoorModelPath);
             info.TryCopyDoorFromGame(); // only to show it here, because the export is what saves it
             string entrance = string.IsNullOrEmpty(info.DoorScene) ? "not placed yet" : LocationNames.For(info.DoorScene) + " at " + info.DoorPosition;
@@ -76,11 +132,10 @@ internal partial class PropBrowser
                     if (GUILayout.Button(new GUIContent("Find Return Door", "Selects a return door and shows it in the Scene view. Click again for the next one.")))
                         m_status = DoorTools.SelectNext(activeScene);
                 }
-                Transform selectedDoor = Selection.activeTransform != null ? System.Linq.Enumerable.FirstOrDefault(DoorTools.Doors(activeScene), d => Selection.activeTransform.IsChildOf(d)) : null;
-                using (new EditorGUI.DisabledScope(selectedDoor == null))
+                using (new EditorGUI.DisabledScope(Selection.transforms.Length == 0))
                 {
-                    if (GUILayout.Button(new GUIContent("Stand on Ground", "Moves the selected return door up or down onto the ground, for one that's buried or floating.")))
-                        m_status = DoorTools.StandOnGround(selectedDoor) ? "Return door moved onto the ground." : "There's no ground at this door's position, so it wasn't moved.";
+                    if (GUILayout.Button(new GUIContent("Drop to Ground", "Moves whatever's selected straight up or down onto the ground, for something buried or floating. Undo puts it back.")))
+                        m_status = $"Moved {GroundTools.DropToGround(Selection.transforms)} of {Selection.transforms.Length} selected objects onto the ground.";
                 }
                 GameObject spawn = RegionExporter.FirstSpawnPoint(activeScene);
                 if (spawn != null)
@@ -122,6 +177,10 @@ internal partial class PropBrowser
             }
             if (GUILayout.Button(new GUIContent("Package", "Makes a zip to upload to Thunderstore."), GUILayout.Width(70)))
                 PackageWindow.Open();
+            if (GUILayout.Button(new GUIContent("Checklist", "Shows what this region still needs before it works for players."), GUILayout.Width(70)))
+                RegionChecklistWindow.Open();
+            if (GUILayout.Button(new GUIContent("Settings", "Choices about the whole region, such as what a defeat here does."), GUILayout.Width(70)))
+                RegionSettingsWindow.Open();
         }
 
         GameLauncher.DrawCharacterChoice(150);
@@ -133,6 +192,11 @@ internal partial class PropBrowser
             if (GUILayout.Button(new GUIContent("Test Region In-Game", "Exports this region, starts the game with your mods, and takes the chosen character straight there. It plays and saves as normal. The main menu shows for a moment, and there's no need to click anything."), GUILayout.Width(135)))
             {
                 SayReport(GameLauncher.TestRegion());
+                GUIUtility.ExitGUI();
+            }
+            if (GUILayout.Button(new GUIContent("Test from Here", "The same, but starts you on the ground where the Scene view is looking, for this test only. Your spawn point doesn't move, and nothing about this ships in your mod."), GUILayout.Width(100)))
+            {
+                SayReport(GameLauncher.TestRegion(WhereTheViewIsLooking()));
                 GUIUtility.ExitGUI();
             }
             if (GUILayout.Button(new GUIContent("Launch Game", "Starts the game with your mods, the same as Start modded in r2modman."), GUILayout.Width(95)))

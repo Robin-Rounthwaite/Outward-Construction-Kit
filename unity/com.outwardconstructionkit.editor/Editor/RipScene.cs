@@ -42,6 +42,7 @@ internal partial class RipScene
         public bool IsItem;
         public bool IsWaterPlane;
         public bool IsWaterSource;
+        public bool IsWorking;
         public string MeshGuid;
         public long MeshFileId;
         public bool RendererEnabled;
@@ -145,6 +146,7 @@ internal partial class RipScene
         HashSet<string> itemScripts = ScriptGuids(file, s_itemScripts);
         HashSet<string> waterPlaneScripts = ScriptGuids(file, s_waterPlaneScripts);
         HashSet<string> waterSourceScripts = ScriptGuids(file, s_waterSourceScripts);
+        HashSet<string> workingScripts = ScriptGuids(file, s_workingScripts);
 
         foreach (string line in File.ReadLines(file))
         {
@@ -203,6 +205,7 @@ internal partial class RipScene
                         current.IsItem |= itemScripts.Contains(guid);
                         current.IsWaterPlane |= waterPlaneScripts.Contains(guid);
                         current.IsWaterSource |= waterSourceScripts.Contains(guid);
+                        current.IsWorking |= workingScripts.Contains(guid);
                     }
                     break;
                 case "1":
@@ -294,7 +297,9 @@ internal partial class RipScene
     }
 
     // Rips include the game's scripts, and a script's GUID is how a scene says what's attached to an object.
-    // What a player can use in the game. In a region these are decoration, because their scripts are left behind.
+    // What keeps its scripts in a region, so players can really use it.
+    private static readonly string[] s_workingScripts = { "Gatherable", "TreasureChest" };
+    // What a player can use in the game. In a region the rest of these are decoration, because their scripts are left behind.
     private static readonly string[] s_interactiveScripts = { "InteractionTriggerBase", "InteractionActivator", "Gatherable", "CentralGatherableAccessPoint", "TreasureChest", "ItemContainer", "ItemSpawner", "TrapTrigger" };
     private static readonly string[] s_itemScripts = { "Item", "Equipment", "Weapon", "Armor", "Bag", "Consumable", "Food" };
     private static readonly string[] s_waterPlaneScripts = { "WaterRender" };
@@ -398,6 +403,7 @@ internal partial class RipScene
                 Walk(child, byName);
         FindEnemies(byName);
         FindItems(byName);
+        FindWorking(byName);
         Props = byName.Values.OrderBy(p => p.BaseName).ToList();
         foreach (Prop prop in Props)
             prop.Scene = this;
@@ -405,6 +411,32 @@ internal partial class RipScene
         List<Node> everything = Roots.SelectMany(r => r.SelfAndDescendants()).ToList();
         HasWater = everything.Any(n => n.IsWaterPlane && n.HasMesh);
         HasWaterSource = everything.Any(n => n.IsWaterSource);
+    }
+
+    // Chests and gathering spots, wherever they sit. The whole thing is the prop, rather than a part of its model.
+    private void FindWorking(Dictionary<string, Prop> byName)
+    {
+        foreach (Node root in Roots)
+            foreach (Node node in root.SelfAndDescendants().Where(n => n.IsWorking))
+            {
+                string baseName = s_instanceSuffix.Replace(node.Name, "");
+                Prop prop;
+                if (byName.TryGetValue(baseName, out prop) && prop.Node.IsWorking)
+                {
+                    prop.InstanceCount++;
+                    continue;
+                }
+                List<Node> drawn = node.SelfAndDescendants().Where(n => n.HasMesh && n.HasRenderer).ToList();
+                if (drawn.Count == 0)
+                    continue;
+                byName[baseName] = new Prop
+                {
+                    Node = node,
+                    BaseName = baseName,
+                    Category = baseName.StartsWith("Gatherable") ? "Gathering spots" : "Chests",
+                    Batched = drawn.Any(n => n.SubMeshCount > 0),
+                };
+            }
     }
 
     // Things with the game's item scripts, wherever they sit, as long as there's something to see.

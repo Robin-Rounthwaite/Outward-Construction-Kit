@@ -12,6 +12,7 @@ internal class PackageWindow : EditorWindow
     private string m_status = "";
     private string m_lastZip;
     private Vector2 m_scroll;
+    private bool m_showPreview = true;
 
     [MenuItem("Construction Kit/Package Region")]
     public static void Open()
@@ -90,6 +91,22 @@ internal class PackageWindow : EditorWindow
         List<string> problems = RegionPackager.Problems(info);
         foreach (string problem in problems)
             KitStyles.HelpBox(problem, MessageType.Warning);
+
+        string[] made = Directory.Exists(OckSettings.UploadFolder) ? Directory.GetFiles(OckSettings.UploadFolder, info.PackageTeam + "-" + info.PackageName + "-*.zip") : new string[0];
+        string suggested = RegionPackager.SuggestedVersion(info.PackageVersion, made);
+        if (suggested != null)
+        {
+            KitStyles.HelpBox($"You've already made this version or a later one. Thunderstore rejects a version it already has, so {suggested} would be next.", MessageType.Info);
+            if (GUILayout.Button(new GUIContent("Use " + suggested, "Sets the version to this.")))
+            {
+                info.PackageVersion = suggested;
+                info.SaveFor(scenePath);
+                GUIUtility.keyboardControl = 0;
+            }
+        }
+        m_showPreview = EditorGUILayout.Foldout(m_showPreview, "Preview", true);
+        if (m_showPreview)
+            EditorGUILayout.LabelField(RegionPackager.Preview(info), KitStyles.WrappedNote);
 
         using (new EditorGUI.DisabledScope(problems.Count > 0))
         {

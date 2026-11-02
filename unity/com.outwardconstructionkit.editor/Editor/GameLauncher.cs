@@ -16,6 +16,7 @@ internal static class GameLauncher
 {
     private const int APP_ID = 1758860;
     private const string REQUEST_FILE = "OCK_AutoTest.txt"; // the plugin's AutoTest reads this
+    private const string AUTHOR_SESSION_FILE = "OCK_AuthorSession.txt"; // and the plugin's AuthorHelp this
     private const string CHARACTER_PREF = "OCK.TestCharacterId";
     private const string OLD_CHARACTER_NAME_PREF = "OCK.TestCharacter"; // a name, from before characters were chosen from a list
     private const double SECONDS_TO_APPEAR = 60d;
@@ -81,11 +82,12 @@ internal static class GameLauncher
         if (refused != null)
             return refused;
         File.Delete(RequestPath()); // a leftover would take the game somewhere nobody asked for
+        File.WriteAllText(AuthorSessionPath(), "");
         return Start("Starting the game with your mods.");
     }
 
-    /// <summary>Exports the open region, then starts the game, which goes straight to it. Says how that went.</summary>
-    public static string TestRegion()
+    /// <summary>Exports the open region, then starts the game, which goes straight to it, at a spot if given. Says how that went.</summary>
+    public static string TestRegion(Vector3? startAt = null)
     {
         string refused = ReasonNotToStart();
         if (refused != null)
@@ -109,14 +111,21 @@ internal static class GameLauncher
             UnityEngine.Debug.LogException(e);
             return "Export failed, so the game wasn't started: " + e.Message;
         }
-        File.WriteAllLines(RequestPath(), TestRequest(id, character));
+        File.WriteAllLines(RequestPath(), TestRequest(id, character, startAt));
+        File.WriteAllText(AuthorSessionPath(), "");
         TestCharacters.MarkUsed(character);
         return Start(exported + "\n\nStarting the game, which goes straight to your region.");
     }
 
-    public static string[] TestRequest(string regionId, string characterId)
+    public static string[] TestRequest(string regionId, string characterId, Vector3? startAt = null)
     {
-        return new[] { "characterid " + characterId, "visit " + regionId };
+        var request = new List<string> { "characterid " + characterId, "visit " + regionId };
+        if (startAt.HasValue)
+        {
+            var ci = System.Globalization.CultureInfo.InvariantCulture;
+            request.Add("startat " + startAt.Value.x.ToString("0.###", ci) + "," + startAt.Value.y.ToString("0.###", ci) + "," + startAt.Value.z.ToString("0.###", ci));
+        }
+        return request.ToArray();
     }
 
     public static string SteamArguments(string bepInExFolder)
@@ -132,6 +141,12 @@ internal static class GameLauncher
     private static string RequestPath()
     {
         return Path.Combine(BepInExFolder(), REQUEST_FILE);
+    }
+
+    // Started from here means it's the region's author at the keyboard, which turns on the plugin's help line for that run.
+    private static string AuthorSessionPath()
+    {
+        return Path.Combine(BepInExFolder(), AUTHOR_SESSION_FILE);
     }
 
     private static string ReasonNotToStart()

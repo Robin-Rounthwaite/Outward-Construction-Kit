@@ -79,6 +79,7 @@ internal static partial class PropImporter
             SourceRotation = sourceWorld.rotation,
             SourceScale = sourceWorld.lossyScale,
             Check = RipScene.CheckFor(source),
+            IsWorking = source.IsWorking,
         }.SaveOn(prefabPath);
         return prefab;
     }

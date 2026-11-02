@@ -100,6 +100,7 @@ internal static class RegionExporter
         int referenced = manifest.Split('\n').Count(l => l.StartsWith("prop "));
         int enemies = manifest.Split('\n').Count(l => l.StartsWith("enemy "));
         int items = manifest.Split('\n').Count(l => l.StartsWith("item "));
+        int working = manifest.Split('\n').Count(l => l.StartsWith("interactive "));
         string workPath = WORK_FOLDER + "/" + info.BuiltSceneName + ".unity";
         Directory.CreateDirectory(WORK_FOLDER);
         AssetDatabase.Refresh();
@@ -157,7 +158,7 @@ internal static class RegionExporter
             File.Copy(Path.Combine(buildFolder, info.Id), bundleOut, true);
             File.WriteAllText(bundleOut + ".refs.txt", manifest);
 
-            string summary = $"Exported '{info.DisplayName}' ({info.Id}, from {sceneName}): {new FileInfo(bundleOut).Length / 1024} KB bundle, {referenced} vanilla props referenced, {embedded} altered props embedded, {enemies} enemies, {items} items, NavMesh {navMeshTriangles} triangles, entrance {(string.IsNullOrEmpty(info.DoorScene) ? "not set" : info.DoorScene)}, to {outputFolder}";
+            string summary = $"Exported '{info.DisplayName}' ({info.Id}, from {sceneName}): {new FileInfo(bundleOut).Length / 1024} KB bundle, {referenced} vanilla props referenced, {embedded} altered props embedded, {enemies} enemies, {items} items, {working} chests and gathering spots, NavMesh {navMeshTriangles} triangles, entrance {(string.IsNullOrEmpty(info.DoorScene) ? "not set" : info.DoorScene)}, to {outputFolder}";
             if (entranceChange != null)
                 summary += "\n" + entranceChange;
             foreach (string warning in placementWarnings)
@@ -185,7 +186,7 @@ internal static class RegionExporter
         foreach (string line in report.Split('\n'))
         {
             if (line.StartsWith("Exported '"))
-                kept.Add(line.Substring(0, line.IndexOf('\'', "Exported '".Length) + 1) + ".");
+                kept.Add("Saved your scene and exported '" + line.Substring("Exported '".Length, line.IndexOf('\'', "Exported '".Length) - "Exported '".Length) + "'.");
             else if (line.Length > 0 && !line.StartsWith("Embedded "))
                 kept.Add(line);
         }
@@ -288,29 +289,44 @@ internal static class RegionExporter
             && !Physics.Raycast(FirstSpawnPoint(scene).transform.position + Vector3.up * GROUND_CHECK_START, Vector3.down, GROUND_CHECK_DISTANCE, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
     }
 
+    public class PlacementProblem
+    {
+        public string Text;
+        public GameObject Target;
+    }
+
     /// <summary>Spawn points and doors a player couldn't use, because they float above the ground or are under it.</summary>
-    public static List<string> PlacementWarnings(Scene scene)
+    public static List<PlacementProblem> PlacementProblems(Scene scene)
     {
         Physics.SyncTransforms();
-        var warnings = new List<string>();
+        var problems = new List<PlacementProblem>();
         GameObject spawns = scene.GetRootGameObjects().FirstOrDefault(r => r.name == SPAWN_ROOT);
         if (spawns != null)
             foreach (Transform spawn in spawns.transform)
-                CheckStandsOnGround("Spawn point " + spawn.name, spawn.position, warnings);
+                CheckStandsOnGround("Spawn point " + spawn.name, spawn, problems);
         foreach (Transform door in DoorTools.Doors(scene))
-            CheckStandsOnGround("A return door", door.position, warnings);
-        return warnings;
+            CheckStandsOnGround("A return door", door, problems);
+        return problems;
     }
 
-    private static void CheckStandsOnGround(string what, Vector3 position, List<string> warnings)
+    public static List<string> PlacementWarnings(Scene scene)
     {
+        return PlacementProblems(scene).Select(p => p.Text).ToList();
+    }
+
+    private static void CheckStandsOnGround(string what, Transform thing, List<PlacementProblem> problems)
+    {
+        Vector3 position = thing.position;
         RaycastHit hit;
+        string problem = null;
         if (!Physics.Raycast(position + Vector3.up * GROUND_CHECK_START, Vector3.down, out hit, GROUND_CHECK_DISTANCE, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
-            warnings.Add($"{what} at {position} has no ground under it, or is below the ground.");
+            problem = $"{what} at {position} has no ground under it, or is below the ground.";
         else if (position.y - hit.point.y > MAX_GROUND_GAP)
-            warnings.Add($"{what} at {position} floats {position.y - hit.point.y:0.0} m above the ground.");
+            problem = $"{what} at {position} floats {position.y - hit.point.y:0.0} m above the ground.";
         else if (hit.point.y - position.y > MAX_GROUND_GAP)
-            warnings.Add($"{what} at {position} is {hit.point.y - position.y:0.0} m under the ground.");
+            problem = $"{what} at {position} is {hit.point.y - position.y:0.0} m under the ground.";
+        if (problem != null)
+            problems.Add(new PlacementProblem { Text = problem, Target = thing.gameObject });
     }
 
     // A scene made with Unity's own New Scene brings a camera, which would compete with the one the game borrows.
@@ -332,6 +348,8 @@ internal static class RegionExporter
         text.Append("environment | ").Append(OckSettings.EnvironmentDonor).Append('\n');
         if (!string.IsNullOrEmpty(info.DoorScene))
             text.Append("door | ").Append(info.DoorScene).Append(" | ").Append(info.DoorPosition).Append(" | ").Append(info.DoorRotationY.ToString("0.###", ci)).Append('\n');
+        if (info.DefeatLine() != null)
+            text.Append(info.DefeatLine()).Append('\n');
         if (!string.IsNullOrEmpty(info.DoorModelPath))
             text.Append("doormodel | ").Append(info.DoorModelScene).Append(" | ").Append(info.DoorModelPath).Append(" | ")
                 .Append(info.DoorModelRotation.x.ToString("0.###", ci)).Append(',').Append(info.DoorModelRotation.y.ToString("0.###", ci)).Append(',').Append(info.DoorModelRotation.z.ToString("0.###", ci)).Append(" | ")
@@ -341,9 +359,21 @@ internal static class RegionExporter
             Vector3 p = enemy.Key.transform.position;
             text.Append("enemy | ").Append(enemy.Value.DonorScene).Append(" | ").Append(enemy.Value.Path).Append(" | ")
                 .Append(p.x.ToString("0.###", ci)).Append(',').Append(p.y.ToString("0.###", ci)).Append(',').Append(p.z.ToString("0.###", ci)).Append(" | ")
-                .Append(enemy.Key.transform.eulerAngles.y.ToString("0.###", ci)).Append('\n');
+                .Append(enemy.Key.transform.eulerAngles.y.ToString("0.###", ci)).Append(info.StaysGone(enemy.Key) ? " | norespawn" : "").Append('\n');
         }
-        foreach (KeyValuePair<GameObject, PropRef> prop in PropRef.FindIn(scene).Where(p => !p.Value.IsEnemy && !PropRef.IsAltered(p.Key) && !ItemTools.IsItemProp(p)).OrderBy(p => p.Key.name))
+        foreach (KeyValuePair<GameObject, PropRef> prop in PropRef.FindIn(scene).Where(p => p.Value.IsWorking && !PropRef.IsAltered(p.Key)).OrderBy(p => p.Key.name))
+        {
+            Vector3 p = prop.Key.transform.position;
+            Vector3 turn = (prop.Key.transform.rotation * Quaternion.Inverse(prop.Value.SourceRotation)).eulerAngles;
+            text.Append("interactive | ").Append(prop.Value.DonorScene).Append(" | ").Append(prop.Value.Path).Append(" | ")
+                .Append(p.x.ToString("0.###", ci)).Append(',').Append(p.y.ToString("0.###", ci)).Append(',').Append(p.z.ToString("0.###", ci)).Append(" | ")
+                .Append(turn.x.ToString("0.###", ci)).Append(',').Append(turn.y.ToString("0.###", ci)).Append(',').Append(turn.z.ToString("0.###", ci));
+            string contents = info.ContentsOf(prop.Key);
+            if (!string.IsNullOrEmpty(contents))
+                text.Append(" | ").Append(contents);
+            text.Append('\n');
+        }
+        foreach (KeyValuePair<GameObject, PropRef> prop in PropRef.FindIn(scene).Where(p => !p.Value.IsEnemy && !p.Value.IsWorking && !PropRef.IsAltered(p.Key) && !ItemTools.IsItemProp(p)).OrderBy(p => p.Key.name))
         {
             Vector3 p = prop.Key.transform.position;
             Vector3 turn = (prop.Key.transform.rotation * Quaternion.Inverse(prop.Value.SourceRotation)).eulerAngles;
@@ -368,7 +398,7 @@ internal static class RegionExporter
             text.Append("shader | ").Append(shader.Key).Append(" | ").Append(shader.Value).Append('\n');
         GroundTools.AppendManifest(scene, text);
         DoorTools.AppendManifest(scene, text);
-        ItemTools.AppendManifest(scene, text);
+        ItemTools.AppendManifest(scene, text, info);
         return text.ToString();
     }
 

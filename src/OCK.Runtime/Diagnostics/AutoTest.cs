@@ -27,6 +27,8 @@ namespace OutwardConstructionKit.Runtime
         private const string TRANSITION_SCENE = "LowMemory_TransitionScene";
         private const string VISIT = "visit "; // the Test Region button: goes there, then it's normal play
         private const string CHARACTER_ID = "characterid ";
+        private const string START_AT = "startat "; // the Test from Here button: where in the region to begin
+        private const float START_AT_HEIGHT = 0.2f;
 
         public static bool Begin(KitPlugin plugin)
         {
@@ -36,11 +38,33 @@ namespace OutwardConstructionKit.Runtime
 
             string[] request = File.ReadAllLines(file);
             File.Delete(file);
+            if (request.Contains("forcereset"))
+                new Harmony(KitPlugin.GUID + ".autotest").PatchAll(typeof(ForceResetPatch));
             if (!request.Any(l => l.StartsWith(VISIT)))
                 plugin.SelfCheck.Value = true;
             Application.runInBackground = true; // the game pauses itself otherwise, if something else has focus
             plugin.StartCoroutine(Run(request));
             return true;
+        }
+
+        // A reset takes days of game time, so this one test makes every region count as due for one.
+        [HarmonyPatch(typeof(AreaManager), nameof(AreaManager.IsAreaExpired))]
+        private static class ForceResetPatch
+        {
+            private static void Postfix(string _areaName, ref bool __result)
+            {
+                if (Region.ForScene(_areaName) != null)
+                    __result = true;
+            }
+        }
+
+        private static void ReportWhatsHere(string[] request)
+        {
+            Log($"Lying here: {string.Join(", ", RegionItems.InWorld().Select(i => i.ItemID.ToString()).ToArray())}. Enemies: {string.Join(", ", CharacterManager.Instance.Characters.Values.Where(c => c != null && !c.IsLocalPlayer && c.gameObject.activeInHierarchy).Select(c => c.name + (c.IsDead ? " dead" : " alive")).ToArray())}.");
+            if (!request.Contains("killenemies"))
+                return;
+            foreach (Character enemy in CharacterManager.Instance.Characters.Values.Where(c => c != null && !c.IsLocalPlayer && !c.IsDead).ToList())
+                enemy.Stats.ReceiveDamage(enemy.Stats.MaxHealth * 100f);
         }
 
         private static void SetMenuInput(bool on)
@@ -155,6 +179,13 @@ namespace OutwardConstructionKit.Runtime
                 }
                 yield return new WaitForSecondsRealtime(1f);
                 yield return Travel(visited.SceneName, 0, result);
+                string startAt = request.Where(l => l.StartsWith(START_AT)).Select(l => l.Substring(START_AT.Length).Trim()).FirstOrDefault();
+                Vector3 spot;
+                if (ok && KitPlugin.TryParseVector(startAt, out spot))
+                {
+                    Player().Teleport(spot + Vector3.up * START_AT_HEIGHT, Player().transform.rotation);
+                    Log($"Started from {spot}, as asked.");
+                }
                 if (ok)
                     Log($"FINISHED, in {visit}, for a person to play.");
                 if (ok && request.Contains("trydoor"))
@@ -204,14 +235,17 @@ namespace OutwardConstructionKit.Runtime
                 Player().Invincible = true; // no one's at the keyboard, and enemies that work will kill a character standing still
                 yield return new WaitForSecondsRealtime(CHECKS_SECONDS);
                 yield return Screenshot(id);
+                ReportWhatsHere(request);
                 if (request.Contains("takeitems"))
                     yield return TakeItems();
+                if (request.Contains("tryprops"))
+                    yield return TryInteractives();
             }
 
             if (regions.Length > 0 && request.Contains("dieinregion"))
             {
                 string died = SceneManager.GetActiveScene().name;
-                Log($"Dying in {died}.");
+                Log($"Dying in {died}, with {Player().Inventory.ContainedSilver} silver and {BagCount()} items.");
                 Player().Invincible = false;
                 Player().Stats.ReceiveDamage(Player().Stats.MaxHealth * 10f); // as an enemy would, which sets off the defeat
                 ProloguePanel defeatScreen = null;
@@ -230,7 +264,7 @@ namespace OutwardConstructionKit.Runtime
                 if (!ok)
                     yield break;
                 yield return new WaitForSecondsRealtime(3f);
-                Log($"Died in {died} and came back in {SceneManager.GetActiveScene().name}, alive: {Player().IsDead == false}, health {Player().Stats.CurrentHealth:0}.");
+                Log($"Died in {died} and came back in {SceneManager.GetActiveScene().name}, alive: {Player().IsDead == false}, health {Player().Stats.CurrentHealth:0} of {Player().Stats.ActiveMaxHealth:0}, stamina {Player().Stats.CurrentStamina:0}, with {Player().Inventory.ContainedSilver} silver and {BagCount()} items.");
                 CheckStanding();
                 Player().Stats.RestoreAllVitals();
             }
@@ -304,6 +338,42 @@ namespace OutwardConstructionKit.Runtime
                 int after = Player().Inventory.ItemCount(item.ItemID);
                 Log(after > before ? $"Took {item.ItemID}: the bag holds {after}." : $"FAIL couldn't take {item.ItemID}: the bag holds {after}.");
             }
+        }
+
+        // Walks up to each chest and gathering spot, reads its prompt, and does what pressing it does.
+        private static IEnumerator TryInteractives()
+        {
+            List<Item> here = InteractiveDonor.InWorld();
+            Log($"{here.Count} chests and gathering spots here: {string.Join(", ", here.Select(i => i.name).ToArray())}.");
+            foreach (Item thing in here)
+            {
+                Player().Teleport(thing.transform.position + thing.transform.forward * 1.2f + Vector3.up * 0.2f, Quaternion.LookRotation(-thing.transform.forward));
+                yield return new WaitForSecondsRealtime(3f);
+                InteractionTriggerBase trigger = Player().Interactable;
+                var container = thing as SelfFilledItemContainer;
+                // A gathering spot already picked, on an earlier visit, rightly has nothing to offer until it regrows.
+                if (trigger == null && thing is Gatherable && !container.HasAnyDrops)
+                {
+                    Log($"{thing.name} is used up, and offers no prompt.");
+                    continue;
+                }
+                Log(trigger != null ? $"Beside {thing.name}, the prompt says '{Player().PressText}' '{Player().HoldText}'." : $"FAIL no prompt beside {thing.name}.");
+                yield return Screenshot("try_" + thing.name);
+                if (container == null)
+                    continue;
+                int before = BagCount();
+                container.ResponsibleCharacter = Player();
+                container.GenerateContents();
+                yield return new WaitForSecondsRealtime(3f);
+                var box = (ItemContainer)container;
+                Log($"{thing.name} now holds {box.ItemCount} items and {box.ContainedSilver} silver, and the bag went from {before} to {BagCount()} items.");
+                Log(thing is Gatherable ? (BagCount() > before ? $"Gathered from {thing.name}." : $"FAIL gathered nothing from {thing.name}.") : (box.ItemCount > 0 || box.ContainedSilver > 0 ? $"{thing.name} has something in it." : $"FAIL {thing.name} is empty."));
+            }
+        }
+
+        private static int BagCount()
+        {
+            return Player().Inventory.Pouch.ItemCount + (Player().Inventory.EquippedBag != null ? Player().Inventory.EquippedBag.Container.ItemCount : 0);
         }
 
         private static void CheckStanding()

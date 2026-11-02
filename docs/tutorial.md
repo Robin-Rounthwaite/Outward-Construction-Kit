@@ -38,15 +38,19 @@ On the **Water** tab, choose a **Water type**, then click **Add** beside the loc
 
 On the **Props** tab, pick a location and category, then click **Add** beside a prop, or drag its name into the Scene view. Move, rotate and scale it with Unity's usual tools. All of that stays a reference to the player's own game files. Stretching it unevenly, or changing it in other ways, makes export embed a copy of its art in your mod.
 
-Props are decoration for now: chests and gathering spots won't work in the game.
+Props marked **works** do what they do in the game: chests open, and gathering spots such as gaberry bushes and iron veins can be picked and regrow on the game's own timers. Look for the **Chests** and **Gathering spots** categories. Select a chest to choose what it holds in **Chest holds**, such as `5010100:2,silver:50`, or leave it empty for the game's own loot. Stretching or changing a prop like this makes it decoration, as other usable props are for now.
+
+The star beside a prop adds it to **Favourites**, in the dropdown beside the location. **Recent** in the same dropdown lists what you added last.
 
 ## 6. Add an item
 
-The **Items** tab lists the game's items, once the game has run with the kit at least once. Click **Add** beside one, and move the orange marker to where it should lie. In the game it's the real item, which players can pick up.
+The **Items** tab lists the game's items, once the game has run with the kit at least once. Click **Add** beside one, and move the orange marker to where it should lie. In the game it's the real item, which players can pick up. A region's reset never removes it, and if it's been taken it comes back then. To make it a one-time find, select its marker and untick **Comes back when the region resets**.
 
 ## 7. Add an enemy
 
-On the **Enemies** tab, add one. It stands where you put it and wakes when a player comes near. Start with something weak, because you'll be testing with your own character.
+On the **Enemies** tab, add one. It stands where you put it and wakes when a player comes near. Start with something weak, because you'll be testing with your own character. Enemies come back when the region resets, unless you select one and untick **Comes back when the region resets**.
+
+**Settings** in the browser chooses what a defeat in your region does: where the party wakes up, what they lose, and the message they see. Left alone, they return where they came from with no penalty.
 
 ## 8. Add a return door
 
@@ -54,7 +58,7 @@ A door back appears beside the arrival point by itself. To choose its place, cli
 
 To change how doors look, select a prop in the scene and click **Use Selected Prop as Door Model**. That only sets the look, of both the entrance and return doors. It doesn't add a door. Return door markers then show the model.
 
-If you lose a door, **Find Return Door** selects it and shows it in the Scene view. **Stand on Ground** moves the selected door onto the ground, if it's buried or floating.
+If you lose a door, **Find Return Door** selects it and shows it in the Scene view. **Drop to Ground** moves whatever's selected onto the ground, if it's buried or floating.
 
 ## 9. Check the spawn point
 
@@ -62,11 +66,13 @@ Select `SpawnPointManager/Spawn0` in the Hierarchy and make sure it sits just ab
 
 ## 10. Export
 
-Click **Export Region**. A short message at the top of the browser says it's done, with anything that needs your attention. Open **Details** under it to see what was exported and where. It should say no props were embedded, unless you meant them to be.
+Click **Checklist** first to see what your region still needs, with buttons to fix what they can. Then click **Export Region**, which saves your scene too. A short message at the top of the browser says it's done, with anything that needs your attention. Open **Details** under it to see what was exported and where. It should say no props were embedded, unless you meant them to be.
 
 ## 11. Visit it
 
-Click **Test Region In-Game** in the browser, which exports your region again, starts the game with your mods, loads your character and takes you straight there. It's normal play from then on, so your character takes damage and saves as usual. Choose the character in **Test as (Character Name)**. A character kept just for testing is safest. **Testing in mod list** shows which r2modman profile it uses, and you can change that in **Construction Kit > Paths**. The kit has to be installed in that profile.
+Click **Test Region In-Game** in the browser, which exports your region again, starts the game with your mods, loads your character and takes you straight there. It's normal play from then on, so your character takes damage and saves as usual. Choose the character in **Test as (Character Name)**. A character kept just for testing is safest. **Testing in mod list** shows which r2modman profile it uses, and you can change that in **Construction Kit > Paths**. The kit has to be installed in that profile. **Test from Here** starts you where the Scene view is looking instead, for that test only.
+
+A line at the top of the screen shows where you are, the door hotkeys and any errors from the kit. It only appears for games started from these buttons, so your players won't see it.
 
 To see the way in that players will use, click **Launch Game** instead, or start the game from the profile you chose with r2modman's **Start modded**. Then, in a town or anywhere else outdoors:
 

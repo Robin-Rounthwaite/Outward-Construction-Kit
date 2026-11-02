@@ -27,6 +27,54 @@ internal static class OckSettings
         set { EditorPrefs.SetString("OCK.PluginsFolder", value); }
     }
 
+    private const int MAX_RECENT = 30;
+    private const char LIST_SEPARATOR = '\n';
+
+    /// <summary>Props marked in the Prop Browser, by name, since each rip gives the same thing a different ID.</summary>
+    public static List<string> Favourites
+    {
+        get { return ReadList("OCK.Favourites"); }
+    }
+
+    public static void ToggleFavourite(string name)
+    {
+        List<string> list = Favourites;
+        if (!list.Remove(name))
+            list.Add(name);
+        WriteList("OCK.Favourites", list);
+    }
+
+    /// <summary>What was last added from the Prop Browser, newest first.</summary>
+    public static List<string> Recent
+    {
+        get { return ReadList("OCK.Recent"); }
+    }
+
+    public static void AddRecent(string name)
+    {
+        List<string> list = Recent;
+        list.Remove(name);
+        list.Insert(0, name);
+        WriteList("OCK.Recent", list.Take(MAX_RECENT));
+    }
+
+    public static void RemoveRecent(string name)
+    {
+        List<string> list = Recent;
+        list.Remove(name);
+        WriteList("OCK.Recent", list);
+    }
+
+    private static List<string> ReadList(string key)
+    {
+        return EditorPrefs.GetString(key, "").Split(new[] { LIST_SEPARATOR }, System.StringSplitOptions.RemoveEmptyEntries).ToList();
+    }
+
+    private static void WriteList(string key, IEnumerable<string> list)
+    {
+        EditorPrefs.SetString(key, string.Join(LIST_SEPARATOR.ToString(), list.ToArray()));
+    }
+
     /// <summary>Where Package Region saves zips. A relative path is inside the Unity project.</summary>
     public static string UploadFolder
     {

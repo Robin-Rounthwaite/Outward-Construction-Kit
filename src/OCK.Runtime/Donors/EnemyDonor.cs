@@ -40,6 +40,52 @@ namespace OutwardConstructionKit.Runtime
             return VIEW_ID_BASE + enemyIndex * VIEW_IDS_PER_ENEMY + slot;
         }
 
+        internal const string GONE_PREFIX = "enemy";
+
+        /// <summary>Stays the same while the enemy does, as RegionItems' keys do.</summary>
+        internal static string GoneKey(string regionId, RegionManifest.EnemyReference enemy)
+        {
+            string spot = string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}|{1}|{2:0.###},{3:0.###},{4:0.###}", regionId, enemy.path, enemy.position.x, enemy.position.y, enemy.position.z);
+            return GONE_PREFIX + Region.Hash(spot).ToString("x8");
+        }
+
+        private static string UidFor(string templateName, Region region, int index)
+        {
+            return region.Id + "_" + templateName + "_ock_" + region.Id + "_" + index;
+        }
+
+        private static IEnumerable<KeyValuePair<RegionManifest.EnemyReference, Character>> ThoseNotRespawning(Region region)
+        {
+            int index = 0;
+            foreach (RegionManifest.EnemyReference reference in region.Manifest.enemies)
+            {
+                index++;
+                if (!reference.noRespawn)
+                    continue;
+                string name = reference.path.Substring(reference.path.LastIndexOf('/') + 1);
+                Character character = CharacterManager.Instance.GetCharacter(UidFor(name, region, index));
+                if (character != null)
+                    yield return new KeyValuePair<RegionManifest.EnemyReference, Character>(reference, character);
+            }
+        }
+
+        /// <summary>The enemies lying dead that a modder asked not to come back.</summary>
+        internal static IEnumerable<string> DefeatedForGood(Region region)
+        {
+            return ThoseNotRespawning(region).Where(e => e.Value.IsDead).Select(e => GoneKey(region.Id, e.Key)).ToList();
+        }
+
+        /// <summary>After a reset, the game would bring them back, so they're taken out again.</summary>
+        internal static void RemoveDefeatedForGood(Region region, HashSet<string> gone)
+        {
+            foreach (KeyValuePair<RegionManifest.EnemyReference, Character> enemy in ThoseNotRespawning(region).ToList())
+                if (gone.Contains(GoneKey(region.Id, enemy.Key)) && !enemy.Value.IsDead)
+                {
+                    KitLog($"'{enemy.Value.name}' stays defeated, as this region asks.", false);
+                    enemy.Value.gameObject.SetActive(false);
+                }
+        }
+
         private static string KeyFor(RegionManifest.EnemyReference reference)
         {
             return reference.scene + "|" + reference.path;

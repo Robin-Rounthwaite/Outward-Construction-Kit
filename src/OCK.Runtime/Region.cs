@@ -230,6 +230,9 @@ namespace OutwardConstructionKit.Runtime
             }
 
             WaterDonor.Place(scene, this); // after the layers, because water isn't ground
+            int interactivesPlaced = InteractiveDonor.Place(scene, this); // likewise, since players use these rather than stand on them
+            if (interactivesPlaced < Manifest.interactives.Count)
+                PlayerNotice.Add($"'{DisplayName}' is missing {Manifest.interactives.Count - interactivesPlaced} of its chests and gathering spots, perhaps after a game update.");
 
             // Enemies go under the AI managers, which find the characters they run by looking at their children.
             Transform aiRoot = AddAIManagers(scene);

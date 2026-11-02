@@ -110,23 +110,29 @@ internal static class ItemTools
         return scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Transform>(true)).Where(t => s_markerName.IsMatch(t.name)).Select(t => t.gameObject).ToList();
     }
 
-    public static string ManifestLine(int id, Vector3 position, Vector3 rotation)
+    public static string ManifestLine(int id, Vector3 position, Vector3 rotation, bool once = false)
     {
         var ci = CultureInfo.InvariantCulture;
         return "item | " + id + " | " + position.x.ToString("0.###", ci) + "," + position.y.ToString("0.###", ci) + "," + position.z.ToString("0.###", ci)
-            + " | " + rotation.x.ToString("0.###", ci) + "," + rotation.y.ToString("0.###", ci) + "," + rotation.z.ToString("0.###", ci);
+            + " | " + rotation.x.ToString("0.###", ci) + "," + rotation.y.ToString("0.###", ci) + "," + rotation.z.ToString("0.###", ci) + (once ? " | once" : "");
     }
 
-    public static void AppendManifest(Scene scene, StringBuilder text)
+    /// <summary>Whether this is one of the markers that becomes a real item.</summary>
+    public static bool IsMarker(GameObject thing)
+    {
+        return thing != null && s_markerName.IsMatch(thing.name);
+    }
+
+    public static void AppendManifest(Scene scene, StringBuilder text, RegionInfo info)
     {
         foreach (GameObject marker in Markers(scene))
-            text.Append(ManifestLine(int.Parse(s_markerName.Match(marker.name).Groups[1].Value, CultureInfo.InvariantCulture), marker.transform.position - Vector3.up * MARKER_SIZE / 2f, marker.transform.eulerAngles)).Append('\n');
+            text.Append(ManifestLine(int.Parse(s_markerName.Match(marker.name).Groups[1].Value, CultureInfo.InvariantCulture), marker.transform.position - Vector3.up * MARKER_SIZE / 2f, marker.transform.eulerAngles, info.StaysGone(marker))).Append('\n');
         foreach (KeyValuePair<GameObject, PropRef> prop in PropRef.FindIn(scene).Where(p => IsItemProp(p)).OrderBy(p => p.Key.name))
         {
             int id;
             TryGetItemId(prop.Value.Path, out id);
             Vector3 turn = (prop.Key.transform.rotation * Quaternion.Inverse(prop.Value.SourceRotation)).eulerAngles;
-            text.Append(ManifestLine(id, prop.Key.transform.position, turn)).Append('\n');
+            text.Append(ManifestLine(id, prop.Key.transform.position, turn, info.StaysGone(prop.Key))).Append('\n');
         }
     }
 
@@ -134,7 +140,7 @@ internal static class ItemTools
     public static bool IsItemProp(KeyValuePair<GameObject, PropRef> prop)
     {
         int id;
-        return !prop.Value.IsEnemy && !PropRef.IsAltered(prop.Key) && TryGetItemId(prop.Value.Path, out id);
+        return !prop.Value.IsEnemy && !prop.Value.IsWorking && !PropRef.IsAltered(prop.Key) && TryGetItemId(prop.Value.Path, out id);
     }
 
     public static void RemoveMarkers(Scene work)

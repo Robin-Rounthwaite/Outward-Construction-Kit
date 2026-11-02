@@ -12,7 +12,7 @@ using UnityEngine.SceneManagement;
 internal class PropRef
 {
     /// <summary>Raised when the importer changes what a library prefab contains, so older ones get rebuilt.</summary>
-    public const int CURRENT_FORMAT = 5;
+    public const int CURRENT_FORMAT = 6;
 
     private const float SCALE_TOLERANCE = 0.001f;
 
@@ -27,6 +27,9 @@ internal class PropRef
 
     /// <summary>Enemies are placed as simple markers, because they're only ever references.</summary>
     public bool IsEnemy;
+
+    /// <summary>A chest or gathering spot, which keeps its scripts in the game and so really works.</summary>
+    public bool IsWorking;
 
     public void SaveOn(string prefabPath)
     {

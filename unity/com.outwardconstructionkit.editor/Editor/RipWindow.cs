@@ -15,6 +15,7 @@ internal class RipWindow : EditorWindow
     public const string SCRIPT = "Packages/com.outwardconstructionkit.editor/Tools~/rip-scene.ps1";
     public const string RIP_ALL_SCRIPT = "Packages/com.outwardconstructionkit.editor/Tools~/rip-all-scenes.ps1";
     private const int LOW_DISK_GB = 20;
+    private const double STALLED_MINUTES = 20d; // a little longer than the script itself waits before giving up
 
     // The empty scenes the game passes through, going by their names.
     private static readonly string[] s_nothingToRip = { "MainMenu_Empty", "LowMemory_TransitionScene" };
@@ -57,6 +58,12 @@ internal class RipWindow : EditorWindow
         }
 
         KitStyles.HelpBox("Ripping copies a scene's models out of your own game files, for the Prop Browser to show. Time and disk space aren't yet measured, so choose a drive with plenty of room. Later rips share what's the same with earlier ones. It runs in its own window, so you can keep working, and appears in the Prop Browser when it's done.", MessageType.Info);
+        foreach (RipProgress running in RunningRips(OckSettings.RipFolder))
+        {
+            Rect bar = EditorGUILayout.GetControlRect();
+            string text = LocationNames.For(running.Scene) + ": " + (running.Stalled ? "seems to have stopped. Check its window." : running.Stage);
+            EditorGUI.ProgressBar(bar, running.Percent / 100f, text);
+        }
         if (GUILayout.Button(new GUIContent("Rip All Scenes", "Rips every scene not yet ripped, one after another. It asks before starting.")))
             RipAll();
         m_search = EditorGUILayout.TextField("Search", m_search);
@@ -78,6 +85,46 @@ internal class RipWindow : EditorWindow
             }
         }
         EditorGUILayout.EndScrollView();
+    }
+
+    public class RipProgress
+    {
+        public string Scene;
+        public string Stage;
+        public float Percent;
+        public bool Stalled;
+    }
+
+    /// <summary>What the rip script says about each rip going on, from the files it keeps up to date.</summary>
+    public static List<RipProgress> RunningRips(string ripFolder)
+    {
+        var running = new List<RipProgress>();
+        string folder = Path.Combine(ripFolder ?? "", "_AssetRipper", "progress");
+        if (!Directory.Exists(folder))
+            return running;
+        foreach (string file in Directory.GetFiles(folder, "*.txt"))
+        {
+            string[] parts;
+            try
+            {
+                parts = File.ReadAllText(file).Trim().Split('|');
+            }
+            catch (IOException)
+            {
+                continue; // the script is writing it, and it'll be there on the next look
+            }
+            float percent;
+            if (parts.Length != 2 || !float.TryParse(parts[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out percent))
+                continue;
+            running.Add(new RipProgress { Scene = Path.GetFileNameWithoutExtension(file), Stage = parts[0], Percent = percent, Stalled = (DateTime.Now - File.GetLastWriteTime(file)).TotalMinutes > STALLED_MINUTES });
+        }
+        return running;
+    }
+
+    private void OnInspectorUpdate()
+    {
+        if (RunningRips(OckSettings.RipFolder).Count > 0)
+            Repaint();
     }
 
     /// <summary>Rips one scene by name, asking first.</summary>

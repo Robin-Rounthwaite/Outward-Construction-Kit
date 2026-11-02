@@ -285,6 +285,7 @@ internal static class OckSelfTest
         Check("scenes get the names players know", LocationNames.For("HallowedMarshNewTerrain") == "Hallowed Marsh" && LocationNames.For("AntiqueField_Dungeon3") == "Antique Plateau dungeon 3" && LocationNames.For("Chersonese_Dungeon4_BlueChamber") == "Chersonese dungeon 4, Blue Chamber" && LocationNames.For("EmercarDungeonsBosses") == "Enmerkar Forest boss arenas" && LocationNames.For("SomethingNew") == "SomethingNew");
         Check("every scene has a name that isn't the game's raw one, or is already readable", OckSettings.BuildSceneNames().All(s => LocationNames.For(s) != s ? true : !s.Contains("_") && !s.Contains("NewTerrain")), string.Join(", ", OckSettings.BuildSceneNames().Where(s => LocationNames.For(s) == s).ToArray()));
         Check("testing a region asks for the region and the character's save ID", GameLauncher.TestRequest("r", "abc").SequenceEqual(new[] { "characterid abc", "visit r" }));
+        Check("testing from here also asks for the spot", GameLauncher.TestRequest("r", "abc", new Vector3(1.5f, 2f, -3f)).Last() == "startat 1.5,2,-3");
         Check("test characters list the most recently used first, and tell apart shared names", TestCharacterOrderIsRight());
         Check("a character's name can be read from a save", ReadsACharacterName());
         Check("Unity's terrain tools can still be switched from code", GroundTools.CanSwitchTerrainTools);
@@ -406,12 +407,44 @@ internal static class OckSelfTest
         Check("packaging asks for a mod name and description", RegionPackager.Problems(new RegionInfo { PackageTeam = "Team", PackageName = "has spaces", PackageVersion = "1", DoorScene = "Monsoon" }).Count == 3);
         Check("packaging asks for a team", RegionPackager.Problems(new RegionInfo { PackageName = "Good", PackageVersion = "1.0.0", Description = "Fine.", DoorScene = "Monsoon" }).Count == 1);
         Check("packaging warns when there's no entrance", RegionPackager.Problems(new RegionInfo { PackageTeam = "Team", PackageName = "Good", PackageVersion = "1.0.0", Description = "Fine." }).Count == 1);
+        Check("an item that stays gone says so in its line", ItemTools.ManifestLine(5, Vector3.one, Vector3.zero, true).EndsWith(" | once") && !ItemTools.ManifestLine(5, Vector3.one, Vector3.zero).Contains("once"));
+        Check("a region left alone has no defeat setup", new RegionInfo().DefeatLine() == null);
+        Check("a defeat setup makes one line the plugin reads", new RegionInfo { DefeatReturn = "here", DefeatSpawn = 2, DefeatSilverPercent = 10, DefeatItemPercent = 25, DefeatVitalsPercent = 30, DefeatMessage = "A|b\nc" }.DefeatLine() == "defeat | here | 2 | 10 | 25 | 30 | A/b c");
+        Check("a chest's contents are checked", RegionInfo.ContentsAreValid("5010100:2,silver:50") && RegionInfo.ContentsAreValid("") && RegionInfo.ContentsAreValid("1:1") && !RegionInfo.ContentsAreValid("5010100") && !RegionInfo.ContentsAreValid("gold:5") && !RegionInfo.ContentsAreValid("1:0"));
         Check("packaging refuses a long description", RegionPackager.Problems(new RegionInfo { PackageTeam = "Team", PackageName = "Good", PackageVersion = "1.0.0", Description = new string('x', 251), DoorScene = "Monsoon" }).Count == 1);
 
         var placed = new RegionInfo { Id = "placed" };
         Check("a door placed in game is read from the config", placed.TryReadDoor(new[] { "[Region other]", "DoorScene = Wrong", "[Region placed]", "DoorScene = Monsoon", "DoorPosition = 1,2,3", "DoorRotationY = 90" }) && placed.DoorScene == "Monsoon" && placed.DoorPosition == "1,2,3" && placed.DoorRotationY == 90f);
         Check("a region with no door placed keeps what it has", !new RegionInfo { Id = "placed" }.TryReadDoor(new[] { "[Region placed]", "DoorScene = ", "DoorPosition = " }));
-        Check("the short export message keeps warnings and drops details", RegionExporter.Brief("Exported 'Mine' (mine, from Mine): 5 KB bundle\nWARNING: A door floats.\nEmbedded props contain art.") == "Exported 'Mine'.\nWARNING: A door floats.");
+        Check("the short export message says it saved, keeps warnings and drops details", RegionExporter.Brief("Exported 'Mine' (mine, from Mine): 5 KB bundle\nWARNING: A door floats.\nEmbedded props contain art.") == "Saved your scene and exported 'Mine'.\nWARNING: A door floats.");
+        Check("the next version follows the highest zip made", RegionPackager.SuggestedVersion("1.0.0", new[] { "T-M-1.0.0.zip", "T-M-1.0.2.zip" }) == "1.0.3");
+        Check("a new version needs no suggestion", RegionPackager.SuggestedVersion("1.1.0", new[] { "T-M-1.0.2.zip" }) == null && RegionPackager.SuggestedVersion("1.0.0", new string[0]) == null);
+        Check("the preview names the zip and the kit", RegionPackager.Preview(new RegionInfo { PackageTeam = "T", PackageName = "My_Mod", PackageVersion = "1.0.0" }).Contains("T-My_Mod-1.0.0.zip") && RegionPackager.Preview(new RegionInfo { PackageName = "My_Mod" }).Contains("Blue_Chamber_Collective-Outward_Construction_Kit-" + RegionPackager.KitVersion));
+        string progressFolder = Path.Combine(output, "rips", "_AssetRipper", "progress");
+        Directory.CreateDirectory(progressFolder);
+        File.WriteAllText(Path.Combine(progressFolder, "Monsoon.txt"), "Exporting|42\r\n");
+        File.WriteAllText(Path.Combine(progressFolder, "Broken.txt"), "nonsense");
+        List<RipWindow.RipProgress> rips = RipWindow.RunningRips(Path.Combine(output, "rips"));
+        Check("a rip's progress can be read, and a bad file skipped", rips.Count == 1 && rips[0].Scene == "Monsoon" && rips[0].Stage == "Exporting" && rips[0].Percent == 42f && !rips[0].Stalled);
+        Check("no rip folder means no rips going on", RipWindow.RunningRips(Path.Combine(output, "no such folder")).Count == 0);
+        List<string> savedFavourites = OckSettings.Favourites;
+        List<string> savedRecent = OckSettings.Recent;
+        foreach (string name in savedFavourites)
+            OckSettings.ToggleFavourite(name);
+        OckSettings.ToggleFavourite("OCK_test_barrel");
+        Check("a favourite is remembered", OckSettings.Favourites.SequenceEqual(new[] { "OCK_test_barrel" }));
+        OckSettings.ToggleFavourite("OCK_test_barrel");
+        Check("a favourite can be taken off", OckSettings.Favourites.Count == 0);
+        foreach (string name in savedFavourites)
+            OckSettings.ToggleFavourite(name);
+        OckSettings.AddRecent("OCK_test_a");
+        OckSettings.AddRecent("OCK_test_b");
+        OckSettings.AddRecent("OCK_test_a");
+        Check("what was added last comes first in Recent, once", OckSettings.Recent.Take(2).SequenceEqual(new[] { "OCK_test_a", "OCK_test_b" }) && OckSettings.Recent.Count(n => n == "OCK_test_a") == 1);
+        foreach (string name in Enumerable.Reverse(savedRecent).ToArray())
+            OckSettings.AddRecent(name);
+        OckSettings.RemoveRecent("OCK_test_a");
+        OckSettings.RemoveRecent("OCK_test_b");
         Check("a mod list goes by its profile's name", PathDetector.ProfileName(@"C:\profiles\my list\BepInEx\plugins") == "my list");
         string noKit = Path.Combine(output, "nokit", "plugins");
         string withKit = Path.Combine(output, "withkit", "plugins");
@@ -569,8 +602,14 @@ internal static class OckSelfTest
         Check("a floating door gets a warning", RegionExporter.PlacementWarnings(room).Count == 1, string.Join(" ", RegionExporter.PlacementWarnings(room).ToArray()));
         door.transform.position = new Vector3(5f, 0f, 5f);
         Check("a door on the ground doesn't", RegionExporter.PlacementWarnings(room).Count == 0, string.Join(" ", RegionExporter.PlacementWarnings(room).ToArray()));
+        door.transform.position = new Vector3(5f, -6f, 5f);
+        Check("a problem names the object at fault", RegionExporter.PlacementProblems(room).Single().Target == door);
+        Check("a buried door can be dropped to the ground", GroundTools.DropToGround(new[] { door.transform }) == 1 && Mathf.Abs(door.transform.position.y) < 0.01f, door.transform.position.ToString());
+        Check("the checklist counts a floor, and offers no fix for what's done", RegionChecklistWindow.Check(room, new RegionInfo(), OckSettings.PluginsFolder).Any(e => e.Done && e.Text.Contains("ground")));
+        Check("the checklist asks for an entrance", RegionChecklistWindow.Check(room, new RegionInfo(), OckSettings.PluginsFolder).Any(e => !e.Done && e.Text.Contains("entrance")) && RegionChecklistWindow.Check(room, new RegionInfo { DoorScene = "Monsoon" }, OckSettings.PluginsFolder).Any(e => e.Done && e.Text.Contains("entrance")));
         door.transform.position = new Vector3(500f, 0f, 500f);
         Check("a door off the map gets a warning", RegionExporter.PlacementWarnings(room).Count == 1);
+        Check("a door off the map stays put", GroundTools.DropToGround(new[] { door.transform }) == 0);
         EditorSceneManager.SaveScene(room);
         AssetDatabase.DeleteAsset(roomPath);
     }

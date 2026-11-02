@@ -70,6 +70,31 @@ internal static class GroundTools
         Selection.activeGameObject = AddWater(GROUND_SCENE);
     }
 
+    [MenuItem("Construction Kit/Drop to Ground")]
+    public static void DropSelectionToGround()
+    {
+        int moved = DropToGround(Selection.transforms);
+        Debug.Log($"[OCK] Moved {moved} of {Selection.transforms.Length} selected objects onto the ground.");
+    }
+
+    /// <summary>Moves each object straight up or down onto what's below, ignoring itself. Returns how many had ground to stand on.</summary>
+    public static int DropToGround(IEnumerable<Transform> things)
+    {
+        Physics.SyncTransforms();
+        int moved = 0;
+        foreach (Transform thing in things)
+        {
+            RaycastHit[] hits = Physics.RaycastAll(thing.position + Vector3.up * GROUND_SEARCH_HEIGHT, Vector3.down, GROUND_SEARCH_DISTANCE, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            RaycastHit[] others = hits.Where(h => !h.transform.IsChildOf(thing)).OrderBy(h => h.distance).ToArray();
+            if (others.Length == 0)
+                continue;
+            Undo.RecordObject(thing, "Drop to Ground");
+            thing.position = others[0].point;
+            moved++;
+        }
+        return moved;
+    }
+
     /// <summary>Whether a person has given the scene ground yet. A room from an older starter scene counts.</summary>
     public static bool HasGround(Scene scene)
     {

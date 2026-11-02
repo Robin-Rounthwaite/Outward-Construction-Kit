@@ -25,6 +25,10 @@ A toolkit for adding new regions to Outward: Definitive Edition, built from the 
 - Add things with a click, or drag them into the scene.
 - Sculpt terrain, and paint it with the game's ground textures.
 - Place any of the game's items from its full list, which players can pick up in the game.
+- Place working chests, filled with your own choice or the game's loot, and gathering spots that regrow.
+- Choose whether each item and enemy comes back when the region resets.
+- Choose what a defeat does: where the party wakes up, what they lose, and the message.
+- A checklist of what the region still needs, Favourites and Recent lists, and Drop to Ground.
 - Add water that looks like any ripped location's, and set what type it is: Clean, Fresh, Salt, Rancid, Magic, Pure or Healing.
 - Place the game's enemies, which fight as they do in the game.
 - Move, rotate and evenly scale props, and alter them further if you need to.
@@ -35,7 +39,7 @@ A toolkit for adding new regions to Outward: Definitive Edition, built from the 
 - Regions load through a door and a loading screen, like the game's own areas.
 - Doors and interaction prompts come from the game itself, and the door's location is set from inside the game.
 - Water can be drunk from and collected, where the location it's copied from has a water source.
-- A defeat in a region shows a message, and returns you to where you came from.
+- A defeat in a region shows a message, and returns you to where you came from, unless its author has chosen otherwise.
 - Removing a region is safe: a save left inside it moves to its entrance or to Cierzo.
 - A region that can't load, or a broken one, says so and doesn't stop the game.
 
@@ -47,7 +51,7 @@ A toolkit for adding new regions to Outward: Definitive Edition, built from the 
 **Help along the way**
 - A starter project and a First Steps window, a setup check, and a guide from installing Unity to your first region.
 - A Create Example Region command.
-- Test Region In-Game and Launch Game buttons, with a choice of which character to test as.
+- Test Region In-Game, Test from Here and Launch Game buttons, with a choice of which character to test as, and a help line on screen while testing.
 
 ## Planned features
 
@@ -57,9 +61,7 @@ Not promises, and in no fixed order.
 - Telling NPCs where to walk and when, for quests or daily schedules, with animations.
 - Animation options for NPCs, plus sound effects and other special effects.
 - New quests with item or skill rewards and flags, able to change who's hostile, in their own window.
-- Setting up death scenarios for a region: spawn points, penalties and messages.
-- Props that work, such as gathering spots and chests.
-- Choosing per enemy or item whether it respawns, and checking how resets treat them.
+- More props that work, such as doors and ladders.
 - Opening the game's existing worldspaces in Unity for editing.
 - Connected and multi-part regions.
 - Patrols, squads and spawn areas for enemies, and items and loot.
@@ -74,9 +76,8 @@ Not promises, and in no fixed order.
 ## Current limitations
 
 - Co-op hasn't been tested yet.
-- Props are decoration for now: chests and gathering spots don't work.
+- Props other than chests and gathering spots are decoration for now.
 - No talking characters or quests yet.
-- Dying in a region always returns you to where you entered it.
 - A game update can stop a region's references from matching.
 
 ## I could use some help

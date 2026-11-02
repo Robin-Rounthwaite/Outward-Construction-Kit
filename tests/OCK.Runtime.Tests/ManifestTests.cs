@@ -62,6 +62,44 @@ namespace OutwardConstructionKit.Tests
         }
 
         [Test]
+        public void ReadsChestsAndGatheringSpots()
+        {
+            List<string> errors;
+            RegionManifest manifest = Parse(new[]
+            {
+                "interactive | Chersonese | Interactions/Gatherables/Gatherable_Rock_IronA | 1,2,3 | 0,90,0",
+                "interactive | Chersonese | Interactions/Loot/Region/1000070_ChestTrunk (C2) | 4,5,6 | 45 | 5010100:2,silver:50",
+            }, out errors);
+            Assert.That(errors, Is.Empty);
+            Assert.That(manifest.interactives[0].contents, Is.Null);
+            Assert.That(manifest.interactives[0].rotation, Is.EqualTo(new Vector3(0f, 90f, 0f)));
+            Assert.That(manifest.interactives[1].path, Is.EqualTo("Interactions/Loot/Region/1000070_ChestTrunk (C2)"));
+            Assert.That(manifest.interactives[1].contents.items.Single().Key, Is.EqualTo(5010100));
+            Assert.That(manifest.interactives[1].contents.items.Single().Value, Is.EqualTo(2));
+            Assert.That(manifest.interactives[1].contents.silver, Is.EqualTo(50));
+        }
+
+        [Test]
+        public void ContentsThatCantBeReadFallBackToTheGamesLoot()
+        {
+            Assert.That(RegionManifest.Contents.Parse("gold:5"), Is.Null);
+            Assert.That(RegionManifest.Contents.Parse("5010100"), Is.Null);
+            Assert.That(RegionManifest.Contents.Parse("5010100:0"), Is.Null);
+            Assert.That(RegionManifest.Contents.Parse(""), Is.Null);
+        }
+
+        [Test]
+        public void AChestsIdStaysTheSameUnlessItMoves()
+        {
+            var chest = new RegionManifest.InteractiveReference { scene = "s", path = "p", position = new Vector3(1f, 2f, 3f) };
+            var same = new RegionManifest.InteractiveReference { scene = "s", path = "p", position = new Vector3(1f, 2f, 3f) };
+            var moved = new RegionManifest.InteractiveReference { scene = "s", path = "p", position = new Vector3(1f, 2f, 4f) };
+            Assert.That(InteractiveDonor.Uid("r", chest), Is.EqualTo(InteractiveDonor.Uid("r", same)));
+            Assert.That(InteractiveDonor.Uid("r", chest), Is.Not.EqualTo(InteractiveDonor.Uid("r", moved)));
+            Assert.That(InteractiveDonor.Uid("r", chest), Is.Not.EqualTo(InteractiveDonor.Uid("other", chest)));
+        }
+
+        [Test]
         public void ReadsEnemiesWithSpacesInTheirPaths()
         {
             RegionManifest.EnemyReference enemy = ParseSample().enemies.Single();
@@ -229,6 +267,66 @@ namespace OutwardConstructionKit.Tests
         {
             string line = ItemCatalog.Line(5010100, "Item", "5010100_CookingPotKit", "Cooking | Pot\nKit");
             Assert.That(line, Is.EqualTo("5010100 | Item | 5010100_CookingPotKit | Cooking / Pot Kit"));
+        }
+
+        [Test]
+        public void ReadsWhatStaysGoneAfterAReset()
+        {
+            List<string> errors;
+            RegionManifest manifest = Parse(new[]
+            {
+                "item | 5 | 1,2,3 | 0,0,0",
+                "item | 6 | 1,2,3 | 0,0,0 | once",
+                "enemy | s | p | 1,2,3 | 0",
+                "enemy | s | q | 1,2,3 | 0 | norespawn",
+            }, out errors);
+            Assert.That(errors, Is.Empty);
+            Assert.That(manifest.items.Select(i => i.once), Is.EqualTo(new[] { false, true }));
+            Assert.That(manifest.enemies.Select(e => e.noRespawn), Is.EqualTo(new[] { false, true }));
+        }
+
+        [Test]
+        public void TheSaveKeepsWhatsGoneForGoodApartFromWhatsPlaced()
+        {
+            string record = RegionItems.WriteRecord(new[] { "b", "a" }, new[] { "enemy1", "a" });
+            Assert.That(RegionItems.ReadRecord(record), Is.EquivalentTo(new[] { "a", "b" }));
+            Assert.That(RegionItems.ReadGone(record), Is.EquivalentTo(new[] { "a", "enemy1" }));
+            Assert.That(RegionItems.ReadGone(RegionItems.WriteRecord(new[] { "a" })), Is.Empty);
+            Assert.That(RegionItems.ReadGone(null), Is.Empty);
+        }
+
+        [Test]
+        public void ReadsADefeatSetup()
+        {
+            List<string> errors;
+            RegionManifest.DefeatSetup defeat = Parse(new[] { "defeat | here | 2 | 10 | 25 | 30 | You wake by the fire." }, out errors).defeat;
+            Assert.That(errors, Is.Empty);
+            Assert.That(defeat.returnTo, Is.EqualTo("here"));
+            Assert.That(defeat.spawnIndex, Is.EqualTo(2));
+            Assert.That(defeat.silverPercent, Is.EqualTo(10));
+            Assert.That(defeat.itemPercent, Is.EqualTo(25));
+            Assert.That(defeat.vitalsPercent, Is.EqualTo(30));
+            Assert.That(defeat.message, Is.EqualTo("You wake by the fire."));
+            Assert.That(Parse(new string[0], out errors).defeat, Is.Null);
+        }
+
+        [Test]
+        public void ADefeatSetupChoosesWhereToReturn()
+        {
+            Assert.That(DeathReturn.Destination(new RegionManifest.DefeatSetup { returnTo = "here" }, "Berg", "Cierzo", "OCK_mine"), Is.EqualTo("OCK_mine"));
+            Assert.That(DeathReturn.Destination(new RegionManifest.DefeatSetup { returnTo = "Monsoon" }, "Berg", "Cierzo", "OCK_mine"), Is.EqualTo("Monsoon"));
+            Assert.That(DeathReturn.Destination(new RegionManifest.DefeatSetup { returnTo = "" }, "Berg", "Cierzo", "OCK_mine"), Is.EqualTo("Berg"));
+            Assert.That(DeathReturn.Destination(null, "Berg", "Cierzo", "OCK_mine"), Is.EqualTo("Berg"));
+        }
+
+        [TestCase(10, 25, 2)]
+        [TestCase(3, 10, 0)]
+        [TestCase(4, 100, 4)]
+        [TestCase(4, 150, 4)]
+        [TestCase(4, 0, 0)]
+        public void ADefeatTakesAShareOfItems(int count, int percent, int expected)
+        {
+            Assert.That(DeathReturn.HowManyToLose(count, percent), Is.EqualTo(expected));
         }
 
         [Test]

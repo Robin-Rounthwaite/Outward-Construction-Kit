@@ -15,7 +15,7 @@ internal partial class RipScene
     // here turns the cache off, and the self-test says so.
     private const string CACHED_FIELDS =
         "ColliderInfo:Center,ClassId,Convex,Direction,Height,IsTrigger,MeshGuid,Radius,Size;"
-        + "Node:Active,Children,Colliders,FirstSubMesh,HasLodGroup,HasRenderer,Id,IsCharacter,IsInteractive,IsItem,IsWaterPlane,IsWaterSource,MaterialGuids,MeshFileId,MeshGuid,Name,Parent,ParentNode,Position,RendererEnabled,RootOrder,Rotation,Scale,SkinnedEnabled,SkinnedMaterialGuids,SkinnedMeshFileId,SkinnedMeshGuid,SubMeshCount;"
+        + "Node:Active,Children,Colliders,FirstSubMesh,HasLodGroup,HasRenderer,Id,IsCharacter,IsInteractive,IsItem,IsWaterPlane,IsWaterSource,IsWorking,MaterialGuids,MeshFileId,MeshGuid,Name,Parent,ParentNode,Position,RendererEnabled,RootOrder,Rotation,Scale,SkinnedEnabled,SkinnedMaterialGuids,SkinnedMeshFileId,SkinnedMeshGuid,SubMeshCount;"
         + "Prop:BaseName,Batched,Category,InstanceCount,IsEnemy,IsItem,Node,Scene;"
         + "RipScene:HasWater,HasWaterSource,Props,Roots,SceneName";
 
@@ -132,6 +132,7 @@ internal partial class RipScene
             m_out.Write(node.IsItem);
             m_out.Write(node.IsWaterPlane);
             m_out.Write(node.IsWaterSource);
+            m_out.Write(node.IsWorking);
             Text(node.MeshGuid);
             m_out.Write(node.MeshFileId);
             m_out.Write(node.RendererEnabled);
@@ -247,6 +248,7 @@ internal partial class RipScene
             node.IsItem = m_in.ReadBoolean();
             node.IsWaterPlane = m_in.ReadBoolean();
             node.IsWaterSource = m_in.ReadBoolean();
+            node.IsWorking = m_in.ReadBoolean();
             node.MeshGuid = Text();
             node.MeshFileId = m_in.ReadInt64();
             node.RendererEnabled = m_in.ReadBoolean();

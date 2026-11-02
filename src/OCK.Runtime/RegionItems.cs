@@ -19,8 +19,10 @@ namespace OutwardConstructionKit.Runtime
         private const string UID_PREFIX = "ockitem";
         private const string RECORD_PREFIX = "ockitems:";
         private const char SEPARATOR = ',';
+        private const char GONE_SEPARATOR = '|';
 
         private static HashSet<string> s_placed = new HashSet<string>();
+        private static HashSet<string> s_gone = new HashSet<string>();
         private static bool s_environmentRead;
         private static int s_unknown;
 
@@ -45,12 +47,30 @@ namespace OutwardConstructionKit.Runtime
         {
             if (string.IsNullOrEmpty(saved) || !saved.StartsWith(RECORD_PREFIX))
                 return new HashSet<string>();
-            return new HashSet<string>(saved.Substring(RECORD_PREFIX.Length).Split(new[] { SEPARATOR }, System.StringSplitOptions.RemoveEmptyEntries));
+            string placed = saved.Substring(RECORD_PREFIX.Length).Split(GONE_SEPARATOR)[0];
+            return new HashSet<string>(placed.Split(new[] { SEPARATOR }, System.StringSplitOptions.RemoveEmptyEntries));
         }
 
-        internal static string WriteRecord(IEnumerable<string> placed)
+        /// <summary>What a modder asked not to come back, which a reset leaves gone: taken items and defeated enemies.</summary>
+        internal static HashSet<string> ReadGone(string saved)
         {
-            return RECORD_PREFIX + string.Join(SEPARATOR.ToString(), placed.OrderBy(k => k, System.StringComparer.Ordinal).ToArray());
+            string[] parts = string.IsNullOrEmpty(saved) || !saved.StartsWith(RECORD_PREFIX) ? new string[0] : saved.Split(GONE_SEPARATOR);
+            return new HashSet<string>(parts.Length > 1 ? parts[1].Split(new[] { SEPARATOR }, System.StringSplitOptions.RemoveEmptyEntries) : new string[0]);
+        }
+
+        internal static string WriteRecord(IEnumerable<string> placed, IEnumerable<string> gone = null)
+        {
+            string record = RECORD_PREFIX + string.Join(SEPARATOR.ToString(), placed.OrderBy(k => k, System.StringComparer.Ordinal).ToArray());
+            string[] goneKeys = gone != null ? gone.OrderBy(k => k, System.StringComparer.Ordinal).ToArray() : new string[0];
+            return goneKeys.Length > 0 ? record + GONE_SEPARATOR + string.Join(SEPARATOR.ToString(), goneKeys) : record;
+        }
+
+        // Stays in the record once gone, or an item taken before an earlier reset would come back at the next.
+        private static IEnumerable<string> GoneNow(Region region)
+        {
+            var lying = new HashSet<string>(InWorld().Select(i => KeyOfUid(i.UID)));
+            IEnumerable<string> items = region.Manifest.items.Where(i => i.once).Select(i => Key(region.Id, i)).Where(k => s_gone.Contains(k) || (s_placed.Contains(k) && !lying.Contains(k)));
+            return items.Concat(EnemyDonor.DefeatedForGood(region)).Concat(s_gone.Where(k => k.StartsWith(EnemyDonor.GONE_PREFIX))).Distinct();
         }
 
         /// <summary>The key inside a UID this kit gave an item, or null for any other item.</summary>
@@ -66,6 +86,7 @@ namespace OutwardConstructionKit.Runtime
         {
             Dictionary<string, RegionManifest.ItemReference> wanted = region.Manifest.items.ToDictionary(i => Key(region.Id, i));
             s_placed.IntersectWith(wanted.Keys); // an item removed and later put back should appear again
+            s_gone.RemoveWhere(k => !k.StartsWith(EnemyDonor.GONE_PREFIX) && !wanted.ContainsKey(k));
             s_unknown = 0;
             foreach (KeyValuePair<string, RegionManifest.ItemReference> entry in wanted.Where(w => !s_placed.Contains(w.Key)))
             {
@@ -137,6 +158,7 @@ namespace OutwardConstructionKit.Runtime
             private static void Prefix()
             {
                 s_placed.Clear();
+                s_gone.Clear();
                 s_environmentRead = true;
             }
         }
@@ -147,8 +169,9 @@ namespace OutwardConstructionKit.Runtime
         {
             private static void Postfix(EnvironmentSave __instance, bool __result)
             {
-                if (!__result)
-                    s_placed = ReadRecord(__instance.DEPRECATED_MapSaveData);
+                s_gone = ReadGone(__instance.DEPRECATED_MapSaveData);
+                // After a reset, what's gone for good counts as placed, so it isn't placed again.
+                s_placed = __result ? new HashSet<string>(s_gone) : ReadRecord(__instance.DEPRECATED_MapSaveData);
             }
         }
 
@@ -157,7 +180,8 @@ namespace OutwardConstructionKit.Runtime
         {
             private static void Postfix(EnvironmentSave __instance)
             {
-                __instance.DEPRECATED_MapSaveData = RegionHere() != null ? WriteRecord(s_placed) : null;
+                Region region = RegionHere();
+                __instance.DEPRECATED_MapSaveData = region != null ? WriteRecord(s_placed.Where(k => !k.StartsWith(EnemyDonor.GONE_PREFIX)), GoneNow(region)) : null;
             }
         }
 
@@ -173,6 +197,7 @@ namespace OutwardConstructionKit.Runtime
                     return; // a guest gets the host's items through the game's own sync
                 try
                 {
+                    EnemyDonor.RemoveDefeatedForGood(region, s_gone);
                     PlaceAll(region);
                 }
                 catch (System.Exception e)

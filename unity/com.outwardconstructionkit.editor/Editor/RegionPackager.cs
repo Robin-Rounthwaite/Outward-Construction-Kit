@@ -45,6 +45,42 @@ internal static class RegionPackager
         return problems;
     }
 
+    /// <summary>The zip this region would make, once its details are right.</summary>
+    public static string ZipName(RegionInfo info)
+    {
+        return info.PackageTeam + "-" + info.PackageName + "-" + info.PackageVersion + ".zip";
+    }
+
+    /// <summary>What goes in the zip and what it depends on, to read through before uploading.</summary>
+    public static string Preview(RegionInfo info)
+    {
+        var text = new StringBuilder();
+        text.Append("Zip: ").Append(ZipName(info)).Append('\n');
+        text.Append("Shows on Thunderstore as: ").Append((info.PackageName ?? "").Replace('_', ' ')).Append(", version ").Append(info.PackageVersion).Append('\n');
+        text.Append("Installs with it: ").Append(KIT_PACKAGE).Append(KitVersion).Append('\n');
+        text.Append("Holds: your region, manifest.json, README.md and icon.png\n");
+        text.Append("Icon: ").Append(string.IsNullOrEmpty(info.IconPath) ? "the kit's default door" : info.IconPath).Append('\n');
+        text.Append("Its page says the door is in: ").Append(string.IsNullOrEmpty(info.DoorScene) ? "nowhere yet" : LocationNames.For(info.DoorScene));
+        return text.ToString();
+    }
+
+    /// <summary>The next version up from the zips already made for this mod, or null if the current one is new.</summary>
+    public static string SuggestedVersion(string current, IEnumerable<string> zipsMade)
+    {
+        Version highest = null;
+        foreach (string zip in zipsMade)
+        {
+            Match match = Regex.Match(Path.GetFileName(zip), @"-(\d+\.\d+\.\d+)\.zip$");
+            Version made;
+            if (match.Success && Version.TryParse(match.Groups[1].Value, out made) && (highest == null || made > highest))
+                highest = made;
+        }
+        Version now;
+        if (highest == null || (Version.TryParse(current, out now) && now > highest))
+            return null;
+        return $"{highest.Major}.{highest.Minor}.{highest.Build + 1}";
+    }
+
     private static string IconFor(RegionInfo info)
     {
         return string.IsNullOrEmpty(info.IconPath) ? Path.GetFullPath(DEFAULT_ICON) : info.IconPath;
@@ -83,7 +119,7 @@ internal static class RegionPackager
             File.Copy(IconFor(info), Path.Combine(stage, "icon.png"));
 
             Directory.CreateDirectory(outputFolder);
-            string zip = Path.Combine(outputFolder, info.PackageTeam + "-" + info.PackageName + "-" + info.PackageVersion + ".zip");
+            string zip = Path.Combine(outputFolder, ZipName(info));
             if (File.Exists(zip))
                 File.Delete(zip);
             using (FileStream file = File.Create(zip))

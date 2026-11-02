@@ -18,6 +18,15 @@ Kills the character in the last region, to test that they come back where they e
 .PARAMETER TakeItems
 Picks up the items each region placed, as the game's take prompt does, and reports whether they reached the bag.
 
+.PARAMETER TryProps
+Goes to each chest and gathering spot each region placed, reads its prompt, and fills or gathers from it.
+
+.PARAMETER KillEnemies
+Kills each region's enemies, to test what a later visit does with them.
+
+.PARAMETER ForceReset
+Makes each region count as due for a reset, which otherwise takes days of game time.
+
 .PARAMETER StartIn
 A scene to travel to first, if the character's save is somewhere else.
 
@@ -36,6 +45,9 @@ param(
     [switch]$EndInRegion,
     [switch]$DieInRegion,
     [switch]$TakeItems,
+    [switch]$TryProps,
+    [switch]$KillEnemies,
+    [switch]$ForceReset,
     [string]$StartIn,
     [string]$Visit,
     [switch]$TryUsing,
@@ -78,6 +90,9 @@ if ($Stay) { $request += 'stay' }
 if ($EndInRegion) { $request += 'endinregion' }
 if ($DieInRegion) { $request += 'dieinregion' }
 if ($TakeItems) { $request += 'takeitems' }
+if ($TryProps) { $request += 'tryprops' }
+if ($KillEnemies) { $request += 'killenemies' }
+if ($ForceReset) { $request += 'forcereset' }
 if ($StartIn) { $request += "startin $StartIn" }
 Set-Content -Path (Join-Path $bepinex 'OCK_AutoTest.txt') -Value $request -Encoding ASCII
 

@@ -32,6 +32,7 @@ namespace OutwardConstructionKit.Runtime
         internal ConfigEntry<bool> UseCache;
 
         internal ConfigEntry<bool> VerboseLog;
+        internal ConfigEntry<bool> AuthorHelpOn;
 
         /// <summary>Routine detail, such as each prop placed, for working on the kit or a region.</summary>
         internal static void Detail(string message)
@@ -65,7 +66,11 @@ namespace OutwardConstructionKit.Runtime
             UseCache = Config.Bind("Dev", "UseCache", true,
                 "Load props and enemies from a cache built from your game files, instead of loading the scenes they came from.");
 
+            AuthorHelpOn = Config.Bind("Dev", "AuthorHelp", false,
+                "Always show the help line for region authors. Games started from Unity's Test and Launch buttons show it anyway.");
+
             Region.LoadAll(Config);
+            AuthorHelp.BeginIfWanted(this);
             try
             {
                 AssetCache.BuildMissing();
@@ -110,6 +115,14 @@ namespace OutwardConstructionKit.Runtime
             catch (System.Exception e)
             {
                 Logger.LogError("Couldn't set up placing items in regions: " + e);
+            }
+            try
+            {
+                InteractiveDonor.Patch(harmony);
+            }
+            catch (System.Exception e)
+            {
+                Logger.LogError("Couldn't set up filling chests in regions: " + e);
             }
             if (AreaManager.Instance != null)
                 RegisterAll(AreaManager.Instance);
@@ -180,6 +193,7 @@ namespace OutwardConstructionKit.Runtime
                         SceneProbe.Run(Path.GetDirectoryName(Info.Location));
                     BuildDoors();
                     MissingRegionGuard.OnLevelReady();
+                    DeathReturn.OnLevelReady();
                     PlayerNotice.ShowPending();
                 }
                 catch (System.Exception e)
@@ -299,6 +313,11 @@ namespace OutwardConstructionKit.Runtime
         private Region SelectedRegion
         {
             get { return Region.All.Count > 0 ? Region.All[m_selected % Region.All.Count] : null; }
+        }
+
+        internal string SelectedRegionName
+        {
+            get { return SelectedRegion != null ? SelectedRegion.DisplayName : null; }
         }
 
         private void SelectNextRegion()

@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using HarmonyLib;
 using UnityEngine.SceneManagement;
 
@@ -18,11 +20,69 @@ namespace OutwardConstructionKit.Runtime
 
         private static string s_cameFrom;
         private static bool s_returning;
+        private static float s_vitalsAfterArrival = -1f;
 
         public static void Patch(Harmony harmony)
         {
             harmony.PatchAll(typeof(FailSafePatch));
             harmony.PatchAll(typeof(ReloadPatch));
+        }
+
+        /// <summary>Where a defeat leads, given what the region's modder asked for. Nothing asked for means where they came from.</summary>
+        internal static string Destination(RegionManifest.DefeatSetup setup, string cameFrom, string entranceScene, string regionScene)
+        {
+            if (setup != null && setup.returnTo == RegionManifest.DefeatSetup.RETURN_HERE)
+                return regionScene;
+            return setup != null && !string.IsNullOrEmpty(setup.returnTo) ? setup.returnTo : Destination(cameFrom, entranceScene);
+        }
+
+        /// <summary>How many of this many things a percentage takes, rounding down, so a small loss can't take everything.</summary>
+        internal static int HowManyToLose(int count, int percent)
+        {
+            return count * UnityEngine.Mathf.Clamp(percent, 0, 100) / 100;
+        }
+
+        // Each player's game sees to its own players, because a guest's belongings aren't the host's to change.
+        private static void ApplyPenalties(RegionManifest.DefeatSetup setup)
+        {
+            if (setup == null)
+                return;
+            s_vitalsAfterArrival = setup.vitalsPercent > 0 ? setup.vitalsPercent / 100f : -1f;
+            foreach (Character player in CharacterManager.Instance.Characters.Values.Where(c => c != null && c.IsLocalPlayer))
+            {
+                try
+                {
+                    if (setup.silverPercent > 0)
+                        player.Inventory.RemoveMoneyPercent(setup.silverPercent);
+                    if (setup.itemPercent <= 0)
+                        continue;
+                    List<Item> carried = player.Inventory.Pouch.GetContainedItems().ToList();
+                    if (player.Inventory.EquippedBag != null)
+                        carried.AddRange(player.Inventory.EquippedBag.Container.GetContainedItems());
+                    int lose = HowManyToLose(carried.Count, setup.itemPercent);
+                    foreach (Item item in carried.OrderBy(_ => UnityEngine.Random.value).Take(lose))
+                        ItemManager.Instance.DestroyItem(item.UID);
+                    KitPlugin.Log.LogMessage($"The defeat cost {player.Name} {lose} of {carried.Count} carried items.");
+                }
+                catch (System.Exception e)
+                {
+                    KitPlugin.Log.LogError("Couldn't apply a defeat's penalties: " + e);
+                }
+            }
+        }
+
+        /// <summary>Once the return has finished loading, leaves players as hurt as the region asked for.</summary>
+        internal static void OnLevelReady()
+        {
+            if (s_vitalsAfterArrival < 0f)
+                return;
+            float share = s_vitalsAfterArrival;
+            s_vitalsAfterArrival = -1f;
+            foreach (Character player in CharacterManager.Instance.Characters.Values.Where(c => c != null && c.IsLocalPlayer))
+            {
+                player.Stats.SetHealth(player.Stats.ActiveMaxHealth * share);
+                player.Stats.UseStamina((Tag[])null, player.Stats.CurrentStamina * (1f - share));
+            }
         }
 
         /// <summary>Notes each vanilla scene as it loads, since that's where the next region is entered from.</summary>
@@ -43,10 +103,14 @@ namespace OutwardConstructionKit.Runtime
         {
             private static void Prefix()
             {
-                bool inRegion = Region.ForScene(SceneManager.GetActiveScene().name) != null;
+                Region region = Region.ForScene(SceneManager.GetActiveScene().name);
+                bool inRegion = region != null;
                 s_returning = !PhotonNetwork.isNonMasterClientInRoom && inRegion;
                 if (PhotonNetwork.isNonMasterClientInRoom && inRegion)
-                    ShowDefeatScreen(null); // the host's choice moves everyone, whether or not a guest has read this yet
+                {
+                    ApplyPenalties(region.Manifest.defeat);
+                    ShowDefeatScreen(null, region.Manifest.defeat); // the host's choice moves everyone, whether or not a guest has read this yet
+                }
             }
         }
 
@@ -63,21 +127,25 @@ namespace OutwardConstructionKit.Runtime
                 Region region = Region.ForScene(scene);
                 if (region == null)
                     return true;
-                string destination = Destination(s_cameFrom, region.EntranceScene);
+                RegionManifest.DefeatSetup setup = region.Manifest.defeat;
+                string destination = Destination(setup, s_cameFrom, region.EntranceScene, scene);
                 // The door's own spawn is beside it, and that only exists in the scene the door is in.
-                int spawnPoint = destination == region.EntranceScene && region.ReturnSpawnIndex.Value >= 0 ? region.ReturnSpawnIndex.Value : 0;
+                int spawnPoint = destination == scene && setup != null ? setup.spawnIndex
+                    : destination == region.EntranceScene && region.ReturnSpawnIndex.Value >= 0 ? region.ReturnSpawnIndex.Value : 0;
                 KitPlugin.Log.LogMessage($"Defeated in {scene}, so returning to {destination}, at spawn {spawnPoint}.");
-                ShowDefeatScreen(() => __instance.RequestSwitchArea(destination, spawnPoint));
+                ApplyPenalties(setup);
+                ShowDefeatScreen(() => __instance.RequestSwitchArea(destination, spawnPoint), setup);
                 return false;
             }
         }
 
         // The game's own context screen, which waits for a key press. A failure here mustn't strand anyone in a region.
-        private static void ShowDefeatScreen(UnityEngine.Events.UnityAction then)
+        private static void ShowDefeatScreen(UnityEngine.Events.UnityAction then, RegionManifest.DefeatSetup setup)
         {
             try
             {
-                MenuManager.Instance.ShowProloguePanel(new[] { new EventContextData.ContextScreen { DefaultText = DEFEAT_TEXT } }, then);
+                string text = setup != null && !string.IsNullOrEmpty(setup.message) ? setup.message : DEFEAT_TEXT;
+                MenuManager.Instance.ShowProloguePanel(new[] { new EventContextData.ContextScreen { DefaultText = text } }, then);
             }
             catch (System.Exception e)
             {
