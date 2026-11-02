@@ -185,7 +185,7 @@ Tested with the Example Region, using Test Region.
 
 "Review the tutorial" is now on your before-beta to-do list.
 
-## Polish ideas (not yet agreed)
+## Polish ideas (last on the pre-beta plan)
 
 - Readiness checklist: what the region has and lacks, with a button to fix each.
 - Test from here: start the test at the Scene view's position.
@@ -197,6 +197,16 @@ Tested with the Example Region, using Test Region.
 - Export summary in the window, with links that select the object at fault.
 - In-game help line for region authors, showing the chosen door's region and the keys.
 - Package preview, with the icon, README and a suggested next version.
+
+## Open: rip size
+
+Measured on Monsoon (15 GB). The game folder is 32 GB, with its textures in about 5.9 GB of `.resS` files.
+
+- **Textures, 7.8 GB:** the game stores them in a compressed GPU format. A rip unpacks them to PNG, which keeps every pixel and is usually larger. The biggest is 63 MB.
+- **Meshes, 2.7 GB:** stored as text assets, which take more room than the game's binary format.
+- **Files the kit doesn't seem to read, about 3.9 GB, or a quarter of the rip:** NavMeshData 1.83 GB, AnimationClip 0.87 GB, OcclusionCullingData 0.5 GB, AudioClip 0.43 GB, LightProbes 0.28 GB. Check nothing needs them, then remove them after each rip, or have the rip skip them.
+- **Repeats:** the game keeps shared assets once, but each rip exports its own copy. Hard links now remove the identical ones.
+- **The estimate:** its low figure rests on a single dungeon, which added 1.1 GB once shared. Smaller dungeons may add less, so it may run high. Rip a few more to improve it.
 
 ## Open: the Prop Browser stall
 
