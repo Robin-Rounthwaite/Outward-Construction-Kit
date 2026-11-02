@@ -106,6 +106,11 @@ internal class FirstStepsWindow : EditorWindow
         {
             using (new EditorGUILayout.HorizontalScope())
             {
+                if (GUILayout.Button(new GUIContent("New Region Scene", "Makes a new scene with a sun and a spawn point, then asks what ground to start with. It closes the open scene, after asking.")))
+                {
+                    RegionExporter.NewRegionScene();
+                    GUIUtility.ExitGUI();
+                }
                 if (File.Exists(TUTORIAL) && GUILayout.Button(new GUIContent("Open the Tutorial", "Opens the guide that builds a region from nothing.")))
                     EditorUtility.OpenWithDefaultApp(Path.GetFullPath(TUTORIAL));
                 if (GUILayout.Button(new GUIContent("Open the Prop Browser", "Opens the window where you add what goes in a region, and export and test it.")))

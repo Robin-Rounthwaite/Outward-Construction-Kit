@@ -15,7 +15,7 @@ A toolkit for adding new regions to Outward: Definitive Edition, built from the 
 ## Quick answers
 
 - **How do I get back to the ground's sculpting and painting tools?** Click **Ground** in the Hierarchy, or **Select Ground** on the Prop Browser's **Ground** tab. The tools are behind the paintbrush button in the Inspector.
-- **How do I add a door?** **Use Selected Prop as Door Model** only sets how doors look. For the door back, click **Add Return Door**. The entrance is placed in the game: press **Ctrl+F8** to choose your region and **Ctrl+F10** to place its door, then click **Use Door Placed in Game** in Unity.
+- **How do I add a door?** **Use Selected Prop as Door Model** only sets how doors look. For the door back, click **Add Return Door**. The entrance is placed in the game: press **Ctrl+F8** to choose your region and **Ctrl+F10** to place its door, and your next export picks it up.
 
 ## Features
 

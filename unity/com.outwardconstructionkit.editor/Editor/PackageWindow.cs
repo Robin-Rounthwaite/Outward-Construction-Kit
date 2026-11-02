@@ -31,12 +31,15 @@ internal class PackageWindow : EditorWindow
         RegionInfo info = RegionInfo.For(scenePath);
         if (string.IsNullOrEmpty(info.PackageName))
             info.PackageName = Regex.Replace(info.DisplayName ?? info.Id, "[^a-zA-Z0-9]+", "_").Trim('_');
+        if (string.IsNullOrEmpty(info.PackageTeam))
+            info.PackageTeam = OckSettings.LastTeam;
 
         m_scroll = EditorGUILayout.BeginScrollView(m_scroll);
         EditorGUILayout.LabelField(info.DisplayName + " (" + info.Id + ")", EditorStyles.boldLabel);
         EditorGUILayout.Space();
 
         EditorGUI.BeginChangeCheck();
+        info.PackageTeam = EditorGUILayout.DelayedTextField(new GUIContent("Team name", "Your team on Thunderstore. It names the zip, and reminds you which team to choose on the upload page, because the zip itself doesn't carry a team."), info.PackageTeam);
         info.PackageName = EditorGUILayout.DelayedTextField(new GUIContent("Mod name", "Letters, numbers and underscores. Underscores show as spaces on Thunderstore."), info.PackageName);
         info.PackageVersion = EditorGUILayout.DelayedTextField(new GUIContent("Version", "Raise this for each upload, because Thunderstore rejects a version it already has."), info.PackageVersion);
         info.WebsiteUrl = EditorGUILayout.DelayedTextField(new GUIContent("Website (optional)"), info.WebsiteUrl);
@@ -59,7 +62,28 @@ internal class PackageWindow : EditorWindow
             }
         }
         if (EditorGUI.EndChangeCheck())
+        {
             info.SaveFor(scenePath);
+            OckSettings.LastTeam = info.PackageTeam;
+        }
+
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            EditorGUI.BeginChangeCheck();
+            string folder = EditorGUILayout.DelayedTextField(new GUIContent("Save zip to", "Where the zip goes. It's remembered for next time. A relative path is inside this Unity project."), OckSettings.UploadFolder);
+            if (GUILayout.Button(new GUIContent("...", "Choose a folder."), GUILayout.Width(26f)))
+            {
+                string picked = EditorUtility.OpenFolderPanel("Save zip to", folder, "");
+                if (!string.IsNullOrEmpty(picked))
+                {
+                    folder = picked.Replace('/', Path.DirectorySeparatorChar);
+                    GUI.changed = true;
+                }
+                GUIUtility.keyboardControl = 0;
+            }
+            if (EditorGUI.EndChangeCheck() && !string.IsNullOrEmpty(folder))
+                OckSettings.UploadFolder = folder;
+        }
 
         EditorGUILayout.Space();
         List<string> problems = RegionPackager.Problems(info);
@@ -73,7 +97,7 @@ internal class PackageWindow : EditorWindow
                 try
                 {
                     string summary;
-                    m_lastZip = RegionPackager.Package(info, RegionPackager.OUTPUT_FOLDER, out summary);
+                    m_lastZip = RegionPackager.Package(info, OckSettings.UploadFolder, out summary);
                     m_status = summary + "\n\nReady to upload: " + Path.GetFullPath(m_lastZip);
                 }
                 catch (Exception e)
@@ -88,7 +112,7 @@ internal class PackageWindow : EditorWindow
             KitStyles.HelpBox(m_status, MessageType.None);
         if (m_lastZip != null && GUILayout.Button(new GUIContent("Show Zip in Folder", "Opens the folder holding the zip you just made.")))
             EditorUtility.RevealInFinder(m_lastZip);
-        KitStyles.HelpBox($"Upload it on thunderstore.io under the Outward community. The kit, version {RegionPackager.KitVersion}, needs to be on Thunderstore already, and your mod installs it for players.", MessageType.Info);
+        KitStyles.HelpBox($"This window only makes the zip. To publish, upload it yourself on thunderstore.io under the Outward community, choosing the team {info.PackageTeam}. The kit, version {RegionPackager.KitVersion}, needs to be on Thunderstore already, and your mod installs it for players.", MessageType.Info);
         EditorGUILayout.EndScrollView();
     }
 }

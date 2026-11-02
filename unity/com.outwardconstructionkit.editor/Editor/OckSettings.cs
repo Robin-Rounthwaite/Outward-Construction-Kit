@@ -27,6 +27,20 @@ internal static class OckSettings
         set { EditorPrefs.SetString("OCK.PluginsFolder", value); }
     }
 
+    /// <summary>Where Package Region saves zips. A relative path is inside the Unity project.</summary>
+    public static string UploadFolder
+    {
+        get { return EditorPrefs.GetString("OCK.UploadFolder", RegionPackager.OUTPUT_FOLDER); }
+        set { EditorPrefs.SetString("OCK.UploadFolder", value); }
+    }
+
+    /// <summary>The Thunderstore team last used, to start each new region's package with.</summary>
+    public static string LastTeam
+    {
+        get { return EditorPrefs.GetString("OCK.LastTeam", ""); }
+        set { EditorPrefs.SetString("OCK.LastTeam", value); }
+    }
+
     /// <summary>An AssetRipper the person already has, if they'd rather use that. Empty means the kit's own.</summary>
     public static string AssetRipperFolder
     {

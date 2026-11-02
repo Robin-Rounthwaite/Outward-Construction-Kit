@@ -10,7 +10,7 @@ Move, rotate, scale and alter props as you like. Export decides for each one: pr
 
 Don't change a region's ID after sharing it, because saves and door placements depend on it. **Export Region** writes it to its own mod folder in your profile, `BepInEx\plugins\OCK-Region-<id>`, and players can have any number of regions installed.
 
-A scene made with **New Region Scene** has what it needs. If you start from your own, it needs a root object named exactly `SpawnPointManager`, with at least one child as a spawn point.
+A scene made with **New Region Scene** has a sun and a spawn point, and opens the **Add Ground** window for you. If you start from your own, it needs a root object named exactly `SpawnPointManager`, with at least one child as a spawn point. Export refuses a scene with no spawn point, or one with nothing under its spawn point and no props.
 
 Props are decoration for now. Their scripts are left behind, so anything players can use in its own scene, such as a chest or gathering spot, is only for show in a region. The Prop Browser marks those **decoration**.
 
@@ -26,7 +26,7 @@ What you see in the editor are stand-ins: copies of the props with a simple look
 
 ## Sharing your region
 
-Set your region's entrance, then click **Package** in the Prop Browser (or **Construction Kit > Package Region**). Fill in a mod name, version and short description, and click **Make Upload Zip**. It writes `Build/Upload/<name>-<version>.zip` in your project, ready to upload at [thunderstore.io](https://thunderstore.io) under the Outward community, and it depends on the kit, so a mod manager installs that too. Raise the version for each upload.
+Place your region's entrance in game, then click **Package** in the Prop Browser (or **Construction Kit > Package Region**). Fill in your Thunderstore team's name, a mod name, version and short description, choose where to save the zip, and click **Make Upload Zip**. It writes `<team>-<name>-<version>.zip` to that folder, which starts as `Build/Upload` in your project. It doesn't upload anything. Upload it yourself at [thunderstore.io](https://thunderstore.io) under the Outward community, choosing your team there, because the zip doesn't carry one. It depends on the kit, so a mod manager installs that too. Raise the version for each upload.
 
 To try the zip first, use **Settings > Import local mod** in r2modman. Remove your own exported copy of the region from that profile first, because two copies share one ID.
 
@@ -34,7 +34,7 @@ To try the zip first, use **Settings > Import local mod** in r2modman. Remove yo
 
 Export works out where enemies can walk from the ground and props in your scene. Unity calls this a NavMesh. To place an enemy, add it from the **Enemies** tab: it shows as its real model in a default pose, or a red capsule if the model isn't in the rip. Enemies are always references, built from the player's own game files and given their own identity.
 
-Your entrance door ships with the region too: after placing it in game with **Ctrl+F10**, click **Use Door Placed in Game** in the Prop Browser, then export. A door a player places themselves overrides the shipped one.
+Your entrance door ships with the region too: place it in game with **Ctrl+F10**, and your next export picks it up and says so. It uses the last door placed for that region, in the profile you test with. A door a player places themselves overrides the shipped one.
 
 ## Ground and water
 

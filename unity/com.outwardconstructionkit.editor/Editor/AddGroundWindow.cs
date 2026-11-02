@@ -51,7 +51,8 @@ internal class AddGroundWindow : EditorWindow
         }
         m_texture = EditorGUILayout.Popup(new GUIContent("Starting ground", "Covers the whole terrain to begin with. You can paint others over it."), m_texture, m_labels);
         m_size = EditorGUILayout.Popup(new GUIContent("Size", "Bigger ground takes longer to export, because enemies need paths worked out across all of it."), m_size, s_sizeLabels);
-        EditorGUILayout.LabelField("This replaces the starter room's floor and walls.", KitStyles.WrappedNote);
+        if (GroundTools.HasStarterRoom(UnityEngine.SceneManagement.SceneManager.GetActiveScene()))
+            EditorGUILayout.LabelField("This replaces the starter room's floor and walls.", KitStyles.WrappedNote);
 
         GUILayout.FlexibleSpace();
         using (new EditorGUILayout.HorizontalScope())

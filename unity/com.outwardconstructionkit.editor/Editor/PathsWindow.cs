@@ -27,6 +27,8 @@ internal class PathsWindow : EditorWindow
     private string m_ripper;
     private List<string> m_foundGameData;
     private List<string> m_foundPlugins;
+    private string m_kitCheckedFor;
+    private bool m_kitFound;
 
     [MenuItem("Construction Kit/Paths")]
     public static void Open()
@@ -39,9 +41,20 @@ internal class PathsWindow : EditorWindow
         m_foundGameData = PathDetector.GameDataFolders();
         m_foundPlugins = PathDetector.PluginFolders(m_foundGameData);
         m_gameData = FirstOf(OckSettings.GameData, m_foundGameData);
-        m_plugins = FirstOf(OckSettings.PluginsFolder, m_foundPlugins);
+        m_plugins = string.IsNullOrEmpty(OckSettings.PluginsFolder) ? PathDetector.SuggestedPlugins(m_foundPlugins) : OckSettings.PluginsFolder;
         m_ripFolder = OckSettings.RipFolder;
         m_ripper = OckSettings.AssetRipperFolder;
+    }
+
+    // Looks through the folder only when the choice changes, because this window redraws often.
+    private bool KitIsInChosenPlugins()
+    {
+        if (m_kitCheckedFor != m_plugins)
+        {
+            m_kitCheckedFor = m_plugins;
+            m_kitFound = PathDetector.HasKit(m_plugins);
+        }
+        return m_kitFound;
     }
 
     private static string FirstOf(string saved, List<string> found)
@@ -62,6 +75,8 @@ internal class PathsWindow : EditorWindow
         m_plugins = PathRow("BepInEx plugins folder", "Where exported regions go, so they load when you launch the game. With a mod manager, pick the profile you test with.", m_plugins, m_foundPlugins);
         if (!PathDetector.IsPluginsFolder(m_plugins))
             KitStyles.HelpBox("This should be an existing folder called plugins, inside BepInEx.", MessageType.Warning);
+        else if (!KitIsInChosenPlugins())
+            KitStyles.HelpBox("The kit isn't installed in this profile, so Test Region In-Game won't start with it. Install the kit there with r2modman, or pick the profile you test with.", MessageType.Warning);
 
         m_ripFolder = PathRow("Rip folder", "Where your rips of the game go, on a drive with plenty of space and off OneDrive. A first rip takes about 15 GB. It's safe to use a folder with things in it: each rip gets a new folder of its own, nothing already there is overwritten, and earlier rips are picked up. The Prop Browser only lists rips of Outward, so anything else in the folder is left alone.", m_ripFolder, null);
 
@@ -103,7 +118,7 @@ internal class PathsWindow : EditorWindow
                 GUIUtility.keyboardControl = 0;
             }
         }
-        if (found != null && found.Count > 1)
+        if (found != null && (found.Count > 1 || found.Count == 1 && found[0] != value))
         {
             int current = found.IndexOf(value);
             int picked = EditorGUILayout.Popup("Found here", current, found.ConvertAll(f => f.Replace('/', '\\').Replace("\\", " \\ ")).ToArray());

@@ -8,13 +8,13 @@ Before starting, you can run **Construction Kit > Create Example Region** to see
 
 ## 1. Make the scene
 
-Run **Construction Kit > New Region Scene**. You get a walled room, a sun and a spawn point, which is already enough to load in the game. Open **Construction Kit > Prop Browser** and dock it somewhere handy.
+Run **Construction Kit > New Region Scene**, and click **Create**. If a scene is open, it stays in your project. You get a sun and a spawn point, and the **Add Ground** window opens for the next step. Leave it open for now, then open **Construction Kit > Prop Browser** and dock it somewhere handy.
 
 In the browser, set **Region ID** to something short and unique, such as `yourname_firstregion`, and **Name** to what players will see. Don't change the ID after sharing a region, because saves depend on it.
 
 ## 2. Add ground
 
-On the **Ground** tab, click **Add Ground**, choose what ground to start with and how big it should be, and click **Add Ground** in that window. It replaces the room with a flat terrain. Keep it selected, and in the Inspector's Terrain component click the paintbrush button:
+In the **Add Ground** window, choose what ground to start with and how big it should be, and click **Add Ground**. If you closed that window, reopen it from the **Ground** tab of the browser. You now have a flat terrain, and a region can't be exported until it has something under its spawn point. Keep the terrain selected, and in the Inspector's Terrain component click the paintbrush button:
 
 - **Raise or Lower Terrain**, then drag in the Scene view to make a hill. Hold Shift to lower.
 - **Smooth Height** softens the result.
@@ -54,17 +54,19 @@ A door back appears beside the arrival point by itself. To choose its place, cli
 
 To change how doors look, select a prop in the scene and click **Use Selected Prop as Door Model**. That only sets the look, of both the entrance and return doors. It doesn't add a door. Return door markers then show the model.
 
+If you lose a door, **Find Return Door** selects it and shows it in the Scene view. **Stand on Ground** moves the selected door onto the ground, if it's buried or floating.
+
 ## 9. Check the spawn point
 
 Select `SpawnPointManager/Spawn0` in the Hierarchy and make sure it sits just above the ground. Save the scene.
 
 ## 10. Export
 
-Click **Export Region**. The message at the top of the browser's tools says what was exported and where. It should say no props were embedded, unless you meant them to be.
+Click **Export Region**. A short message at the top of the browser says it's done, with anything that needs your attention. Open **Details** under it to see what was exported and where. It should say no props were embedded, unless you meant them to be.
 
 ## 11. Visit it
 
-Click **Test Region In-Game** in the browser, which exports your region again, starts the game with your mods, loads your character and takes you straight there. It's normal play from then on, so your character takes damage and saves as usual. Choose the character in **Test as (Character Name)**. A character kept just for testing is safest.
+Click **Test Region In-Game** in the browser, which exports your region again, starts the game with your mods, loads your character and takes you straight there. It's normal play from then on, so your character takes damage and saves as usual. Choose the character in **Test as (Character Name)**. A character kept just for testing is safest. **Testing in mod list** shows which r2modman profile it uses, and you can change that in **Construction Kit > Paths**. The kit has to be installed in that profile.
 
 To see the way in that players will use, click **Launch Game** instead, or start the game from the profile you chose with r2modman's **Start modded**. Then, in a town or anywhere else outdoors:
 
@@ -72,10 +74,12 @@ To see the way in that players will use, click **Launch Game** instead, or start
 2. Press **Ctrl+F10** to place its door in front of you. Check the name first, because this places a door for whichever region is chosen, wherever you're standing.
 3. Walk up and use the door. You get a loading screen, then your region.
 
+Your next export picks up the door you placed, and the export message says so, so it ships with your mod. It uses the last door placed for this region, so place it again if you moved it by accident.
+
 If something's missing, look at the log. In r2modman, your profile's folder is under **Settings > Browse profile folder**, and the log is `BepInEx\LogOutput.log` inside it. Search it for your region's ID and for `[Error`. For a checklist of each region in the log, as `[CHECK]` lines, set `SelfCheck = true` under `[Dev]` in `BepInEx\config\catalysten.outwardconstructionkit.cfg` in the same folder.
 
 ## 12. Share it
 
-Back in Unity, click **Use Door Placed in Game**, so your entrance ships with the mod, then follow [Sharing your region](making-a-region.md#sharing-your-region).
+Follow [Sharing your region](making-a-region.md#sharing-your-region).
 
 [Making a region](making-a-region.md) goes into more detail on each of these.

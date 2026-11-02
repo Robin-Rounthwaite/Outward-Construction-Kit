@@ -91,6 +91,9 @@ internal static class GameLauncher
         if (refused != null)
             return refused;
 
+        if (!PathDetector.HasKit(OckSettings.PluginsFolder))
+            return $"The game wasn't started, because the kit isn't installed in '{PathDetector.ProfileName(OckSettings.PluginsFolder)}', so nothing could take you to your region. Install it there with r2modman, or pick the profile you test with in Construction Kit > Paths.";
+
         string character = TestCharacterId;
         if (character.Length == 0)
             return "No saved characters were found, so the game wasn't started. Start the game, make a character, and try again.";

@@ -25,6 +25,8 @@ internal static class RegionPackager
     public static List<string> Problems(RegionInfo info)
     {
         var problems = new List<string>();
+        if (string.IsNullOrEmpty(info.PackageTeam) || !Regex.IsMatch(info.PackageTeam, "^[a-zA-Z0-9_]+$"))
+            problems.Add("Add your Thunderstore team's name, using letters, numbers and underscores.");
         if (string.IsNullOrEmpty(info.PackageName) || !Regex.IsMatch(info.PackageName, "^[a-zA-Z0-9_]+$") || info.PackageName.Length > MAX_NAME)
             problems.Add($"The mod name can only use letters, numbers and underscores, up to {MAX_NAME} characters. Underscores show as spaces on Thunderstore.");
         if (string.IsNullOrEmpty(info.PackageVersion) || !Regex.IsMatch(info.PackageVersion, @"^\d+\.\d+\.\d+$"))
@@ -35,8 +37,6 @@ internal static class RegionPackager
             problems.Add($"The description is {info.Description.Length} characters, and Thunderstore allows {MAX_DESCRIPTION}.");
         if (!string.IsNullOrEmpty(info.WebsiteUrl) && !Regex.IsMatch(info.WebsiteUrl, "^https?://"))
             problems.Add("The website needs to start with https://, or be left empty.");
-        if (string.IsNullOrEmpty(info.DoorScene))
-            problems.Add("Set the region's entrance first, or players will have no door to reach it. Place its door in game with Ctrl+F10, then click Use door placed in game in the Prop Browser.");
         string iconProblem = IconProblem(IconFor(info));
         if (iconProblem != null)
             problems.Add(iconProblem);
@@ -81,7 +81,7 @@ internal static class RegionPackager
             File.Copy(IconFor(info), Path.Combine(stage, "icon.png"));
 
             Directory.CreateDirectory(outputFolder);
-            string zip = Path.Combine(outputFolder, info.PackageName + "-" + info.PackageVersion + ".zip");
+            string zip = Path.Combine(outputFolder, info.PackageTeam + "-" + info.PackageName + "-" + info.PackageVersion + ".zip");
             if (File.Exists(zip))
                 File.Delete(zip);
             using (FileStream file = File.Create(zip))

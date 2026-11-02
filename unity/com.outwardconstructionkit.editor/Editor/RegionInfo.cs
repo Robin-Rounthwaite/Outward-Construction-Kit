@@ -28,6 +28,7 @@ internal class RegionInfo
     public float DoorModelScale = 1f;
 
     // For sharing it, which Package Region uses. None of it affects the game.
+    public string PackageTeam;
     public string PackageName;
     public string PackageVersion = "1.0.0";
     public string Description;
@@ -74,9 +75,15 @@ internal class RegionInfo
         if (!File.Exists(config))
             return false;
 
+        return TryReadDoor(File.ReadAllLines(config));
+    }
+
+    /// <summary>Takes this region's door from the lines of the plugin's config, if one was placed.</summary>
+    public bool TryReadDoor(string[] configLines)
+    {
         bool inSection = false;
         string scene = null, position = null, rotation = null;
-        foreach (string line in File.ReadAllLines(config))
+        foreach (string line in configLines)
         {
             if (line.StartsWith("["))
                 inSection = line.Trim() == "[Region " + Id + "]";

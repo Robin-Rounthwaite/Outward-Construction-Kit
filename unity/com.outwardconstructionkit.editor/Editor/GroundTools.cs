@@ -70,7 +70,19 @@ internal static class GroundTools
         Selection.activeGameObject = AddWater(GROUND_SCENE);
     }
 
-    /// <summary>Replaces the starter room's floor and walls with a flat, grassy terrain at y = 0.</summary>
+    /// <summary>Whether a person has given the scene ground yet. A room from an older starter scene counts.</summary>
+    public static bool HasGround(Scene scene)
+    {
+        return scene.GetRootGameObjects().Any(r => s_starterBoxes.Contains(r.name) || r.GetComponentInChildren<Terrain>(true) != null);
+    }
+
+    /// <summary>Whether the scene has the floor and walls that older starter scenes came with, which ground replaces.</summary>
+    public static bool HasStarterRoom(Scene scene)
+    {
+        return scene.GetRootGameObjects().Any(r => s_starterBoxes.Contains(r.name));
+    }
+
+    /// <summary>Makes a flat, grassy terrain at y = 0, replacing an older starter scene's floor and walls.</summary>
     public static Terrain AddGround(float size = DEFAULT_GROUND_SIZE, string startScene = null, string startTexture = null)
     {
         Scene scene = SceneManager.GetActiveScene();

@@ -45,12 +45,16 @@ internal static class RegionExporter
     [MenuItem("Construction Kit/New Region Scene")]
     public static void NewRegionScene()
     {
+        Scene current = SceneManager.GetActiveScene();
+        if (!string.IsNullOrEmpty(current.path) && !EditorUtility.DisplayDialog("New Region Scene", $"This makes a new scene and closes '{current.name}'. It stays in your project, and you can reopen it from the Project window.", "Create", "Cancel"))
+            return;
         if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
             return;
         CreateStarterScene("NewRegion");
+        AddGroundWindow.Open(null);
     }
 
-    /// <summary>A walled room with a sun and a spawn point, which is the least a region can load with.</summary>
+    /// <summary>A sun and a spawn point, the setup a person wouldn't think to add. Ground comes next, from Add Ground.</summary>
     public static Scene CreateStarterScene(string name)
     {
         Directory.CreateDirectory(REGIONS_FOLDER);
@@ -61,12 +65,6 @@ internal static class RegionExporter
         light.intensity = 1.1f;
         light.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
 
-        Box("Floor", new Vector3(0f, -0.5f, 0f), new Vector3(40f, 1f, 40f));
-        Box("Wall_N", new Vector3(0f, 3f, 20f), new Vector3(40f, 6f, 1f));
-        Box("Wall_S", new Vector3(0f, 3f, -20f), new Vector3(40f, 6f, 1f));
-        Box("Wall_E", new Vector3(20f, 3f, 0f), new Vector3(1f, 6f, 40f));
-        Box("Wall_W", new Vector3(-20f, 3f, 0f), new Vector3(1f, 6f, 40f));
-
         var spawns = new GameObject(SPAWN_ROOT);
         var spawn = new GameObject("Spawn0");
         spawn.transform.SetParent(spawns.transform, false);
@@ -74,14 +72,6 @@ internal static class RegionExporter
 
         EditorSceneManager.SaveScene(scene, AssetDatabase.GenerateUniqueAssetPath(REGIONS_FOLDER + "/" + name + ".unity"));
         return scene;
-    }
-
-    private static void Box(string name, Vector3 position, Vector3 scale)
-    {
-        var box = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        box.name = name;
-        box.transform.position = position;
-        box.transform.localScale = scale;
     }
 
     [MenuItem("Construction Kit/Export Region")]
@@ -105,6 +95,7 @@ internal static class RegionExporter
         string sceneName = scene.name; // the scene handle stops being valid once another scene opens
 
         RegionInfo info = RegionInfo.For(originalPath);
+        string entranceChange = TakeEntranceFromGame(info, originalPath);
         string manifest = BuildManifest(scene, info);
         int referenced = manifest.Split('\n').Count(l => l.StartsWith("prop "));
         int enemies = manifest.Split('\n').Count(l => l.StartsWith("enemy "));
@@ -167,6 +158,8 @@ internal static class RegionExporter
             File.WriteAllText(bundleOut + ".refs.txt", manifest);
 
             string summary = $"Exported '{info.DisplayName}' ({info.Id}, from {sceneName}): {new FileInfo(bundleOut).Length / 1024} KB bundle, {referenced} vanilla props referenced, {embedded} altered props embedded, {enemies} enemies, {items} items, NavMesh {navMeshTriangles} triangles, entrance {(string.IsNullOrEmpty(info.DoorScene) ? "not set" : info.DoorScene)}, to {outputFolder}";
+            if (entranceChange != null)
+                summary += "\n" + entranceChange;
             foreach (string warning in placementWarnings)
                 summary += "\nWARNING: " + warning;
             if (embedded > 0)
@@ -183,6 +176,32 @@ internal static class RegionExporter
             EditorSceneManager.OpenScene(originalPath, OpenSceneMode.Single);
             AssetDatabase.DeleteAsset(WORK_FOLDER);
         }
+    }
+
+    /// <summary>The short version of an export's summary: what happened and anything needing attention.</summary>
+    public static string Brief(string report)
+    {
+        var kept = new List<string>();
+        foreach (string line in report.Split('\n'))
+        {
+            if (line.StartsWith("Exported '"))
+                kept.Add(line.Substring(0, line.IndexOf('\'', "Exported '".Length) + 1) + ".");
+            else if (line.Length > 0 && !line.StartsWith("Embedded "))
+                kept.Add(line);
+        }
+        return string.Join("\n", kept.ToArray());
+    }
+
+    // The door placed with Ctrl+F10 is only in this PC's config, so it's copied to what ships. A change gets said out
+    // loud, because a door placed by accident would otherwise replace the shipped one unnoticed.
+    private static string TakeEntranceFromGame(RegionInfo info, string scenePath)
+    {
+        string before = info.DoorScene + "|" + info.DoorPosition;
+        bool hadOne = !string.IsNullOrEmpty(info.DoorScene);
+        if (!info.TryCopyDoorFromGame() || info.DoorScene + "|" + info.DoorPosition == before)
+            return null;
+        info.SaveFor(scenePath);
+        return $"Entrance {(hadOne ? "changed" : "set")} to the door you placed in game: {LocationNames.For(info.DoorScene)} at {info.DoorPosition}.";
     }
 
     // Baked while stand-ins are still in the scene, because enemies have to walk around the real props too.
@@ -235,7 +254,7 @@ internal static class RegionExporter
         return spawns != null && spawns.transform.childCount > 0 ? spawns.transform.GetChild(0).gameObject : null;
     }
 
-    /// <summary>Adds where players arrive, for a scene that didn't start from New Region.</summary>
+    /// <summary>Adds where players arrive, for a scene that didn't start from New Region Scene.</summary>
     public static GameObject AddSpawnPoint(Vector3 position)
     {
         Scene scene = SceneManager.GetActiveScene();
@@ -256,7 +275,17 @@ internal static class RegionExporter
     private static void Validate(Scene scene)
     {
         if (!HasSpawnPoint(scene))
-            throw new InvalidOperationException("This scene has no spawn point, so players would have nowhere to arrive. Click Add Spawn Point in the Prop Browser, or start from New Region.");
+            throw new InvalidOperationException("This scene has no spawn point, so players would have nowhere to arrive. Click Add Spawn Point in the Prop Browser, or start from New Region Scene.");
+        if (HasNothingToStandOn(scene))
+            throw new InvalidOperationException("This scene has nothing under its spawn point, so players would fall forever. Click Add Ground on the Ground tab of the Prop Browser.");
+    }
+
+    // Stand-in props may not have colliders here, but the real ones do in game, so they could be the floor.
+    private static bool HasNothingToStandOn(Scene scene)
+    {
+        Physics.SyncTransforms();
+        return !PropRef.FindIn(scene).Any(p => !p.Value.IsEnemy)
+            && !Physics.Raycast(FirstSpawnPoint(scene).transform.position + Vector3.up * GROUND_CHECK_START, Vector3.down, GROUND_CHECK_DISTANCE, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
     }
 
     /// <summary>Spawn points and doors a player couldn't use, because they float above the ground or are under it.</summary>

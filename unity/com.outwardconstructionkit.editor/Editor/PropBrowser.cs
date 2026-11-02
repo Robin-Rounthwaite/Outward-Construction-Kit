@@ -55,6 +55,11 @@ internal partial class PropBrowser : EditorWindow
     private string m_knownRoots = "";
     private double m_nextRipCheck;
     private string m_status = "";
+    private string m_report = "";
+    private string m_reportBrief;
+    private bool m_showReport;
+    private string m_groundPromptShownFor;
+    private string m_groundPromptDismissedFor;
     private bool m_showPaths;
 
     private bool ShowsProps { get { return m_tab == Tab.Enemies || m_tab == Tab.Props; } }
@@ -321,6 +326,8 @@ internal partial class PropBrowser : EditorWindow
             UpdateCategories();
 
         EditorGUILayout.LabelField(s_nextSteps[(int)m_tab], KitStyles.WrappedNote);
+        if (m_tab == Tab.Props)
+            DrawGroundPrompt();
         DrawFilters();
         switch (m_tab)
         {
@@ -345,6 +352,30 @@ internal partial class PropBrowser : EditorWindow
         Repaint();
     }
 
+    // Props need something to stand on, so this asks for ground first. It goes once there's ground, or for this scene when dismissed.
+    private void DrawGroundPrompt()
+    {
+        UnityEngine.SceneManagement.Scene scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+        if (m_groundPromptDismissedFor == scene.path || GroundTools.HasGround(scene))
+            return;
+        if (m_groundPromptShownFor != scene.path)
+        {
+            m_groundPromptShownFor = scene.path;
+            ShowNotification(new GUIContent("Add ground first"));
+        }
+        KitStyles.HelpBox("This scene has no ground yet. Add it first, so your props have something to stand on.", MessageType.Info);
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            if (GUILayout.Button(new GUIContent("Add Ground", "Choose what ground to start with and how big it should be.")))
+            {
+                AddGroundWindow.Open(() => Say("Ground added", "Ground added and selected. You can go on adding props."));
+                GUIUtility.ExitGUI();
+            }
+            if (GUILayout.Button(new GUIContent("Not Now", "Hides this message for this scene."), GUILayout.Width(70)))
+                m_groundPromptDismissedFor = scene.path;
+        }
+    }
+
     // The window's only feedback, so it sits above the tabs where it's seen, whichever one is open.
     private void DrawStatus()
     {
@@ -353,6 +384,21 @@ internal partial class PropBrowser : EditorWindow
         if (s_statusStyle == null)
             s_statusStyle = new GUIStyle(EditorStyles.helpBox) { fontSize = STATUS_FONT_SIZE, wordWrap = true };
         GUILayout.Label(m_status, s_statusStyle);
+        if (m_status != m_reportBrief)
+            return;
+        m_showReport = EditorGUILayout.Foldout(m_showReport, "Details", true);
+        if (m_showReport)
+            EditorGUILayout.LabelField(m_report, KitStyles.WrappedNote);
+    }
+
+    /// <summary>Shows what an export did in a line or two, with everything else behind Details and in the Console.</summary>
+    private void SayReport(string report)
+    {
+        Debug.Log("[OCK] " + report);
+        m_report = report;
+        m_reportBrief = m_status = RegionExporter.Brief(report);
+        m_showReport = false;
+        Repaint();
     }
 
     /// <summary>A brief message over the window, so a click visibly did something, and a lasting one with the details.</summary>

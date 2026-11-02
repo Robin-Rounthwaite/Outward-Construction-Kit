@@ -11,6 +11,8 @@ using Microsoft.Win32;
 /// </summary>
 internal static class PathDetector
 {
+    private const string KIT_PLUGIN = "OutwardConstructionKit.dll";
+
     private static readonly string[] s_gameDataPaths =
     {
         Path.Combine("Outward", "Outward_Defed", "Outward Definitive Edition_Data"),
@@ -52,6 +54,28 @@ internal static class PathDetector
         if (!Directory.Exists(profilesFolder))
             return new List<string>();
         return Directory.GetDirectories(profilesFolder).Select(p => Path.Combine(p, "BepInEx", "plugins")).Where(Directory.Exists).ToList();
+    }
+
+    /// <summary>Whether the kit's plugin is installed in this plugins folder.</summary>
+    public static bool HasKit(string pluginsFolder)
+    {
+        return !string.IsNullOrEmpty(pluginsFolder) && Directory.Exists(pluginsFolder)
+            && Directory.GetFiles(pluginsFolder, KIT_PLUGIN, SearchOption.AllDirectories).Length > 0;
+    }
+
+    /// <summary>What to fill in unasked: only a choice that's clear. Otherwise it's left for the person to pick on purpose.</summary>
+    public static string SuggestedPlugins(IEnumerable<string> found)
+    {
+        List<string> withKit = found.Where(HasKit).ToList();
+        return withKit.Count == 1 ? withKit[0] : "";
+    }
+
+    /// <summary>The name a person knows a plugins folder by: its mod manager profile, or the game's own folder.</summary>
+    public static string ProfileName(string pluginsFolder)
+    {
+        string bepInEx = Path.GetDirectoryName((pluginsFolder ?? "").TrimEnd('/', '\\'));
+        string owner = string.IsNullOrEmpty(bepInEx) ? null : Path.GetDirectoryName(bepInEx);
+        return string.IsNullOrEmpty(owner) ? "" : Path.GetFileName(owner);
     }
 
     public static bool IsGameData(string folder)

@@ -358,6 +358,7 @@ internal static class OckSelfTest
         const string id = "test_alpha";
         Scene scene = RegionExporter.CreateStarterScene("OCK_SelfTest_" + id);
         string path = scene.path;
+        AddRoom();
         new RegionInfo { Id = id, DisplayName = "Test Region Alpha" }.SaveFor(path);
 
         GameObject moved = Place(rip, BARRELS, new Vector3(-15f, 0f, 6f));
@@ -402,10 +403,25 @@ internal static class OckSelfTest
 
     private static void CheckPackaging(RegionInfo info, string output)
     {
-        Check("packaging asks for a mod name and description", RegionPackager.Problems(new RegionInfo { PackageName = "has spaces", PackageVersion = "1", DoorScene = "Monsoon" }).Count == 3);
-        Check("packaging asks for an entrance", RegionPackager.Problems(new RegionInfo { PackageName = "Good", PackageVersion = "1.0.0", Description = "Fine." }).Count == 1);
-        Check("packaging refuses a long description", RegionPackager.Problems(new RegionInfo { PackageName = "Good", PackageVersion = "1.0.0", Description = new string('x', 251), DoorScene = "Monsoon" }).Count == 1);
+        Check("packaging asks for a mod name and description", RegionPackager.Problems(new RegionInfo { PackageTeam = "Team", PackageName = "has spaces", PackageVersion = "1" }).Count == 3);
+        Check("packaging asks for a team", RegionPackager.Problems(new RegionInfo { PackageName = "Good", PackageVersion = "1.0.0", Description = "Fine." }).Count == 1);
+        Check("packaging doesn't make anyone copy the entrance by hand", RegionPackager.Problems(new RegionInfo { PackageTeam = "Team", PackageName = "Good", PackageVersion = "1.0.0", Description = "Fine." }).Count == 0);
+        Check("packaging refuses a long description", RegionPackager.Problems(new RegionInfo { PackageTeam = "Team", PackageName = "Good", PackageVersion = "1.0.0", Description = new string('x', 251) }).Count == 1);
 
+        var placed = new RegionInfo { Id = "placed" };
+        Check("a door placed in game is read from the config", placed.TryReadDoor(new[] { "[Region other]", "DoorScene = Wrong", "[Region placed]", "DoorScene = Monsoon", "DoorPosition = 1,2,3", "DoorRotationY = 90" }) && placed.DoorScene == "Monsoon" && placed.DoorPosition == "1,2,3" && placed.DoorRotationY == 90f);
+        Check("a region with no door placed keeps what it has", !new RegionInfo { Id = "placed" }.TryReadDoor(new[] { "[Region placed]", "DoorScene = ", "DoorPosition = " }));
+        Check("the short export message keeps warnings and drops details", RegionExporter.Brief("Exported 'Mine' (mine, from Mine): 5 KB bundle\nWARNING: A door floats.\nEmbedded props contain art.") == "Exported 'Mine'.\nWARNING: A door floats.");
+        Check("a mod list goes by its profile's name", PathDetector.ProfileName(@"C:\profiles\my list\BepInEx\plugins") == "my list");
+        string noKit = Path.Combine(output, "nokit", "plugins");
+        string withKit = Path.Combine(output, "withkit", "plugins");
+        Directory.CreateDirectory(noKit);
+        Directory.CreateDirectory(Path.Combine(withKit, "Some_Team-Kit"));
+        File.WriteAllText(Path.Combine(withKit, "Some_Team-Kit", "OutwardConstructionKit.dll"), "");
+        Check("a profile without the kit is noticed", !PathDetector.HasKit(noKit) && PathDetector.HasKit(withKit));
+        Check("only a clear choice of profile is suggested", PathDetector.SuggestedPlugins(new[] { noKit, withKit }) == withKit && PathDetector.SuggestedPlugins(new[] { noKit }) == "" && PathDetector.SuggestedPlugins(new[] { withKit, withKit + "\\" }) == "");
+
+        info.PackageTeam = "Test_Team";
         info.PackageName = "Test_Region_Alpha";
         info.PackageVersion = "1.2.3";
         info.Description = "A \"quoted\" test.";
@@ -419,7 +435,7 @@ internal static class OckSelfTest
 
         string summary;
         string zip = RegionPackager.Package(info, Path.Combine(output, "upload"), out summary);
-        Check("the zip is named as Thunderstore expects", Path.GetFileName(zip) == "Test_Region_Alpha-1.2.3.zip", zip);
+        Check("the zip is named for its team, mod and version", Path.GetFileName(zip) == "Test_Team-Test_Region_Alpha-1.2.3.zip", zip);
         using (var archive = new System.IO.Compression.ZipArchive(File.OpenRead(zip)))
         {
             using (var reader = new StreamReader(archive.GetEntry(info.Id + ".refs.txt").Open()))
@@ -459,11 +475,24 @@ internal static class OckSelfTest
         AssetDatabase.DeleteAsset(choicesData);
         string path = scene.path;
         new RegionInfo { Id = id, DisplayName = "Test Region Gamma" }.SaveFor(path);
+        Check("a new region scene has no room, and no ground yet", !GroundTools.HasGround(scene) && !GroundTools.HasStarterRoom(scene));
+        bool refusedNoGround = false;
+        try
+        {
+            RegionExporter.Export(Path.Combine(output, "noground"));
+        }
+        catch (InvalidOperationException)
+        {
+            refusedNoGround = true;
+        }
+        Check("export refuses a scene with nothing under the spawn point", refusedNoGround);
+        AddRoom(); // as an older starter scene has
+        Check("an older scene's room counts as ground", GroundTools.HasGround(scene) && GroundTools.HasStarterRoom(scene));
 
         Terrain ground = GroundTools.AddGround();
         TerrainData data = ground.terrainData;
         string dataPath = AssetDatabase.GetAssetPath(data);
-        Check("adding ground removes the starter room", !scene.GetRootGameObjects().Any(r => r.name == "Floor" || r.name.StartsWith("Wall_")));
+        Check("adding ground removes an older scene's room",!scene.GetRootGameObjects().Any(r => r.name == "Floor" || r.name.StartsWith("Wall_")));
         Check("ground starts level with the spawn point", Mathf.Abs(ground.SampleHeight(Vector3.zero) + ground.transform.position.y) < 0.01f, ground.SampleHeight(Vector3.zero).ToString());
         Check("adding ground twice keeps one terrain", GroundTools.AddGround() == ground);
 
@@ -533,7 +562,8 @@ internal static class OckSelfTest
     {
         Scene room = RegionExporter.CreateStarterScene("OCK_SelfTest_placement");
         string roomPath = room.path;
-        Check("a starter room has nothing to warn about", RegionExporter.PlacementWarnings(room).Count == 0, string.Join(" ", RegionExporter.PlacementWarnings(room).ToArray()));
+        AddRoom();
+        Check("a floor under the spawn point has nothing to warn about",RegionExporter.PlacementWarnings(room).Count == 0, string.Join(" ", RegionExporter.PlacementWarnings(room).ToArray()));
         GameObject door = DoorTools.Add();
         door.transform.position = new Vector3(5f, 4f, 5f);
         Check("a floating door gets a warning", RegionExporter.PlacementWarnings(room).Count == 1, string.Join(" ", RegionExporter.PlacementWarnings(room).ToArray()));
@@ -575,6 +605,7 @@ internal static class OckSelfTest
     {
         Scene scene = RegionExporter.CreateStarterScene("OCK_SelfTest_render");
         string path = scene.path;
+        AddRoom();
         float x = -12f;
         foreach (string name in new[] { BARRELS, STATUE, ROCK, LIGHT, BUSH, VINE })
         {
@@ -597,6 +628,24 @@ internal static class OckSelfTest
 
         EditorSceneManager.SaveScene(scene);
         AssetDatabase.DeleteAsset(path);
+    }
+
+    // The floor and walls that starter scenes used to come with, which older scenes still have.
+    private static void AddRoom()
+    {
+        Box("Floor", new Vector3(0f, -0.5f, 0f), new Vector3(40f, 1f, 40f));
+        Box("Wall_N", new Vector3(0f, 3f, 20f), new Vector3(40f, 6f, 1f));
+        Box("Wall_S", new Vector3(0f, 3f, -20f), new Vector3(40f, 6f, 1f));
+        Box("Wall_E", new Vector3(20f, 3f, 0f), new Vector3(1f, 6f, 40f));
+        Box("Wall_W", new Vector3(-20f, 3f, 0f), new Vector3(1f, 6f, 40f));
+    }
+
+    private static void Box(string name, Vector3 position, Vector3 scale)
+    {
+        var box = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        box.name = name;
+        box.transform.position = position;
+        box.transform.localScale = scale;
     }
 
     private static GameObject Place(RipScene rip, string name, Vector3 position)
