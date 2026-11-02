@@ -1,6 +1,6 @@
 # Outward Construction Kit
 
-Adds new regions to Outward: Definitive Edition. Walk through a door, get a real loading screen, and arrive somewhere new, built from the game's own props, enemies, water and terrain textures.
+A new era for Outward modding! Now we can add new regions and dungeons to the game. Walk through a door, get a real loading screen, and arrive somewhere new, built from the game's own props, enemies, water and terrain textures. Adds new regions to Outward: Definitive Edition.
 
 **This is a beta.** This mod does nothing by itself: it loads region mods, and lets you make your own.
 
