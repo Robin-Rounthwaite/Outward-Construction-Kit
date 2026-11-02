@@ -48,14 +48,14 @@ The Prop Browser shows models extracted ("ripped") from your own copy of the gam
 | | Monsoon only | Rip all scenes |
 |---|---|---|
 | **Gives you** | Everything the tutorial needs, including its ground textures | All 79 of the game's scenes except two empty ones, so every prop and enemy |
-| **Disk space** | 15 GB | **Probably about 550 GB, and possibly anywhere from 250 GB to 1.1 TB** |
+| **Disk space** | 15 GB | **Probably about 100 to 170 GB** |
 | **Time** | About 18 minutes | **About a day** |
 
 Start with Monsoon unless you have the space and want everything from the start. You can rip more scenes at any time.
 
-The figures for ripping everything are estimates, from four scenes that came to between 3 and 15 GB each. Nobody has ripped the whole game yet. It stops before the drive fills up, with regions and towns done first, and carries on from where it stopped if you run it again.
+The figures for ripping everything are estimates. Each rip exports much the same shared game files, so the kit keeps one copy of what's identical. Measured so far, a second region added 1.7 GB and a small dungeon 1.1 GB, where a full rip of that dungeon would be 7.6 GB. Windows Explorer still shows each rip at its full size, because the files appear in each. Nobody has ripped the whole game yet. It stops before the drive fills up, with regions and towns done first, and carries on from where it stopped if you run it again.
 
-To rip, use **First Steps**, or **Construction Kit > Rip a Scene**, which has a **Rip** button beside each scene and a **Rip All Scenes** button. The first time, this downloads [AssetRipper](https://github.com/AssetRipper/AssetRipper) from GitHub, about 42 MB, into your rip folder. Ripping runs in its own window, so you can keep working. When it finishes, click **Refresh** in the Prop Browser.
+To rip, use **First Steps**, or **Construction Kit > Rip a Scene**, which has a **Rip** button beside each scene and a **Rip All Scenes** button. The first time, this downloads [AssetRipper](https://github.com/AssetRipper/AssetRipper) from GitHub, about 42 MB, into your rip folder. Ripping runs in its own window, so you can keep working. When it finishes, it appears in the Prop Browser by itself. If you'd rather use an AssetRipper you already have, set its folder in **Construction Kit > Paths**; version 2.0.0 is the tested one.
 
 ## 5. Make a region
 

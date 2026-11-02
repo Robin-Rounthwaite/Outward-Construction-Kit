@@ -28,12 +28,15 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 
 public static class RipFileSharing
 {
     // Files this small live inside the file table anyway, so a link saves nothing.
     private const long MIN_BYTES = 4096;
     private const int BUFFER_BYTES = 1 << 20;
+    private const int WORKERS = 6;
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern bool CreateHardLink(string newFile, string existingFile, IntPtr security);
@@ -47,35 +50,33 @@ public static class RipFileSharing
     // Matches are looked for at the same path in the other rips, because that's how the same asset comes out.
     public static void Share(string rip, IList<string> others, bool reportOnly)
     {
-        foreach (string file in Directory.EnumerateFiles(rip, "*", SearchOption.AllDirectories))
+        var options = new ParallelOptions { MaxDegreeOfParallelism = WORKERS };
+        Parallel.ForEach(Directory.EnumerateFiles(rip, "*", SearchOption.AllDirectories), options, file =>
         {
             if (file.EndsWith(".meta", StringComparison.OrdinalIgnoreCase))
-                continue;
+                return;
             string relative = file.Substring(rip.Length).TrimStart('\\');
             if (relative.StartsWith(@"ExportedProject\Assets\Scenes\", StringComparison.OrdinalIgnoreCase))
-                continue;
+                return;
             var info = new FileInfo(file);
             if (info.Length < MIN_BYTES)
-                continue;
+                return;
             foreach (string other in others)
             {
                 string match = Path.Combine(other, relative);
                 var matchInfo = new FileInfo(match);
                 if (!matchInfo.Exists || matchInfo.Length != info.Length || !SameBytes(file, match))
                     continue;
-                if (reportOnly)
-                {
-                    FilesLinked++;
-                    BytesSaved += info.Length;
-                }
-                else
-                    Link(file, match, info.Length);
+                if (!reportOnly)
+                    Link(file, match);
+                Interlocked.Increment(ref FilesLinked);
+                Interlocked.Add(ref BytesSaved, info.Length);
                 break;
             }
-        }
+        });
     }
 
-    private static void Link(string file, string match, long length)
+    private static void Link(string file, string match)
     {
         string spare = file + ".ocklink";
         if (File.Exists(spare))
@@ -84,8 +85,6 @@ public static class RipFileSharing
             throw new IOException("Couldn't link " + file + ", error " + Marshal.GetLastWin32Error() + ". The rip folder's drive may not support hard links.");
         File.Delete(file);
         File.Move(spare, file);
-        FilesLinked++;
-        BytesSaved += length;
     }
 
     private static bool SameBytes(string a, string b)

@@ -339,7 +339,7 @@ internal partial class PropBrowser : EditorWindow
                 OnPathsChanged();
             if (GUILayout.Button("Rip a Scene", GUILayout.Width(85)))
                 RipWindow.Open();
-            if (GUILayout.Button(new GUIContent("Rip All Scenes", "Rips every scene not yet ripped, one after another, which takes a very long time and hundreds of gigabytes. It says how much before starting."), GUILayout.Width(100)))
+            if (GUILayout.Button(new GUIContent("Rip All Scenes", "Rips every scene not yet ripped, one after another, which takes a very long time and a lot of disk space. It says how much before starting."), GUILayout.Width(100)))
             {
                 RipWindow.RipAll();
                 GUIUtility.ExitGUI();
