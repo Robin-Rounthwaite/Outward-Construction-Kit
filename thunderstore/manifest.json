@@ -1,6 +1,6 @@
 {
   "name": "Outward_Construction_Kit",
-  "version_number": "0.3.0",
+  "version_number": "0.3.1",
   "website_url": "https://github.com/Robin-Rounthwaite/Outward-Construction-Kit",
   "description": "Beta. Loads new regions for Outward: Definitive Edition, reached through a door with a real loading screen. Needed by region mods, and for making your own in Unity.",
   "dependencies": [

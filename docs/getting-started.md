@@ -22,7 +22,7 @@ The Hub may warn that this version of Unity is dangerous. That warning doesn't a
 
 ## 3. Open the starter project
 
-1. Download the [starter project](https://github.com/Robin-Rounthwaite/Outward-Construction-Kit/releases/download/v0.3.0/Outward_Construction_Kit_Starter-0.3.0.zip) and unzip it to a folder of its own with a short path, such as `D:\OutwardRegions`. In testing, a copy under a very long path sat idle after opening. Keep it off OneDrive and similar services too: they lock Unity's working files, which breaks exports.
+1. Download the [starter project](https://github.com/Robin-Rounthwaite/Outward-Construction-Kit/releases/download/v0.3.1/Outward_Construction_Kit_Starter-0.3.1.zip) and unzip it to a folder of its own with a short path, such as `D:\OutwardRegions`. In testing, a copy under a very long path sat idle after opening. Keep it off OneDrive and similar services too: they lock Unity's working files, which breaks exports.
 2. In the Hub, click **Open** (**Add** on some versions), and choose the `OutwardRegionProject` folder. The first opening takes a few minutes.
 3. The **Construction Kit Paths** window appears. It suggests the game folder and each mod profile it can find on your PC, looking without changing anything. Check them, and pick the profile from step 2.
 4. For **Rip folder**, choose or make a folder on a drive with plenty of space, and off OneDrive. Rips hold game art that shouldn't sync anywhere. It doesn't have to be empty: each rip gets a new folder of its own, nothing already there is overwritten, and earlier rips are picked up.

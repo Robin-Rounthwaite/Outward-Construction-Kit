@@ -19,7 +19,7 @@ namespace OutwardConstructionKit.Runtime
     {
         public const string GUID = "catalysten.outwardconstructionkit";
         public const string NAME = "Outward Construction Kit";
-        public const string VERSION = "0.3.0";
+        public const string VERSION = "0.3.1";
 
         internal static KitPlugin Instance;
         internal static BepInEx.Logging.ManualLogSource Log;
