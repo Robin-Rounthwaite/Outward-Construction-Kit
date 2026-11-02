@@ -18,6 +18,8 @@ If you uninstall a region while your character is inside it, you'll arrive back 
 
 Regions are made in Unity 2020.3.26f1, with the free starter project and guides on [GitHub](https://github.com/Robin-Rounthwaite/Outward-Construction-Kit). You place vanilla props and enemies, sculpt and paint ground, add water, and export. Anything you only move, rotate or evenly scale stays a reference to the player's own game files, so no art ships in your mod.
 
+![A region being built in Unity, with a stone bridge and the kit's Prop Browser](https://raw.githubusercontent.com/Robin-Rounthwaite/Outward-Construction-Kit/main/docs/images/building-in-unity.webp)
+
 ## Current limitations
 
 - Co-op hasn't been tested yet.
