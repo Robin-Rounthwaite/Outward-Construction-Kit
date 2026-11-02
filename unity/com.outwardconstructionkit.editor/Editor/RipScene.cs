@@ -10,7 +10,7 @@ using UnityEngine;
 /// Reads the props out of a ripped scene file. These are large (over a million lines) and Unity can't
 /// load them without the game's scripts, so this reads just the parts it needs as text.
 /// </summary>
-internal class RipScene
+internal partial class RipScene
 {
     public class ColliderInfo
     {
@@ -91,6 +91,9 @@ internal class RipScene
         public bool IsEnemy;
         public bool IsItem;
         public RipScene Scene;
+
+        /// <summary>Every location it's found in, among those being shown. Filled in by the Prop Browser.</summary>
+        [NonSerialized] public List<string> Locations;
     }
 
     // Not scenery, and full of things that aren't props.

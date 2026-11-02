@@ -75,6 +75,6 @@ Write-Host ''
 Write-Host ("Finished: {0} ripped, {1} already there, {2} failed, in {3:0.0} hours." -f $ripped, $skipped, $failed.Count, $timer.Elapsed.TotalHours)
 if ($stoppedAt) { Write-Host "$stoppedAt Free up space, then run this again to carry on." }
 if ($failed.Count -gt 0) { Write-Host "These failed, and running this again retries them: $($failed -join ', ')" }
-Write-Host 'Click Refresh in the Prop Browser to see them.'
+Write-Host 'They appear in the Prop Browser by themselves.'
 if (-not $NoPause) { Read-Host 'Press Enter to close' | Out-Null }
 if ($stoppedAt -or $failed.Count -gt 0) { exit 1 }
