@@ -12,7 +12,13 @@ Don't change a region's ID after sharing it, because saves and door placements d
 
 A scene made with **New Region Scene** has what it needs. If you start from your own, it needs a root object named exactly `SpawnPointManager`, with at least one child as a spawn point.
 
-Props are decoration for now, and so is the **Items** tab, until items can be picked up. Their scripts are left behind, so anything players can use in its own scene, such as a chest or gathering spot, is only for show in a region. The Prop Browser marks those **decoration**.
+Props are decoration for now. Their scripts are left behind, so anything players can use in its own scene, such as a chest or gathering spot, is only for show in a region. The Prop Browser marks those **decoration**.
+
+## Items
+
+The **Items** tab lists the game's own items, which the game writes out for the kit when it starts, so start it once with the kit installed. The names are in the game's language. Search by name or item number, or filter by type, then click **Add** and move the orange marker to where the item should lie. It's only a marker in Unity, and in game it becomes the real item, which players can pick up.
+
+Each item is placed once for a save. After a player takes it, it stays gone until the region resets, as the game's own areas do, when it comes back. An item you add later appears even for a character who's been there before, so you can keep testing with the same one. A prop taken from a rip that's really an item, such as a cooking pot kit, also becomes the real item on export, unless you've stretched it.
 
 ## How props look in the editor
 

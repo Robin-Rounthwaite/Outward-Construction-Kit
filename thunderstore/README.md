@@ -22,7 +22,7 @@ Regions are made in Unity 2020.3.26f1, with the free starter project and guides 
 
 - Co-op hasn't been tested yet.
 - Only Outward: Definitive Edition on Windows is supported.
-- Props and items are decoration for now: chests, gathering spots and pick-ups don't work.
+- Props are decoration for now: chests and gathering spots don't work. Items placed from the Items tab are real, and can be picked up.
 - Dying in a region always returns you to where you entered it. There are no defeat scenarios yet.
 - A game update can stop a region's references from matching. The game then shows a notice on screen, and the log has the details.
 
