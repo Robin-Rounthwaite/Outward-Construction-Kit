@@ -26,6 +26,14 @@ Regions are made in Unity 2020.3.26f1, with the free starter project and guides 
 - Dying in a region always returns you to where you entered it. There are no defeat scenarios yet.
 - A game update can stop a region's references from matching. The game then shows a notice on screen, and the log has the details.
 
+## Screenshots
+
+![A character in a region with a hill, a tower and a pond, with UnityExplorer open](https://raw.githubusercontent.com/Robin-Rounthwaite/Outward-Construction-Kit/main/docs/images/example-region-with-tools.webp)
+
+![A character on the steps of a building placed in a region, beside hanging vines](https://raw.githubusercontent.com/Robin-Rounthwaite/Outward-Construction-Kit/main/docs/images/building-and-vines.webp)
+
+![A character in a walled region with barrels, statues, a bush, a rock and a large tree](https://raw.githubusercontent.com/Robin-Rounthwaite/Outward-Construction-Kit/main/docs/images/barrels-statues-and-tree.webp)
+
 ## Reporting problems
 
 Please open an issue on [GitHub](https://github.com/Robin-Rounthwaite/Outward-Construction-Kit/issues), with your `BepInEx/LogOutput.log` attached.
