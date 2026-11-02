@@ -153,7 +153,7 @@ namespace OutwardConstructionKit.Runtime
             return 100000 + (int)(Hash(id) % 900000);
         }
 
-        private static uint Hash(string text)
+        internal static uint Hash(string text)
         {
             uint hash = 2166136261;
             foreach (char c in text)

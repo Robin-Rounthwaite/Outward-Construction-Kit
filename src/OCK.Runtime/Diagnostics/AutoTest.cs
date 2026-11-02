@@ -179,6 +179,8 @@ namespace OutwardConstructionKit.Runtime
                 Player().Invincible = true; // no one's at the keyboard, and enemies that work will kill a character standing still
                 yield return new WaitForSecondsRealtime(CHECKS_SECONDS);
                 yield return Screenshot(id);
+                if (request.Contains("takeitems"))
+                    yield return TakeItems();
             }
 
             if (regions.Length > 0 && request.Contains("dieinregion"))
@@ -223,7 +225,7 @@ namespace OutwardConstructionKit.Runtime
                 Application.Quit();
         }
 
-// What a player does on arriving, by the game's own routes: sees the HUD, walks up to the water and a return
+        // What a player does on arriving, by the game's own routes: sees the HUD, walks up to the water and a return
         // door, gets their prompts, and uses them. Only when asked, because it moves the character.
         private static IEnumerator TryUsing(string home)
         {
@@ -260,6 +262,21 @@ namespace OutwardConstructionKit.Runtime
             trigger.TryActivateBasicAction(Player());
             bool back = false;
             yield return WaitFor(() => SceneManager.GetActiveScene().name == home && Player() != null && Loaded(), "the return door led back to " + home, r => back = r);
+        }
+
+        // What the game's take prompt does when pressed, which is more than the test can say about the prompt being seen.
+        private static IEnumerator TakeItems()
+        {
+            List<Item> lying = RegionItems.InWorld();
+            Log($"{lying.Count} region items lying here: {string.Join(", ", lying.Select(i => i.Name + " at " + i.transform.position).ToArray())}.");
+            foreach (Item item in lying)
+            {
+                int before = Player().Inventory.ItemCount(item.ItemID);
+                Player().Inventory.TakeItem(item, false);
+                yield return new WaitForSecondsRealtime(2f);
+                int after = Player().Inventory.ItemCount(item.ItemID);
+                Log(after > before ? $"Took {item.ItemID}: the bag holds {after}." : $"FAIL couldn't take {item.ItemID}: the bag holds {after}.");
+            }
         }
 
         private static void CheckStanding()

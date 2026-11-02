@@ -171,6 +171,67 @@ namespace OutwardConstructionKit.Tests
         }
 
         [Test]
+        public void ReadsItems()
+        {
+            List<string> errors;
+            RegionManifest manifest = Parse(new[] { "item | 5010100 | 1,2,3 | 0,90,0", "item | 4000010 | -1,0,0.5 | 45" }, out errors);
+            Assert.That(errors, Is.Empty);
+            Assert.That(manifest.items.Count, Is.EqualTo(2));
+            Assert.That(manifest.items[0].id, Is.EqualTo(5010100));
+            Assert.That(manifest.items[0].position, Is.EqualTo(new Vector3(1f, 2f, 3f)));
+            Assert.That(manifest.items[1].rotation, Is.EqualTo(new Vector3(0f, 45f, 0f)));
+        }
+
+        [TestCase("item | notanumber | 1,2,3 | 0")]
+        [TestCase("item | -5 | 1,2,3 | 0")]
+        [TestCase("item | 5010100 | 1,2 | 0")]
+        [TestCase("item | 5010100 | 1,2,3")]
+        public void ReportsABadItemLine(string line)
+        {
+            List<string> errors;
+            RegionManifest manifest = Parse(new[] { line }, out errors);
+            Assert.That(manifest.items, Is.Empty);
+            Assert.That(errors.Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ItemKeysFollowTheItemAndItsSpot()
+        {
+            var item = new RegionManifest.ItemReference { id = 5010100, position = new Vector3(1f, 2f, 3f) };
+            string key = RegionItems.Key("region", item);
+            Assert.That(RegionItems.Key("region", new RegionManifest.ItemReference { id = 5010100, position = new Vector3(1f, 2f, 3f), rotation = Vector3.up }), Is.EqualTo(key), "turning it isn't a new item");
+            Assert.That(RegionItems.Key("region", new RegionManifest.ItemReference { id = 5010100, position = new Vector3(1f, 2f, 4f) }), Is.Not.EqualTo(key));
+            Assert.That(RegionItems.Key("region", new RegionManifest.ItemReference { id = 5010101, position = new Vector3(1f, 2f, 3f) }), Is.Not.EqualTo(key));
+            Assert.That(RegionItems.Key("other", item), Is.Not.EqualTo(key));
+        }
+
+        [Test]
+        public void ThePlacedItemsRecordSurvivesASave()
+        {
+            string saved = RegionItems.WriteRecord(new[] { "b2", "a1" });
+            Assert.That(RegionItems.ReadRecord(saved), Is.EquivalentTo(new[] { "a1", "b2" }));
+            Assert.That(RegionItems.ReadRecord(RegionItems.WriteRecord(new string[0])), Is.Empty);
+            Assert.That(RegionItems.ReadRecord(null), Is.Empty);
+            Assert.That(RegionItems.ReadRecord("old map data from before the field was retired"), Is.Empty);
+        }
+
+        [TestCase("ockitem1234abcd-Xy_z", "1234abcd")]
+        [TestCase("Xy_z-abc", null)]
+        [TestCase("ockitem", null)]
+        [TestCase("", null)]
+        public void FindsTheKeyInAnItemsUid(string uid, string key)
+        {
+            Assert.That(RegionItems.KeyOfUid(uid), Is.EqualTo(key));
+        }
+
+        [Test]
+        public void ItemCatalogLinesStayOnOneLineWithFourParts()
+        {
+            string line = ItemCatalog.Line(5010100, "Item", "5010100_CookingPotKit", "Cooking | Pot\nKit");
+            Assert.That(line, Is.EqualTo("5010100 | Item | 5010100_CookingPotKit | Cooking / Pot Kit"));
+        }
+
+        [Test]
         public void ReturnsADefeatedPlayerWhereTheyCameFrom()
         {
             Assert.That(DeathReturn.Destination("Berg", "CierzoNewTerrain"), Is.EqualTo("Berg"));

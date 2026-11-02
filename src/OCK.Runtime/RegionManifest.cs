@@ -18,6 +18,7 @@ namespace OutwardConstructionKit.Runtime
     ///   prop | scene | hierarchy path | x,y,z | rotation, as x,y,z degrees or just y | optional check | optional even scale
     ///   doormodel | scene | hierarchy path | rotation as x,y,z degrees, with the door's front along +Z | even scale
     ///   shader | material name | shader name, for embedded materials, whose placeholder shaders may not survive
+    ///   item | the game's item ID | x,y,z | rotation, as x,y,z degrees or just y
     /// The check is "first drawn object's name:number of drawn objects", to catch a path finding the wrong object.
     /// Not JSON, because JsonUtility dropped the nested prop list when running from a plugin DLL.
     /// </summary>
@@ -58,6 +59,13 @@ namespace OutwardConstructionKit.Runtime
             public string waterType;
         }
 
+        public class ItemReference
+        {
+            public int id;
+            public Vector3 position;
+            public Vector3 rotation;
+        }
+
         public class ReturnDoor
         {
             public Vector3 position;
@@ -79,6 +87,7 @@ namespace OutwardConstructionKit.Runtime
         public List<EnemyReference> enemies = new List<EnemyReference>();
         public List<GroundLayer> groundLayers = new List<GroundLayer>();
         public List<WaterReference> water = new List<WaterReference>();
+        public List<ItemReference> items = new List<ItemReference>();
         public string doorScene;
         public string doorPosition;
         public float doorRotationY;
@@ -144,6 +153,7 @@ namespace OutwardConstructionKit.Runtime
                 Vector3 rotation;
                 float rotationY;
                 float scale = 1f;
+                int itemId;
                 if (parts[0] == "environment" && parts.Length == 2)
                     manifest.environmentDonor = parts[1];
                 else if (parts[0] == "region" && parts.Length == 3)
@@ -186,6 +196,11 @@ namespace OutwardConstructionKit.Runtime
                     && TryParseRotation(parts[4], out rotation)
                     && (parts.Length < 7 || (float.TryParse(parts[6], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out scale) && scale > 0f)))
                     manifest.props.Add(new PropReference { scene = parts[1], path = parts[2], position = position, rotation = rotation, check = parts.Length > 5 ? parts[5] : null, scale = scale });
+                else if (parts[0] == "item" && parts.Length == 4
+                    && int.TryParse(parts[1], System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out itemId) && itemId > 0
+                    && KitPlugin.TryParseVector(parts[2], out position)
+                    && TryParseRotation(parts[3], out rotation))
+                    manifest.items.Add(new ItemReference { id = itemId, position = position, rotation = rotation });
                 else if (parts[0].Length > 0 && !parts[0].StartsWith("#"))
                     KitPlugin.Log.LogError("Can't read manifest line: " + line);
             }

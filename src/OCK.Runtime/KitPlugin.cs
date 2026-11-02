@@ -103,9 +103,18 @@ namespace OutwardConstructionKit.Runtime
             {
                 Logger.LogError("Couldn't set up checking that co-op players have the same regions: " + e);
             }
+            try
+            {
+                RegionItems.Patch(harmony);
+            }
+            catch (System.Exception e)
+            {
+                Logger.LogError("Couldn't set up placing items in regions: " + e);
+            }
             if (AreaManager.Instance != null)
                 RegisterAll(AreaManager.Instance);
 
+            StartCoroutine(ItemCatalog.WriteWhenLoaded());
             SceneManager.sceneLoaded += OnSceneLoaded;
             StartCoroutine(BuildWhenLoaded());
             if (AutoTest.Begin(this))

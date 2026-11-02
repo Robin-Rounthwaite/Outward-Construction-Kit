@@ -48,6 +48,7 @@ namespace OutwardConstructionKit.Runtime
                 CheckBasics(region, propsPlaced, check);
                 CheckPlayerFooting(check);
                 CheckEnemies(region, roots, check);
+                RegionItems.AddChecks(region, check);
                 CheckGround(region, roots, check);
                 CheckWater(region, roots, check);
                 CheckReturnDoors(region, check);
