@@ -24,13 +24,14 @@ internal class PathsWindow : EditorWindow
     private string m_gameData;
     private string m_plugins;
     private string m_ripFolder;
+    private string m_ripper;
     private List<string> m_foundGameData;
     private List<string> m_foundPlugins;
 
     [MenuItem("Construction Kit/Paths")]
     public static void Open()
     {
-        GetWindow<PathsWindow>(true, "Construction Kit Paths").minSize = new Vector2(620f, 380f);
+        GetWindow<PathsWindow>(true, "Construction Kit Paths").minSize = new Vector2(620f, 460f);
     }
 
     private void OnEnable()
@@ -40,6 +41,7 @@ internal class PathsWindow : EditorWindow
         m_gameData = FirstOf(OckSettings.GameData, m_foundGameData);
         m_plugins = FirstOf(OckSettings.PluginsFolder, m_foundPlugins);
         m_ripFolder = OckSettings.RipFolder;
+        m_ripper = OckSettings.AssetRipperFolder;
     }
 
     private static string FirstOf(string saved, List<string> found)
@@ -63,6 +65,10 @@ internal class PathsWindow : EditorWindow
 
         m_ripFolder = PathRow("Rip folder", "An empty folder for what you rip from the game, on a drive with plenty of space and off OneDrive. A first rip takes about 15 GB.", m_ripFolder, null);
 
+        m_ripper = PathRow("AssetRipper folder (optional)", "Leave empty and the kit downloads the version it's tested with, once. Only fill this in to use a copy you already have; version 2.0.0 is the tested one.", m_ripper, null);
+        if (!string.IsNullOrEmpty(m_ripper) && (!Directory.Exists(m_ripper) || Directory.GetFiles(m_ripper, "AssetRipper*.exe", SearchOption.AllDirectories).Length == 0))
+            EditorGUILayout.HelpBox("There's no AssetRipper program in this folder.", MessageType.Warning);
+
         GUILayout.FlexibleSpace();
         using (new EditorGUI.DisabledScope(!PathDetector.IsGameData(m_gameData) || !PathDetector.IsPluginsFolder(m_plugins)))
         {
@@ -71,6 +77,7 @@ internal class PathsWindow : EditorWindow
                 OckSettings.GameData = m_gameData;
                 OckSettings.PluginsFolder = m_plugins;
                 OckSettings.RipFolder = m_ripFolder;
+                OckSettings.AssetRipperFolder = m_ripper;
                 OckSettings.PathsConfirmed = true;
                 foreach (PropBrowser browser in Resources.FindObjectsOfTypeAll<PropBrowser>())
                     browser.OnPathsChanged();

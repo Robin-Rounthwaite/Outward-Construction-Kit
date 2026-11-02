@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -14,9 +15,12 @@ internal partial class PropBrowser : EditorWindow
     private const string DRAG_KEY = "OckProp";
     private const string ALL_LOCATIONS = "All locations";
     private const string ALL_CATEGORIES = "All";
+    private const string CACHE_FOLDER = "Library/OCK/RipCache";
+    private const double RIP_CHECK_SECONDS = 5.0;
 
     private static readonly string[] s_tabNames = Enum.GetNames(typeof(Tab));
     private static readonly Dictionary<string, RipScene> s_scenes = new Dictionary<string, RipScene>();
+    private static readonly Dictionary<string, string> s_stamps = new Dictionary<string, string>();
     private static readonly Dictionary<string, List<string>> s_groundTextures = new Dictionary<string, List<string>>();
 
     [SerializeField] private Tab m_tab = Tab.Props;
@@ -34,6 +38,9 @@ internal partial class PropBrowser : EditorWindow
     private List<RipScene.Prop> m_visible = new List<RipScene.Prop>();
     private List<RipScene> m_visibleWater = new List<RipScene>();
     private List<KeyValuePair<string, string>> m_visibleTextures = new List<KeyValuePair<string, string>>();
+    private readonly Dictionary<string, List<string>> m_textureLocations = new Dictionary<string, List<string>>();
+    private string m_knownRoots = "";
+    private double m_nextRipCheck;
     private string m_status = "";
     private bool m_showPaths;
 
@@ -48,6 +55,7 @@ internal partial class PropBrowser : EditorWindow
     private void OnEnable()
     {
         SceneView.duringSceneGui += OnSceneGui;
+        EditorApplication.update += CheckForFinishedRips;
         // A reload shouldn't mean waiting for every rip to be read again.
         if (m_location == ALL_LOCATIONS)
             m_location = null;
@@ -57,51 +65,120 @@ internal partial class PropBrowser : EditorWindow
     private void OnDisable()
     {
         SceneView.duringSceneGui -= OnSceneGui;
+        EditorApplication.update -= CheckForFinishedRips;
     }
 
     private void Refresh()
     {
-        // Waits until the editor is idle, because this can run during a reload, before new shaders have imported.
-        EditorApplication.delayCall += PropImporter.RefreshLibraryMaterials;
-        m_ripped = OckSettings.RippedScenes();
-        m_sceneNames = m_ripped.Keys.OrderBy(LocationNames.For).ToArray();
-        m_sceneLabels = m_sceneNames.Select(LocationNames.For).ToArray();
-        m_locations = new[] { ALL_LOCATIONS }.Concat(m_sceneNames).ToArray();
-        m_locationLabels = new[] { ALL_LOCATIONS }.Concat(m_sceneLabels).ToArray();
-        if (m_location != ALL_LOCATIONS && !m_sceneNames.Contains(m_location))
-            m_location = m_sceneNames.FirstOrDefault();
-        LoadLocation();
+        using (OckTiming.Measure("Prop Browser refresh"))
+        {
+            // Waits until the editor is idle, because this can run during a reload, before new shaders have imported.
+            EditorApplication.delayCall += PropImporter.RefreshLibraryMaterials;
+            string[] before = m_sceneNames;
+            m_ripped = OckSettings.RippedScenes();
+            m_knownRoots = RootsNow();
+            ForgetWhatChanged();
+            m_sceneNames = m_ripped.Keys.OrderBy(LocationNames.For).ToArray();
+            m_sceneLabels = m_sceneNames.Select(LocationNames.For).ToArray();
+            m_locations = new[] { ALL_LOCATIONS }.Concat(m_sceneNames).ToArray();
+            m_locationLabels = new[] { ALL_LOCATIONS }.Concat(m_sceneLabels).ToArray();
+            if (m_location != ALL_LOCATIONS && !m_sceneNames.Contains(m_location))
+                m_location = m_sceneNames.FirstOrDefault();
+            LoadLocation();
+            if (before.Length > 0)
+                SayWhatChanged(before);
+        }
     }
 
-    // Each rip takes seconds to read, so they're only read when wanted, and reading them all can be stopped partway.
+    // What's been read stays, apart from rips that have gone or been replaced.
+    private void ForgetWhatChanged()
+    {
+        foreach (string name in s_stamps.Keys.ToList())
+        {
+            string file;
+            if (m_ripped.TryGetValue(name, out file) && File.Exists(file) && RipScene.StampOf(file) == s_stamps[name])
+                continue;
+            s_stamps.Remove(name);
+            s_scenes.Remove(name);
+            s_groundTextures.Remove(name);
+        }
+    }
+
+    private void SayWhatChanged(string[] before)
+    {
+        string[] added = m_sceneNames.Except(before).Select(LocationNames.For).ToArray();
+        string[] removed = before.Except(m_sceneNames).Select(LocationNames.For).ToArray();
+        if (added.Length > 0)
+            m_status = "New in the list: " + string.Join(", ", added) + ". ";
+        if (removed.Length > 0)
+            m_status = (added.Length > 0 ? m_status : "") + "No longer in the rip folder: " + string.Join(", ", removed) + ".";
+    }
+
+    private static string RootsNow()
+    {
+        return string.Join("|", OckSettings.RipRoots().ToArray());
+    }
+
+    // A rip runs in a window of its own, and only appears in the folder once it's finished.
+    private void CheckForFinishedRips()
+    {
+        if (EditorApplication.timeSinceStartup < m_nextRipCheck || EditorApplication.isCompiling || EditorApplication.isUpdating)
+            return;
+        m_nextRipCheck = EditorApplication.timeSinceStartup + RIP_CHECK_SECONDS;
+        if (RootsNow() == m_knownRoots)
+            return;
+        Refresh();
+        Repaint();
+    }
+
+    /// <summary>Forgets everything read from the rips, for when a rip has changed in a way its files' dates don't show.</summary>
+    [MenuItem("Construction Kit/Read All Rips Again")]
+    public static void ReadAllRipsAgain()
+    {
+        s_scenes.Clear();
+        s_stamps.Clear();
+        s_groundTextures.Clear();
+        PropImporter.ForgetRipFiles();
+        if (Directory.Exists(CACHE_FOLDER))
+            Directory.Delete(CACHE_FOLDER, true);
+        foreach (PropBrowser browser in Resources.FindObjectsOfTypeAll<PropBrowser>())
+            browser.Refresh();
+    }
+
+    // Each rip takes seconds to read the first time, so they're only read when wanted, and reading them all can be stopped partway.
     private void LoadLocation()
     {
-        m_loaded.Clear();
-        string[] wanted = m_location == ALL_LOCATIONS ? m_sceneNames : m_sceneNames.Where(n => n == m_location).ToArray();
-        try
+        using (OckTiming.Measure("Prop Browser reading " + (m_location ?? "nothing")))
         {
-            for (int i = 0; i < wanted.Length; i++)
+            m_loaded.Clear();
+            string[] wanted = m_location == ALL_LOCATIONS ? m_sceneNames : m_sceneNames.Where(n => n == m_location).ToArray();
+            try
             {
-                string name = wanted[i];
-                RipScene scene;
-                if (!s_scenes.TryGetValue(name, out scene))
+                for (int i = 0; i < wanted.Length; i++)
                 {
-                    if (EditorUtility.DisplayCancelableProgressBar("Construction Kit", "Reading " + LocationNames.For(name) + "...", (i + 0.5f) / wanted.Length))
+                    string name = wanted[i];
+                    RipScene scene;
+                    if (!s_scenes.TryGetValue(name, out scene))
                     {
-                        m_status = $"Stopped reading rips, so this shows {m_loaded.Count} of {wanted.Length} locations.";
-                        break;
+                        if (EditorUtility.DisplayCancelableProgressBar("Construction Kit", "Reading " + LocationNames.For(name) + "...", (i + 0.5f) / wanted.Length))
+                        {
+                            m_status = $"Stopped reading rips, so this shows {m_loaded.Count} of {wanted.Length} locations.";
+                            break;
+                        }
+                        using (OckTiming.Measure("Reading the rip of " + name))
+                            scene = RipScene.LoadCached(name, m_ripped[name], CACHE_FOLDER);
+                        s_scenes[name] = scene;
+                        s_stamps[name] = RipScene.StampOf(m_ripped[name]);
                     }
-                    scene = RipScene.Load(name, m_ripped[name]);
-                    s_scenes[name] = scene;
+                    m_loaded.Add(scene);
                 }
-                m_loaded.Add(scene);
             }
+            finally
+            {
+                EditorUtility.ClearProgressBar();
+            }
+            UpdateCategories();
         }
-        finally
-        {
-            EditorUtility.ClearProgressBar();
-        }
-        UpdateCategories();
     }
 
     private void UpdateCategories()
@@ -144,23 +221,37 @@ internal partial class PropBrowser : EditorWindow
     {
         return scenes.SelectMany(s => s.Props)
             .Where(p => InTab(p, tab) && (category == null || p.Category == category) && Matches(p.BaseName, search))
-            .GroupBy(p => p.BaseName).Select(g => g.First()).OrderBy(p => p.BaseName).ToList();
+            .GroupBy(p => p.BaseName).Select(g =>
+            {
+                RipScene.Prop first = g.First();
+                first.Locations = g.Select(p => p.Scene.SceneName).Distinct().ToList();
+                return first;
+            }).OrderBy(p => p.BaseName).ToList();
     }
 
-    // Texture name to the location it's taken from, listed once each like the props.
+    // Texture name to the location it's taken from, listed once each like the props, keeping everywhere it's found too.
     private List<KeyValuePair<string, string>> TexturesFor(IEnumerable<RipScene> scenes, string search)
     {
         var found = new Dictionary<string, string>();
+        m_textureLocations.Clear();
         foreach (RipScene scene in scenes)
         {
             List<string> textures;
             if (!s_groundTextures.TryGetValue(scene.SceneName, out textures))
             {
-                string root = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(m_ripped[scene.SceneName])));
+                string root = Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(m_ripped[scene.SceneName])));
                 s_groundTextures[scene.SceneName] = textures = GroundTools.GroundTexturesIn(root);
             }
-            foreach (string texture in textures.Where(t => Matches(t, search) && !found.ContainsKey(t)))
-                found[texture] = scene.SceneName;
+            foreach (string texture in textures.Where(t => Matches(t, search)))
+            {
+                List<string> locations;
+                if (!m_textureLocations.TryGetValue(texture, out locations))
+                {
+                    m_textureLocations[texture] = locations = new List<string>();
+                    found[texture] = scene.SceneName;
+                }
+                locations.Add(scene.SceneName);
+            }
         }
         return found.OrderBy(t => t.Key).ToList();
     }
@@ -170,11 +261,9 @@ internal partial class PropBrowser : EditorWindow
         return search.Length == 0 || name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
-    /// <summary>The paths window calls this when they change.</summary>
+    /// <summary>The paths window and the Refresh button call this. Only what's different gets read.</summary>
     public void OnPathsChanged()
     {
-        s_scenes.Clear();
-        s_groundTextures.Clear();
         Refresh();
     }
 
@@ -355,7 +444,7 @@ internal partial class PropBrowser : EditorWindow
                 GUILayout.Label(texture.Key);
                 GUILayout.FlexibleSpace();
                 if (m_location == ALL_LOCATIONS)
-                    GUILayout.Label(LocationNames.For(texture.Value), EditorStyles.miniLabel, GUILayout.Width(150));
+                    GUILayout.Label(new GUIContent(LocationNames.RegionsOf(m_textureLocations[texture.Key]), string.Join(", ", m_textureLocations[texture.Key].Select(LocationNames.For).ToArray())), EditorStyles.miniLabel, GUILayout.Width(150));
                 using (new EditorGUI.DisabledScope(ground == null))
                 {
                     if (GUILayout.Button(new GUIContent("Add", "Adds this vanilla texture to the Terrain's Paint Texture layers. It ships as a reference, so it adds nothing to your mod."), GUILayout.Width(44)))
@@ -394,7 +483,7 @@ internal partial class PropBrowser : EditorWindow
         if (!prop.IsEnemy && prop.Node.SelfAndDescendants().Any(n => n.IsInteractive))
             GUILayout.Label(new GUIContent("decoration", "Players can use this in its own scene, but in a region it's only for show."), EditorStyles.miniLabel, GUILayout.Width(60));
         if (m_location == ALL_LOCATIONS)
-            GUILayout.Label(LocationNames.For(prop.Scene.SceneName), EditorStyles.miniLabel, GUILayout.Width(150));
+            GUILayout.Label(new GUIContent(LocationNames.RegionsOf(prop.Locations), string.Join(", ", (prop.Locations ?? new List<string>()).Select(LocationNames.For).ToArray())), EditorStyles.miniLabel, GUILayout.Width(150));
         GUILayout.Label(prop.Category, EditorStyles.miniLabel, GUILayout.Width(80));
         if (GUILayout.Button("Add", GUILayout.Width(44)))
             PlaceAtViewCentre(prop);
@@ -464,7 +553,9 @@ internal partial class PropBrowser : EditorWindow
         try
         {
             EditorUtility.DisplayProgressBar("Construction Kit", "Importing " + prop.BaseName + "...", 0.5f);
-            GameObject prefab = PropImporter.Import(prop.Scene, prop);
+            GameObject prefab;
+            using (OckTiming.Measure("Importing " + prop.BaseName))
+                prefab = PropImporter.Import(prop.Scene, prop);
             var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
             instance.transform.position = point;
             Undo.RegisterCreatedObjectUndo(instance, "Add " + prop.BaseName);

@@ -160,20 +160,29 @@ internal static partial class PropImporter
         if (Shader.Find(STAND_IN_SHADER) == null)
             return; // not imported yet, so this runs again the next time the window opens
 
-        foreach (string assetGuid in AssetDatabase.FindAssets("t:Material", new[] { LIBRARY }))
+        using (OckTiming.Measure("Checking the library's materials"))
         {
-            string path = AssetDatabase.GUIDToAssetPath(assetGuid);
-            if (path.Contains("/_Embedded/"))
-                continue;
-            string ripGuid = AssetImporter.GetAtPath(path).userData;
-            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
-            string file = string.IsNullOrEmpty(ripGuid) ? null : RipFile(ripGuid);
-            if (material == null || file == null || !IsOutOfDate(material))
-                continue;
-            Configure(material, file, Path.GetDirectoryName(Path.GetDirectoryName(path)).Replace('\\', '/'));
-            EditorUtility.SetDirty(material);
+            bool changed = false;
+            foreach (string assetGuid in AssetDatabase.FindAssets("t:Material", new[] { LIBRARY }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(assetGuid);
+                if (path.Contains("/_Embedded/"))
+                    continue;
+                var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+                // Looked at first, because finding a material's file in the rips is what takes the time.
+                if (material == null || !IsOutOfDate(material))
+                    continue;
+                string ripGuid = AssetImporter.GetAtPath(path).userData;
+                string file = string.IsNullOrEmpty(ripGuid) ? null : RipFile(ripGuid);
+                if (file == null)
+                    continue;
+                Configure(material, file, Path.GetDirectoryName(Path.GetDirectoryName(path)).Replace('\\', '/'));
+                EditorUtility.SetDirty(material);
+                changed = true;
+            }
+            if (changed)
+                AssetDatabase.SaveAssets();
         }
-        AssetDatabase.SaveAssets();
     }
 
     private static bool IsOutOfDate(Material material)

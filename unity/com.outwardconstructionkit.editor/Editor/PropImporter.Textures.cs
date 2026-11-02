@@ -34,6 +34,8 @@ internal static partial class PropImporter
     public static void ApplyTextureModeToLibrary()
     {
         string[] textures = AssetDatabase.FindAssets("t:Texture2D", new[] { LIBRARY });
+        // Imported together at the end, because each one on its own also costs a refresh of the whole project.
+        AssetDatabase.StartAssetEditing();
         try
         {
             for (int i = 0; i < textures.Length; i++)
@@ -45,6 +47,7 @@ internal static partial class PropImporter
         }
         finally
         {
+            AssetDatabase.StopAssetEditing();
             EditorUtility.ClearProgressBar();
         }
     }
@@ -70,7 +73,7 @@ internal static partial class PropImporter
             return null;
 
         string existing = AssetDatabase.GUIDToAssetPath(guid);
-        string path = !string.IsNullOrEmpty(existing) && File.Exists(existing) ? existing : CopyTextureWithMode(file, folder + "/Textures");
+        string path = !string.IsNullOrEmpty(existing) && File.Exists(existing) ? existing : SameTextureInLibrary(file) ?? CopyTextureWithMode(file, folder + "/Textures");
         if (isNormalMap)
         {
             var importer = AssetImporter.GetAtPath(path) as TextureImporter;
@@ -81,6 +84,16 @@ internal static partial class PropImporter
             }
         }
         return AssetDatabase.LoadAssetAtPath<Texture>(path);
+    }
+
+    // Each rip gives the same texture a different ID, but the same name and size, so one copy can serve them all.
+    private static string SameTextureInLibrary(string file)
+    {
+        string name = Path.GetFileName(file);
+        long length = new FileInfo(file).Length;
+        return AssetDatabase.FindAssets(Path.GetFileNameWithoutExtension(file) + " t:Texture2D", new[] { LIBRARY })
+            .Select(AssetDatabase.GUIDToAssetPath)
+            .FirstOrDefault(p => Path.GetFileName(p) == name && !p.Contains("/_Embedded/") && File.Exists(p) && new FileInfo(p).Length == length);
     }
 
     // Compressing textures is most of an import's cost, so fast mode settles this in the .meta before the first import.

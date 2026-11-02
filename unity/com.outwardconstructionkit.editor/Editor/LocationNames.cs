@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 /// <summary>The names players know a scene by, since many of the game's own scene names aren't that.</summary>
@@ -53,5 +54,24 @@ internal static class LocationNames
             return name + (group.Groups[2].Value == "Small" ? " small dungeons" : " boss arenas");
 
         return scene;
+    }
+
+    /// <summary>A scene's name with dungeons counted as part of their region, so Chersonese_Dungeon6 is Chersonese.</summary>
+    public static string RegionOf(string scene)
+    {
+        string region;
+        Match dungeon = s_dungeon.Match(scene);
+        if (dungeon.Success && s_dungeonRegions.TryGetValue(dungeon.Groups[1].Value, out region))
+            return region;
+        Match group = s_group.Match(scene);
+        if (group.Success && s_dungeonRegions.TryGetValue(group.Groups[1].Value, out region))
+            return region;
+        return For(scene);
+    }
+
+    /// <summary>Everywhere something is found, as a list for people, with each region named once.</summary>
+    public static string RegionsOf(IEnumerable<string> scenes)
+    {
+        return scenes == null ? "" : string.Join(", ", scenes.Select(RegionOf).Distinct().OrderBy(r => r).ToArray());
     }
 }

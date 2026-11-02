@@ -71,8 +71,13 @@ $output = Join-Path $RipFolder $Scene
 if (Test-Path $output) { throw "$output already exists. Delete it first to rip this scene again." }
 
 $ripperHome = Join-Path $RipFolder '_AssetRipper'
-if (-not $ToolFolder) { $ToolFolder = Join-Path $ripperHome $RIPPER_VERSION }
+$ownCopy = -not $ToolFolder
+if ($ownCopy) { $ToolFolder = Join-Path $ripperHome $RIPPER_VERSION }
 $exe = Get-ChildItem $ToolFolder -Recurse -Filter 'AssetRipper*.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
+if (-not $exe -and -not $ownCopy) { throw "There's no AssetRipper program in $ToolFolder. Check the folder in Construction Kit > Paths, or empty it to use the kit's own." }
+if ($exe -and -not $ownCopy -and $exe.VersionInfo.ProductVersion -notlike "$RIPPER_VERSION*") {
+    Write-Host "This AssetRipper is version $($exe.VersionInfo.ProductVersion), and the kit is tested with $RIPPER_VERSION, so its rips may not read correctly."
+}
 if (-not $exe) {
     Install-Ripper $ToolFolder
     $exe = Get-ChildItem $ToolFolder -Recurse -Filter 'AssetRipper*.exe' | Select-Object -First 1
@@ -162,5 +167,12 @@ Start-Sleep 2 # for it to let go of its files
 Move-Item $work $output
 
 $size = (Get-ChildItem $output -Recurse -File | Measure-Object Length -Sum).Sum / 1GB
-Write-Host ("Done: $output, {0:0.0} GB, in {1:0} minutes. Click Refresh in the Prop Browser to see it." -f $size, $timer.Elapsed.TotalMinutes)
+try {
+    & (Join-Path $PSScriptRoot 'share-rip-files.ps1') -RipFolder $RipFolder -Scene $Scene
+}
+catch {
+    # The rip itself is fine, it just takes more space.
+    Write-Host "Couldn't share files with your other rips: $_"
+}
+Write-Host ("Done: $output, {0:0.0} GB before sharing, in {1:0} minutes. It appears in the Prop Browser by itself." -f $size, $timer.Elapsed.TotalMinutes)
 if (-not $NoPause) { Read-Host 'Press Enter to close' | Out-Null }

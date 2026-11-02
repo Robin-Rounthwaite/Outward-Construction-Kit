@@ -27,6 +27,13 @@ internal static class OckSettings
         set { EditorPrefs.SetString("OCK.PluginsFolder", value); }
     }
 
+    /// <summary>An AssetRipper the person already has, if they'd rather use that. Empty means the kit's own.</summary>
+    public static string AssetRipperFolder
+    {
+        get { return EditorPrefs.GetString("OCK.AssetRipperFolder", ""); }
+        set { EditorPrefs.SetString("OCK.AssetRipperFolder", value); }
+    }
+
     /// <summary>Each AssetRipper export under the rip folder, or the folder itself if it's one export.</summary>
     public static IEnumerable<string> RipRoots()
     {

@@ -29,6 +29,7 @@ internal static class OckSelfTest
     private const string SHELL_HORROR = "Enemy ShellHorror";
     private const string HOUND = "Enemy Hound";
     private const int MAX_GROUND_BUNDLE_KB = 10 * 1024;
+    private const string SETTINGS_DURING_RUN = "OCK.SelfTestOriginalSettings";
 
     private static StringBuilder s_report;
     private static int s_passed;
@@ -46,8 +47,31 @@ internal static class OckSelfTest
 
     static OckSelfTest()
     {
+        RestoreAfterAStoppedRun();
         if (Array.IndexOf(Environment.GetCommandLineArgs(), "-ockSelfTest") >= 0)
             EditorApplication.update += RunWhenIdle;
+    }
+
+    // A run changes the person's settings as it goes, and one that's stopped partway can't put them back itself.
+    private static void RestoreAfterAStoppedRun()
+    {
+        if (!EditorPrefs.HasKey(SETTINGS_DURING_RUN))
+            return;
+        string[] original = EditorPrefs.GetString(SETTINGS_DURING_RUN).Split('\n');
+        EditorPrefs.DeleteKey(SETTINGS_DURING_RUN);
+        if (original.Length != 4)
+            return;
+        bool modeChanged = OckSettings.FastImport != (original[0] == "1");
+        OckSettings.FastImport = original[0] == "1";
+        OckSettings.PathsConfirmed = original[1] == "1";
+        OckSettings.RipFolder = original[2];
+        OckSettings.GameData = original[3];
+        if (modeChanged)
+            EditorApplication.delayCall += () =>
+            {
+                PropImporter.ApplyTextureModeToLibrary();
+                PropImporter.RefreshLibraryMaterials();
+            };
     }
 
     private static void RunWhenIdle()
@@ -62,6 +86,7 @@ internal static class OckSelfTest
         s_originalRips = OckSettings.RipFolder;
         s_originalGameData = OckSettings.GameData;
         s_originalConfirmed = OckSettings.PathsConfirmed;
+        EditorPrefs.SetString(SETTINGS_DURING_RUN, string.Join("\n", new[] { s_originalMode ? "1" : "0", s_originalConfirmed ? "1" : "0", s_originalRips, s_originalGameData }));
         try
         {
             OckSettings.RipFolder = Environment.GetEnvironmentVariable("OCK_TEST_RIP_FOLDER");
@@ -88,6 +113,7 @@ internal static class OckSelfTest
         OckSettings.RipFolder = s_originalRips;
         OckSettings.GameData = s_originalGameData;
         OckSettings.PathsConfirmed = s_originalConfirmed;
+        EditorPrefs.DeleteKey(SETTINGS_DURING_RUN);
         s_report.AppendLine($"{s_passed} passed, {s_failed} failed.");
         File.WriteAllText(Path.Combine(s_output, "selftest.txt"), s_report.ToString());
         EditorApplication.Exit(s_failed == 0 ? 0 : 1);
@@ -208,6 +234,17 @@ internal static class OckSelfTest
         CheckBrowserTabs(first, second);
     }
 
+    private static void CheckRipCache(RipScene read)
+    {
+        string file = OckSettings.RippedScenes()[read.SceneName];
+        string folder = Path.Combine("Temp", "OckRipCacheTest");
+        RipScene.LoadCached(read.SceneName, file, folder);
+        RipScene kept = RipScene.LoadCached(read.SceneName, file, folder);
+        Directory.Delete(folder, true);
+        Func<RipScene, string> describe = s => string.Join("\n", s.Props.Select(p => p.BaseName + "|" + p.Category + "|" + p.InstanceCount + "|" + p.Node.ScenePath + "|" + RipScene.CheckFor(p.Node) + "|" + p.Node.WorldMatrix).ToArray());
+        Check("a rip read back from its cache is the same", describe(read) == describe(kept) && read.HasWater == kept.HasWater && read.HasWaterSource == kept.HasWaterSource && kept.Props.All(p => p.Scene == kept));
+    }
+
     private static void CheckBrowserTabs(RipScene first, RipScene second)
     {
         var both = new[] { first, second };
@@ -230,9 +267,15 @@ internal static class OckSelfTest
         List<string> order = RipWindow.ScenesToRip(new[] { "MainMenu_Empty", "Abrassar_Dungeon1", "Monsoon", "Levant", "Berg", "LowMemory_TransitionScene" }, new[] { "Monsoon" });
         Check("Rip All does regions before dungeons, and only what's missing", order.SequenceEqual(new[] { "Levant", "Berg", "Abrassar_Dungeon1" }), string.Join(", ", order.ToArray()));
         Check("the Rip All script ships with the package", File.Exists(Path.GetFullPath(RipWindow.RIP_ALL_SCRIPT)), Path.GetFullPath(RipWindow.RIP_ALL_SCRIPT));
+        Check("the script that shares files between rips ships with the package", File.Exists(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(RipWindow.SCRIPT)), "share-rip-files.ps1")));
 
         Check("scenes get the names players know", LocationNames.For("HallowedMarshNewTerrain") == "Hallowed Marsh" && LocationNames.For("AntiqueField_Dungeon3") == "Antique Plateau dungeon 3" && LocationNames.For("Chersonese_Dungeon4_BlueChamber") == "Chersonese dungeon 4, Blue Chamber" && LocationNames.For("EmercarDungeonsBosses") == "Enmerkar Forest boss arenas" && LocationNames.For("SomethingNew") == "SomethingNew");
         Check("every scene has a name that isn't the game's raw one, or is already readable", OckSettings.BuildSceneNames().All(s => LocationNames.For(s) != s ? true : !s.Contains("_") && !s.Contains("NewTerrain")), string.Join(", ", OckSettings.BuildSceneNames().Where(s => LocationNames.For(s) == s).ToArray()));
+        Check("dungeons count under their region", LocationNames.RegionOf("Chersonese_Dungeon6") == "Chersonese" && LocationNames.RegionOf("Hallowed_Dungeon4_Interior") == "Hallowed Marsh" && LocationNames.RegionOf("EmercarDungeonsBosses") == "Enmerkar Forest" && LocationNames.RegionOf("Monsoon") == "Monsoon");
+        Check("a list of locations names each region once", LocationNames.RegionsOf(new[] { "Chersonese_Dungeon6", "ChersoneseNewTerrain", "Monsoon" }) == "Chersonese, Monsoon");
+        Check("things found in two locations say so", props.Any(p => p.Locations.Count == 2) && props.All(p => p.Locations.Count >= 1));
+        Check("the rip cache keeps every field", RipScene.CacheCoversEveryField);
+        CheckRipCache(first);
         Check("Test Region asks for the region, and the character if named", GameLauncher.TestRequest("r", "Jim").SequenceEqual(new[] { "character Jim", "visit r" }) && GameLauncher.TestRequest("r", "").SequenceEqual(new[] { "visit r" }));
         Check("the game is started pointing at the profile's BepInEx", GameLauncher.SteamArguments(@"C:\p\BepInEx").Contains(@"--doorstop-target ""C:\p\BepInEx\core\BepInEx.Preloader.dll"""));
 

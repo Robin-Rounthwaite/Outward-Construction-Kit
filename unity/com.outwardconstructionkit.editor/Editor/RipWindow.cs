@@ -16,9 +16,10 @@ internal class RipWindow : EditorWindow
     public const string RIP_ALL_SCRIPT = "Packages/com.outwardconstructionkit.editor/Tools~/rip-all-scenes.ps1";
     private const int LOW_DISK_GB = 20;
 
-    // From the four scenes ripped so far, so only a rough guide to the rest.
-    private const int TYPICAL_SCENE_GB_LOW = 3;
-    private const int TYPICAL_SCENE_GB_HIGH = 15;
+    // Measured: every rip exports much the same shared assets, and later rips link to those, so only a first rip is big.
+    private const int FIRST_RIP_GB = 15;
+    private const int TYPICAL_LATER_SCENE_GB_LOW = 1;
+    private const int TYPICAL_LATER_SCENE_GB_HIGH = 2;
     private const int TYPICAL_SCENE_MINUTES_LOW = 3;
     private const int TYPICAL_SCENE_MINUTES_HIGH = 18;
 
@@ -48,7 +49,7 @@ internal class RipWindow : EditorWindow
 
     private void Refresh()
     {
-        m_scenes = OckSettings.BuildSceneNames();
+        m_scenes = OckSettings.BuildSceneNames().OrderBy(s => Array.IndexOf(s_nothingToRip, s) >= 0).ToList();
         m_ripped = new HashSet<string>(OckSettings.RippedScenes().Keys);
     }
 
@@ -62,24 +63,25 @@ internal class RipWindow : EditorWindow
             return;
         }
 
-        EditorGUILayout.HelpBox("Ripping copies a scene's models out of your own game files, for the Prop Browser to show. A scene usually takes 10 to 30 minutes and several gigabytes, up to about 15. It runs in its own window, so you can keep working.", MessageType.Info);
+        EditorGUILayout.HelpBox("Ripping copies a scene's models out of your own game files, for the Prop Browser to show. A scene usually takes 10 to 30 minutes. A first rip takes up to about 15 gigabytes, and later ones much less, because they share what's the same. It runs in its own window, so you can keep working, and appears in the Prop Browser when it's done.", MessageType.Info);
         if (GUILayout.Button("Rip All Scenes"))
             RipAll();
         m_search = EditorGUILayout.TextField("Search", m_search);
         m_scroll = EditorGUILayout.BeginScrollView(m_scroll);
-        for (int i = 0; i < m_scenes.Count; i++)
+        foreach (string scene in m_scenes)
         {
-            string scene = m_scenes[i];
             string name = LocationNames.For(scene);
             if (m_search.Length > 0 && scene.IndexOf(m_search, StringComparison.OrdinalIgnoreCase) < 0 && name.IndexOf(m_search, StringComparison.OrdinalIgnoreCase) < 0)
                 continue;
             using (new EditorGUILayout.HorizontalScope())
             {
                 EditorGUILayout.LabelField(new GUIContent(name, "The game calls this " + scene + "."));
+                if (Array.IndexOf(s_nothingToRip, scene) >= 0)
+                    EditorGUILayout.LabelField(new GUIContent("little to offer", "The game only passes through this scene, so it has almost nothing of its own."), EditorStyles.miniLabel, GUILayout.Width(70f));
                 if (m_ripped.Contains(scene))
                     EditorGUILayout.LabelField("ripped", EditorStyles.miniLabel, GUILayout.Width(60f));
                 else if (GUILayout.Button("Rip", GUILayout.Width(60f)))
-                    Rip(scene, i);
+                    RipByName(scene);
             }
         }
         EditorGUILayout.EndScrollView();
@@ -100,8 +102,8 @@ internal class RipWindow : EditorWindow
             PathsWindow.Open();
             return;
         }
-        string message = $"Rip {LocationNames.For(scene)}? It usually takes 10 to 30 minutes and several gigabytes, in {OckSettings.RipFolder}.";
-        if (!Directory.Exists(Path.Combine(OckSettings.RipFolder, "_AssetRipper")))
+        string message = $"Rip {LocationNames.For(scene)}? It usually takes 10 to 30 minutes, in {OckSettings.RipFolder}. A first rip takes up to about {FIRST_RIP_GB} GB, and later ones much less, because they share what's the same.";
+        if (WillDownloadRipper())
             message += "\n\nThis first time, it also downloads AssetRipper 2.0.0 from GitHub, about 42 MB, and keeps it in that folder.";
         long free = FreeGigabytes(OckSettings.RipFolder);
         if (free >= 0 && free < LOW_DISK_GB)
@@ -109,8 +111,24 @@ internal class RipWindow : EditorWindow
         if (!EditorUtility.DisplayDialog("Rip a Scene", message, "Rip", "Cancel"))
             return;
 
-        string arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{Path.GetFullPath(SCRIPT)}\" -GameData \"{OckSettings.GameData}\" -Level {level} -Scene \"{scene}\" -RipFolder \"{OckSettings.RipFolder}\"";
+        string arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{Path.GetFullPath(SCRIPT)}\" -GameData \"{OckSettings.GameData}\" -Level {level} -Scene \"{scene}\" -RipFolder \"{OckSettings.RipFolder}\"" + RipperArgument();
         Process.Start(new ProcessStartInfo("powershell.exe", arguments) { UseShellExecute = true });
+    }
+
+    private static int EstimateGb(int scenes, int perLaterScene)
+    {
+        bool anyRipped = OckSettings.RippedScenes().Count > 0;
+        return anyRipped ? scenes * perLaterScene : FIRST_RIP_GB + (scenes - 1) * perLaterScene;
+    }
+
+    private static bool WillDownloadRipper()
+    {
+        return string.IsNullOrEmpty(OckSettings.AssetRipperFolder) && !Directory.Exists(Path.Combine(OckSettings.RipFolder, "_AssetRipper"));
+    }
+
+    private static string RipperArgument()
+    {
+        return string.IsNullOrEmpty(OckSettings.AssetRipperFolder) ? "" : $" -ToolFolder \"{OckSettings.AssetRipperFolder}\"";
     }
 
     /// <summary>Asks first, because it's a very large job, then rips every scene not yet ripped, in a window of its own.</summary>
@@ -130,18 +148,18 @@ internal class RipWindow : EditorWindow
         }
 
         string message = $"Rip the {remaining.Count} scenes not yet ripped, into {OckSettings.RipFolder}?\n\n"
-            + $"Going by the four scenes measured so far, that's somewhere between {remaining.Count * TYPICAL_SCENE_GB_LOW} and {remaining.Count * TYPICAL_SCENE_GB_HIGH} GB, and {remaining.Count * TYPICAL_SCENE_MINUTES_LOW / 60} and {remaining.Count * TYPICAL_SCENE_MINUTES_HIGH / 60} hours. Most modders only need a few scenes.\n\n"
+            + $"Rips share what's the same between them, so going by the scenes measured so far, that's roughly {EstimateGb(remaining.Count, TYPICAL_LATER_SCENE_GB_LOW)} to {EstimateGb(remaining.Count, TYPICAL_LATER_SCENE_GB_HIGH)} GB, and {remaining.Count * TYPICAL_SCENE_MINUTES_LOW / 60} to {remaining.Count * TYPICAL_SCENE_MINUTES_HIGH / 60} hours. Most modders only need a few scenes.\n\n"
             + "Regions and towns go first, then dungeons. It runs in its own window, stops before the drive fills up, and carries on from where it stopped if you run it again.";
         long free = FreeGigabytes(OckSettings.RipFolder);
         if (free >= 0)
             message += $"\n\nThat drive has {free} GB free.";
-        if (!Directory.Exists(Path.Combine(OckSettings.RipFolder, "_AssetRipper")))
+        if (WillDownloadRipper())
             message += "\n\nThis first time, it also downloads AssetRipper 2.0.0 from GitHub, about 42 MB, and keeps it in that folder.";
         if (!EditorUtility.DisplayDialog("Rip All Scenes", message, "Rip All", "Cancel"))
             return;
 
         string scenes = string.Join(",", remaining.Select(s => names.IndexOf(s) + "=" + s).ToArray());
-        string arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{Path.GetFullPath(RIP_ALL_SCRIPT)}\" -GameData \"{OckSettings.GameData}\" -Scenes \"{scenes}\" -RipFolder \"{OckSettings.RipFolder}\"";
+        string arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{Path.GetFullPath(RIP_ALL_SCRIPT)}\" -GameData \"{OckSettings.GameData}\" -Scenes \"{scenes}\" -RipFolder \"{OckSettings.RipFolder}\"" + RipperArgument();
         Process.Start(new ProcessStartInfo("powershell.exe", arguments) { UseShellExecute = true });
     }
 
