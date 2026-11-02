@@ -23,7 +23,7 @@ The version must match the game's exactly, because bundles built with any other 
 1. Download the starter project and unzip it to a folder of its own with a short path, such as `D:\OutwardRegions`. In testing, a copy under a very long path sat idle after opening. Keep it off OneDrive and similar services too: they lock Unity's working files, which breaks exports.
 2. In the Hub, click **Open** (**Add** on some versions), and choose the `OutwardRegionProject` folder. The first opening takes a few minutes.
 3. The **Construction Kit Paths** window appears. It suggests the game folder and each mod profile it can find on your PC, looking without changing anything. Check them, and pick the profile from step 2.
-4. For **Rip folder**, choose or make an empty folder on a drive with plenty of space, and off OneDrive. Rips hold game art that shouldn't sync anywhere. See step 4 for how much space.
+4. For **Rip folder**, choose or make a folder on a drive with plenty of space, and off OneDrive. Rips hold game art that shouldn't sync anywhere. It doesn't have to be empty: each rip gets a new folder of its own, nothing already there is overwritten, and earlier rips are picked up. See step 4 for how much space.
 5. Click **Confirm**. You can reopen this window from **Construction Kit > Paths**.
 
 The **First Steps** window then opens, and takes you through the rest. You can reopen it from **Construction Kit > First Steps**.
