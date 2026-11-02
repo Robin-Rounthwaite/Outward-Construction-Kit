@@ -21,6 +21,9 @@ Picks up the items each region placed, as the game's take prompt does, and repor
 .PARAMETER TryProps
 Goes to each chest and gathering spot each region placed, reads its prompt, and fills or gathers from it.
 
+.PARAMETER TryTalking
+Goes to each character that can talk in each region, and starts the conversation.
+
 .PARAMETER KillEnemies
 Kills each region's enemies, to test what a later visit does with them.
 
@@ -48,6 +51,7 @@ param(
     [switch]$TryProps,
     [switch]$KillEnemies,
     [switch]$ForceReset,
+    [switch]$TryTalking,
     [string]$StartIn,
     [string]$Visit,
     [switch]$TryUsing,
@@ -91,6 +95,7 @@ if ($EndInRegion) { $request += 'endinregion' }
 if ($DieInRegion) { $request += 'dieinregion' }
 if ($TakeItems) { $request += 'takeitems' }
 if ($TryProps) { $request += 'tryprops' }
+if ($TryTalking) { $request += 'trytalking' }
 if ($KillEnemies) { $request += 'killenemies' }
 if ($ForceReset) { $request += 'forcereset' }
 if ($StartIn) { $request += "startin $StartIn" }

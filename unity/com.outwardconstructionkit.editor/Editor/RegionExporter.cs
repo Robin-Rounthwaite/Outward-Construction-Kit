@@ -354,12 +354,23 @@ internal static class RegionExporter
             text.Append("doormodel | ").Append(info.DoorModelScene).Append(" | ").Append(info.DoorModelPath).Append(" | ")
                 .Append(info.DoorModelRotation.x.ToString("0.###", ci)).Append(',').Append(info.DoorModelRotation.y.ToString("0.###", ci)).Append(',').Append(info.DoorModelRotation.z.ToString("0.###", ci)).Append(" | ")
                 .Append(info.DoorModelScale.ToString("0.###", ci)).Append('\n');
+        int dialogues = 0;
         foreach (KeyValuePair<GameObject, PropRef> enemy in PropRef.FindIn(scene).Where(p => p.Value.IsEnemy).OrderBy(p => p.Key.name))
         {
             Vector3 p = enemy.Key.transform.position;
             text.Append("enemy | ").Append(enemy.Value.DonorScene).Append(" | ").Append(enemy.Value.Path).Append(" | ")
                 .Append(p.x.ToString("0.###", ci)).Append(',').Append(p.y.ToString("0.###", ci)).Append(',').Append(p.z.ToString("0.###", ci)).Append(" | ")
                 .Append(enemy.Key.transform.eulerAngles.y.ToString("0.###", ci)).Append(info.StaysGone(enemy.Key) ? " | norespawn" : "").Append('\n');
+            RegionInfo.CharacterDialogue dialogue = info.DialogueOf(enemy.Key);
+            if (dialogue != null)
+            {
+                string name = "d" + ++dialogues;
+                text.Append("talk | ").Append(enemy.Value.Path).Append(" | ")
+                    .Append(p.x.ToString("0.###", ci)).Append(',').Append(p.y.ToString("0.###", ci)).Append(',').Append(p.z.ToString("0.###", ci))
+                    .Append(" | ").Append(name).Append(" | ").Append(dialogue.Name.Replace('|', '/')).Append('\n');
+                foreach (string line in dialogue.ManifestLines(name))
+                    text.Append(line).Append('\n');
+            }
         }
         foreach (KeyValuePair<GameObject, PropRef> prop in PropRef.FindIn(scene).Where(p => p.Value.IsWorking && !PropRef.IsAltered(p.Key)).OrderBy(p => p.Key.name))
         {

@@ -25,6 +25,8 @@ internal partial class PropBrowser
         KeyValuePair<GameObject, PropRef> asProp = new KeyValuePair<GameObject, PropRef>(selected, reference);
         if (!enemy && !ItemTools.IsMarker(selected) && (reference == null || !ItemTools.IsItemProp(asProp)))
             return;
+        if (enemy && GUILayout.Button(new GUIContent("Dialogue", "Writes what this character says, and what players can say back.")))
+            DialogueWindow.Open();
         bool comesBack = !info.StaysGone(selected);
         bool chosen = EditorGUILayout.ToggleLeft(new GUIContent(enemy ? "Comes back when the region resets" : "Comes back when the region resets, once taken", "Regions reset as the game's own areas do, after a few days in the game. Untick this and it stays gone for that character for good."), comesBack);
         if (chosen != comesBack)

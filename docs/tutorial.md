@@ -50,6 +50,8 @@ The **Items** tab lists the game's items, once the game has run with the kit at 
 
 On the **Enemies** tab, add one. It stands where you put it and wakes when a player comes near. Start with something weak, because you'll be testing with your own character. Enemies come back when the region resets, unless you select one and untick **Comes back when the region resets**.
 
+To make someone talk, add a person from the **Characters** category, select them, and click **Dialogue**. Give them a conversation, write what they say, and add answers for the player, each leading to another line or ending the conversation. Characters keep their game behaviour, so some may wander, or fight your enemies.
+
 **Settings** in the browser chooses what a defeat in your region does: where the party wakes up, what they lose, and the message they see. Left alone, they return where they came from with no penalty.
 
 ## 8. Add a return door

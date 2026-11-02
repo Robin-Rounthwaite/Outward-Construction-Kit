@@ -240,6 +240,8 @@ namespace OutwardConstructionKit.Runtime
                     yield return TakeItems();
                 if (request.Contains("tryprops"))
                     yield return TryInteractives();
+                if (request.Contains("trytalking"))
+                    yield return TryTalking();
             }
 
             if (regions.Length > 0 && request.Contains("dieinregion"))
@@ -337,6 +339,38 @@ namespace OutwardConstructionKit.Runtime
                 yield return new WaitForSecondsRealtime(2f);
                 int after = Player().Inventory.ItemCount(item.ItemID);
                 Log(after > before ? $"Took {item.ItemID}: the bag holds {after}." : $"FAIL couldn't take {item.ItemID}: the bag holds {after}.");
+            }
+        }
+
+        // Walks up to each character that can talk, and starts the conversation, as pressing the prompt does.
+        private static IEnumerator TryTalking()
+        {
+            NPCInteraction[] talkers = SceneManager.GetActiveScene().GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<NPCInteraction>(true)).ToArray();
+            Log($"{talkers.Length} characters can talk here.");
+            foreach (NPCInteraction talker in talkers)
+            {
+                Transform npc = talker.DialogueActor.transform;
+                InteractionTriggerBase trigger = null;
+                for (int tries = 0; tries < 4 && trigger == null; tries++) // they can wander off while the prompt appears
+                {
+                    Player().Teleport(npc.position + npc.forward * 1.5f, Quaternion.LookRotation(-npc.forward));
+                    yield return new WaitForSecondsRealtime(3f);
+                    trigger = Player().Interactable;
+                }
+                Log(trigger != null ? $"Beside {talker.DialogueActor.name}, the prompt says '{Player().PressText}' '{Player().HoldText}'." : $"FAIL no prompt beside {talker.DialogueActor.name}.");
+                yield return Screenshot("talk_prompt");
+                if (trigger == null)
+                    continue;
+                trigger.TryActivateBasicAction(Player());
+                yield return new WaitForSecondsRealtime(4f);
+                Log(Player().CharacterUI.IsDialogueInProgress ? "A conversation has started." : "FAIL no conversation started.");
+                yield return Screenshot("talk_line");
+                yield return new WaitForSecondsRealtime(2f);
+                var answers = (List<DialogueAnswer>)Traverse.Create(Player().CharacterUI.DialoguePanel).Field("m_dialogueOptions").GetValue();
+                answers[0].onClick.Invoke();
+                yield return new WaitForSecondsRealtime(4f);
+                yield return Screenshot("talk_answer");
+                yield return new WaitForSecondsRealtime(1f);
             }
         }
 

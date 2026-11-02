@@ -218,6 +218,19 @@ namespace OutwardConstructionKit.Runtime
                     holder.SetHolderUID(new UID(holder.HolderUID.Value + suffix));
             }
 
+            RegionManifest.TalkReference talk = region.Manifest.talks.FirstOrDefault(t => t.path == reference.path && t.position == reference.position);
+            if (talk != null)
+            {
+                try
+                {
+                    RegionDialogue.Attach(enemy, talk, region.Manifest);
+                }
+                catch (System.Exception e)
+                {
+                    KitLog($"'{talk.name}' can't talk: {e}", true);
+                }
+            }
+
             enemy.transform.SetParent(parent, false);
             enemy.transform.position = reference.position;
             enemy.transform.rotation = Quaternion.Euler(0f, reference.rotationY, 0f);

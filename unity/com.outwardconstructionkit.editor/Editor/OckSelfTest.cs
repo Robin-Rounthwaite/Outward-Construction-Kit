@@ -407,6 +407,12 @@ internal static class OckSelfTest
         Check("packaging asks for a mod name and description", RegionPackager.Problems(new RegionInfo { PackageTeam = "Team", PackageName = "has spaces", PackageVersion = "1", DoorScene = "Monsoon" }).Count == 3);
         Check("packaging asks for a team", RegionPackager.Problems(new RegionInfo { PackageName = "Good", PackageVersion = "1.0.0", Description = "Fine.", DoorScene = "Monsoon" }).Count == 1);
         Check("packaging warns when there's no entrance", RegionPackager.Problems(new RegionInfo { PackageTeam = "Team", PackageName = "Good", PackageVersion = "1.0.0", Description = "Fine." }).Count == 1);
+        var conversation = new RegionInfo.CharacterDialogue { Name = "Tam" };
+        conversation.Lines.Add(new RegionInfo.DialogueLine { Name = "Line 1", Text = "Hello|there\nfriend" });
+        conversation.Lines[0].Choices.Add(new RegionInfo.DialogueChoice { Text = "Bye", Next = "(ends the conversation)" });
+        conversation.Lines.Add(new RegionInfo.DialogueLine { Name = "Line 2", Text = "More" });
+        Check("a conversation makes lines the plugin reads, on one line each", conversation.ManifestLines("d1").SequenceEqual(new[] { "say | d1 | Line 1 | Hello/there friend", "choice | d1 | Line 1 | Bye | (ends the conversation)", "say | d1 | Line 2 | More" }));
+        Check("a new line gets a name not already used", conversation.NextLineName() == "Line 3");
         Check("an item that stays gone says so in its line", ItemTools.ManifestLine(5, Vector3.one, Vector3.zero, true).EndsWith(" | once") && !ItemTools.ManifestLine(5, Vector3.one, Vector3.zero).Contains("once"));
         Check("a region left alone has no defeat setup", new RegionInfo().DefeatLine() == null);
         Check("a defeat setup makes one line the plugin reads", new RegionInfo { DefeatReturn = "here", DefeatSpawn = 2, DefeatSilverPercent = 10, DefeatItemPercent = 25, DefeatVitalsPercent = 30, DefeatMessage = "A|b\nc" }.DefeatLine() == "defeat | here | 2 | 10 | 25 | 30 | A/b c");
@@ -550,6 +556,24 @@ internal static class OckSelfTest
             Check("an enemy's model stands by its position", Vector3.Distance(size.center, hound.transform.position) < 3f, size.center + " from " + hound.transform.position);
         }
 
+        // A chest and a gathering spot that work, and a chest holding what's chosen for it.
+        RipScene.Prop bush = second.Props.FirstOrDefault(p => p.Node.IsWorking && p.BaseName.StartsWith("Gatherable_"));
+        RipScene.Prop trunk = second.Props.FirstOrDefault(p => p.Node.IsWorking && p.Category == "Chests");
+        Check("a rip offers gathering spots and chests that work", bush != null && trunk != null);
+        GameObject placedBush = bush != null ? Place(second, bush.BaseName, new Vector3(12f, 0f, 3f)) : null;
+        GameObject placedTrunk = trunk != null ? Place(second, trunk.BaseName, new Vector3(14f, 0f, 3f)) : null;
+        EditorSceneManager.SaveScene(scene);
+        if (placedTrunk != null)
+        {
+            RegionInfo withChest = RegionInfo.For(path);
+            withChest.SetContents(placedTrunk, "5010100:2,silver:50");
+            withChest.SetStaysGone(hound, true);
+            withChest.AddDialogue(hound);
+            withChest.DialogueOf(hound).Lines[0].Text = "Woof.";
+            withChest.SaveFor(path);
+            Check("a chest remembers what's chosen for it", RegionInfo.For(path).ContentsOf(placedTrunk) == "5010100:2,silver:50");
+        }
+
         GameObject door = DoorTools.Add();
         door.transform.position = new Vector3(-1.8f, 0f, 1.8f); // about as far as the automatic door stands
         door.transform.rotation = Quaternion.Euler(0f, 135f, 0f); // facing the spawn at the middle
@@ -567,6 +591,10 @@ internal static class OckSelfTest
         Check("ground layers name their textures", manifest.Any(l => l == "ground | Monsoon | Ground_Grass | tex_env_masterGroundGrassFull | tex_env_masterGroundGrassFull_n"));
         Check("both waters are listed with their donors", manifest.Contains("water | Monsoon | -35,-1.5,0 | 40,1,40 | 0 | Clean") && manifest.Contains("water | ChersoneseNewTerrain | 35,-1.5,0 | 40,1,40 | 0 | Clean"));
         Check("the return door is listed", manifest.Contains("returndoor | -1.8,0,1.8 | 135"));
+        Check("a gathering spot that works is listed as one, and not as a prop", manifest.Any(l => l.StartsWith("interactive | ") && l.Contains("12,0,3")) && !manifest.Any(l => (l.StartsWith("prop ") || l.StartsWith("item ")) && l.Contains("12,0,3")));
+        Check("a filled chest lists what it holds", manifest.Any(l => l.StartsWith("interactive | ") && l.Contains("14,0,3") && l.EndsWith("| 5010100:2,silver:50")), string.Join(" / ", manifest.Where(l => l.StartsWith("interactive")).ToArray()));
+        Check("an enemy asked to stay defeated says so", manifest.Any(l => l.StartsWith("enemy ") && l.Contains("0,0,20") && l.EndsWith("| norespawn")), string.Join(" / ", manifest.Where(l => l.StartsWith("enemy")).ToArray()));
+        Check("a character's conversation is listed", manifest.Any(l => l.StartsWith("talk | ") && l.Contains("0,0,20")) && manifest.Contains("say | d1 | Line 1 | Woof."), string.Join(" / ", manifest.Where(l => l.StartsWith("talk") || l.StartsWith("say")).ToArray()));
         Check("the second rip's enemy has its real path", manifest.Any(l => l.StartsWith("enemy | ChersoneseNewTerrain | AISquadManagerStructure/")));
 
         string[] art = RegionExporter.LastDependencies.Where(d => d.StartsWith(PropImporter.LIBRARY)).ToArray();

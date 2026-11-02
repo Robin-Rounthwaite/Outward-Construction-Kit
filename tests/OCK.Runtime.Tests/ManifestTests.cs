@@ -296,6 +296,26 @@ namespace OutwardConstructionKit.Tests
         }
 
         [Test]
+        public void ReadsAConversation()
+        {
+            List<string> errors;
+            RegionManifest manifest = Parse(new[]
+            {
+                "enemy | s | a/b (1) | 1,2,3 | 0",
+                "talk | a/b (1) | 1,2,3 | d1 | Old Tam",
+                "say | d1 | Line 1 | Well met.",
+                "choice | d1 | Line 1 | Who are you? | Line 2",
+                "choice | d1 | Line 1 | Goodbye. | (ends the conversation)",
+                "say | d1 | Line 2 | Nobody much.",
+            }, out errors);
+            Assert.That(errors, Is.Empty);
+            Assert.That(manifest.talks.Single().name, Is.EqualTo("Old Tam"));
+            Assert.That(manifest.talks.Single().position, Is.EqualTo(manifest.enemies.Single().position));
+            Assert.That(manifest.dialogueLines.Select(l => l.node), Is.EqualTo(new[] { "Line 1", "Line 2" }));
+            Assert.That(manifest.dialogueLines[0].choices.Select(c => c.next), Is.EqualTo(new[] { "Line 2", "(ends the conversation)" }));
+        }
+
+        [Test]
         public void ReadsADefeatSetup()
         {
             List<string> errors;

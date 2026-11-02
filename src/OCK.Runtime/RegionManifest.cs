@@ -20,6 +20,9 @@ namespace OutwardConstructionKit.Runtime
     ///   shader | material name | shader name, for embedded materials, whose placeholder shaders may not survive
     ///   item | the game's item ID | x,y,z | rotation, as x,y,z degrees or just y | optional "once", to stay gone after a reset once taken
     ///   interactive | scene | hierarchy path | x,y,z | rotation | optional contents, as 5010100:2,silver:50
+    ///   talk | a placed enemy's hierarchy path | its x,y,z | dialogue name | name shown to players
+    ///   say | dialogue name | line name | what the character says. The dialogue starts at its first
+    ///   choice | dialogue name | line name | what the player can say | line it leads to, or anything else to end it
     ///   defeat | where to return, as a scene, "here", or blank for where they came from | spawn index for "here" | % silver lost | % items lost | % health and stamina left | message, or blank
     /// The check is "first drawn object's name:number of drawn objects", to catch a path finding the wrong object.
     /// Not JSON, because JsonUtility dropped the nested prop list when running from a plugin DLL.
@@ -122,6 +125,29 @@ namespace OutwardConstructionKit.Runtime
             public string message;
         }
 
+        /// <summary>Which placed character says which dialogue, found by where it stands.</summary>
+        public class TalkReference
+        {
+            public string path;
+            public Vector3 position;
+            public string dialogue;
+            public string name;
+        }
+
+        public class DialogueChoice
+        {
+            public string text;
+            public string next;
+        }
+
+        public class DialogueLine
+        {
+            public string dialogue;
+            public string node;
+            public string text;
+            public readonly List<DialogueChoice> choices = new List<DialogueChoice>();
+        }
+
         public class ReturnDoor
         {
             public Vector3 position;
@@ -140,6 +166,8 @@ namespace OutwardConstructionKit.Runtime
 
         public PropReference doorModel;
         public DefeatSetup defeat;
+        public List<TalkReference> talks = new List<TalkReference>();
+        public List<DialogueLine> dialogueLines = new List<DialogueLine>();
         public List<ReturnDoor> returnDoors = new List<ReturnDoor>();
         public List<EnemyReference> enemies = new List<EnemyReference>();
         public List<GroundLayer> groundLayers = new List<GroundLayer>();
@@ -265,6 +293,12 @@ namespace OutwardConstructionKit.Runtime
                     && KitPlugin.TryParseVector(parts[3], out position)
                     && TryParseRotation(parts[4], out rotation))
                     manifest.interactives.Add(new InteractiveReference { scene = parts[1], path = parts[2], position = position, rotation = rotation, contents = parts.Length == 6 ? Contents.Parse(parts[5]) : null });
+                else if (parts[0] == "talk" && parts.Length == 5 && KitPlugin.TryParseVector(parts[2], out position))
+                    manifest.talks.Add(new TalkReference { path = parts[1], position = position, dialogue = parts[3], name = parts[4] });
+                else if (parts[0] == "say" && parts.Length == 4)
+                    manifest.dialogueLines.Add(new DialogueLine { dialogue = parts[1], node = parts[2], text = parts[3] });
+                else if (parts[0] == "choice" && parts.Length == 5 && manifest.dialogueLines.Any(l => l.dialogue == parts[1] && l.node == parts[2]))
+                    manifest.dialogueLines.Last(l => l.dialogue == parts[1] && l.node == parts[2]).choices.Add(new DialogueChoice { text = parts[3], next = parts[4] });
                 else if (parts[0] == "defeat" && parts.Length == 7
                     && int.TryParse(parts[2], out int spawnIndex) && int.TryParse(parts[3], out int silverPercent)
                     && int.TryParse(parts[4], out int itemPercent) && int.TryParse(parts[5], out int vitalsPercent))

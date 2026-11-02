@@ -26,6 +26,7 @@ A toolkit for adding new regions to Outward: Definitive Edition, built from the 
 - Sculpt terrain, and paint it with the game's ground textures.
 - Place any of the game's items from its full list, which players can pick up in the game.
 - Place working chests, filled with your own choice or the game's loot, and gathering spots that regrow.
+- Give placed characters conversations with branching answers, in the game's own dialogue panel.
 - Choose whether each item and enemy comes back when the region resets.
 - Choose what a defeat does: where the party wakes up, what they lose, and the message.
 - A checklist of what the region still needs, Favourites and Recent lists, and Drop to Ground.
@@ -57,7 +58,7 @@ A toolkit for adding new regions to Outward: Definitive Edition, built from the 
 
 Not promises, and in no fixed order.
 
-- Talking NPCs, then quest givers, then merchants, with dialogue written by modders.
+- Quest givers, then merchants.
 - Telling NPCs where to walk and when, for quests or daily schedules, with animations.
 - Animation options for NPCs, plus sound effects and other special effects.
 - New quests with item or skill rewards and flags, able to change who's hostile, in their own window.
@@ -77,7 +78,7 @@ Not promises, and in no fixed order.
 
 - Co-op hasn't been tested yet.
 - Props other than chests and gathering spots are decoration for now.
-- No talking characters or quests yet.
+- Characters can talk, but there are no quests or merchants yet.
 - A game update can stop a region's references from matching.
 
 ## I could use some help

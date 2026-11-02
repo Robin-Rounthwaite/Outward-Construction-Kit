@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEditor;
 using Vector3 = UnityEngine.Vector3;
@@ -76,6 +77,74 @@ internal class RegionInfo
         ChestContents.RemoveAll(c => c.ObjectId == id);
         if (!string.IsNullOrEmpty(contents))
             ChestContents.Add(new ChestContent { ObjectId = id, Contents = contents });
+    }
+
+    [Serializable]
+    public class DialogueChoice
+    {
+        public string Text;
+        public string Next;
+    }
+
+    [Serializable]
+    public class DialogueLine
+    {
+        public string Name;
+        public string Text;
+        public List<DialogueChoice> Choices = new List<DialogueChoice>();
+    }
+
+    [Serializable]
+    public class CharacterDialogue
+    {
+        public string ObjectId;
+        public string Name;
+        public List<DialogueLine> Lines = new List<DialogueLine>();
+
+        public string NextLineName()
+        {
+            for (int number = Lines.Count + 1; ; number++)
+                if (Lines.All(l => l.Name != "Line " + number))
+                    return "Line " + number;
+        }
+
+        /// <summary>The manifest's lines for this conversation, named so the plugin can find them. Anything else leads to the end.</summary>
+        public IEnumerable<string> ManifestLines(string dialogueName)
+        {
+            foreach (DialogueLine line in Lines)
+            {
+                yield return "say | " + dialogueName + " | " + Clean(line.Name) + " | " + Clean(line.Text);
+                foreach (DialogueChoice choice in line.Choices)
+                    yield return "choice | " + dialogueName + " | " + Clean(line.Name) + " | " + Clean(choice.Text) + " | " + Clean(choice.Next);
+            }
+        }
+
+        // Each part of a manifest line is one line of text, between bars.
+        private static string Clean(string text)
+        {
+            return (text ?? "").Replace('|', '/').Replace('\r', ' ').Replace('\n', ' ');
+        }
+    }
+
+    public List<CharacterDialogue> Dialogues = new List<CharacterDialogue>();
+
+    public CharacterDialogue DialogueOf(UnityEngine.GameObject character)
+    {
+        string id = IdOf(character);
+        return Dialogues.Find(d => d.ObjectId == id);
+    }
+
+    public void AddDialogue(UnityEngine.GameObject character)
+    {
+        var dialogue = new CharacterDialogue { ObjectId = IdOf(character), Name = character.name };
+        dialogue.Lines.Add(new DialogueLine { Name = "Line 1", Text = "" });
+        Dialogues.Add(dialogue);
+    }
+
+    public void RemoveDialogue(UnityEngine.GameObject character)
+    {
+        string id = IdOf(character);
+        Dialogues.RemoveAll(d => d.ObjectId == id);
     }
 
     // Items and enemies a modder asked not to come back at a region reset.
