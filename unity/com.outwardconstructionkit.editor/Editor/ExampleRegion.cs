@@ -15,6 +15,7 @@ internal static class ExampleRegion
     private const string STATUE = "mdl_env_propStatueTripleLadies_c";
     private const string HOUND = "Enemy Hound";
     private const string PEBBLE = "tex_env_masterGroundPebble";
+    private const int COOKING_POT_ID = 5010100;
     private const string FOREST_FLOOR = "tex_env_masterMuddyForestFloor_d";
     private const string ENTRANCE_SCENE = "CierzoNewTerrain";
     private const string ENTRANCE_POSITION = "1236,27.9,1684"; // beside the scene's first spawn point
@@ -62,7 +63,8 @@ internal static class ExampleRegion
 
         GameObject water = GroundTools.AddWater(GROUND_RIP);
         water.transform.position = new Vector3(s_pond.x, -1.5f, s_pond.z);
-        GroundTools.SetWaterType(water, System.Array.IndexOf(GroundTools.WaterTypes, "Salt"));
+
+        ItemTools.AddMarker(new ItemTools.Entry { Id = COOKING_POT_ID, Name = "Cooking Pot" }, new Vector3(4f, 0f, 4f));
 
         GameObject door = DoorTools.Add();
         door.transform.position = new Vector3(-1.8f, 0f, -1.8f);

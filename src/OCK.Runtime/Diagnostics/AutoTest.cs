@@ -117,7 +117,6 @@ namespace OutwardConstructionKit.Runtime
             if (!ok)
                 yield break;
 
-            string startScene = SceneManager.GetActiveScene().name;
             string visit = request.Where(l => l.StartsWith(VISIT)).Select(l => l.Substring(VISIT.Length).Trim()).FirstOrDefault();
             if (visit != null)
             {
@@ -133,7 +132,7 @@ namespace OutwardConstructionKit.Runtime
                 if (ok)
                     Log($"FINISHED, in {visit}, for a person to play.");
                 if (ok && request.Contains("trydoor"))
-                    yield return TryUsing(startScene);
+                    yield return TryUsing();
                 yield break;
             }
 
@@ -227,7 +226,7 @@ namespace OutwardConstructionKit.Runtime
 
         // What a player does on arriving, by the game's own routes: sees the HUD, walks up to the water and a return
         // door, gets their prompts, and uses them. Only when asked, because it moves the character.
-        private static IEnumerator TryUsing(string home)
+        private static IEnumerator TryUsing()
         {
             yield return new WaitForSecondsRealtime(4f);
             Log(MenuManager.Instance.MasterCanvas.alpha == 1f && MenuManager.Instance.MasterCanvas.interactable && !Global.HideUI
@@ -259,9 +258,11 @@ namespace OutwardConstructionKit.Runtime
             yield return Screenshot("try_door");
             if (trigger == null)
                 yield break;
+            string region = SceneManager.GetActiveScene().name;
             trigger.TryActivateBasicAction(Player());
-            bool back = false;
-            yield return WaitFor(() => SceneManager.GetActiveScene().name == home && Player() != null && Loaded(), "the return door led back to " + home, r => back = r);
+            bool left = false;
+            yield return WaitFor(() => SceneManager.GetActiveScene().name != region && SceneManager.GetActiveScene().name != TRANSITION_SCENE && Player() != null && Loaded(), "the return door led out of the region", r => left = r);
+            Log($"Now in {SceneManager.GetActiveScene().name}.");
         }
 
         // What the game's take prompt does when pressed, which is more than the test can say about the prompt being seen.

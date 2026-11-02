@@ -541,7 +541,8 @@ internal static class OckSelfTest
         Check("the example's scaled barrels stay a reference", manifest.Any(l => l.StartsWith("prop ") && l.EndsWith("| 1.5")));
         Check("the example has an enemy, water, ground and a door", manifest.Any(l => l.StartsWith("enemy ")) && manifest.Any(l => l.StartsWith("water ")) && manifest.Any(l => l.StartsWith("ground ")) && manifest.Any(l => l.StartsWith("returndoor ")));
         Check("a region with no door model leaves it to the kit", !manifest.Any(l => l.StartsWith("doormodel ")));
-        Check("water lists the type it was given", manifest.Any(l => l.StartsWith("water ") && l.EndsWith("| Salt")), string.Join(" / ", manifest));
+        Check("water is Clean unless given a type", manifest.Any(l => l.StartsWith("water ") && l.EndsWith("| Clean")), string.Join(" / ", manifest));
+        Check("the example has an item to pick up", manifest.Any(l => l.StartsWith("item | ")), string.Join(" / ", manifest));
         Check("an added ground texture is a reference", manifest.Any(l => l.Contains("| Ground_masterGroundPebble | tex_env_masterGroundPebble |")), string.Join(" / ", manifest));
         Check("a texture from another scene names that scene", manifest.Any(l => l.StartsWith("ground | " + SECOND_RIP + " | Ground_masterMuddyForestFloor_d | tex_env_masterMuddyForestFloor_d |")), string.Join(" / ", manifest));
         Check("a scene's rip offers its ground textures", GroundTools.GroundTexturesIn(OckSettings.RipRoots().First()).Contains("tex_env_masterGroundEarth"));

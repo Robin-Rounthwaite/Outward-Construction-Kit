@@ -1,6 +1,40 @@
 # Test feedback
 
-Findings from the hands-on tests, to apply together. Nothing here has been built yet.
+Findings from the hands-on tests. The action items below have been built, apart from the polish ideas, which aren't agreed, and the stall, whose cause is still unknown. The retest list says what a person still needs to check.
+
+## Retest list
+
+**Prop Browser**
+- Tooltips appear on buttons. Button rows fit the window.
+- Water tab: the type dropdown is always there and updates as soon as you select water.
+- Ground tab: **Add** responds at once, selects the Terrain, turns on Paint Texture and chooses the new texture, including with the Inspector closed. Terrain Layers previews are visible.
+- Items tab: run the game once with the kit, then check the list fills, and **Add** makes an orange marker.
+- Location columns list every region, with dungeons under their region.
+- A finished rip appears by itself. **Refresh** adds new rips and drops deleted ones without re-reading the rest. **Read All Rips Again** re-reads everything.
+- The real door model shows at the return door marker, in the right place, without flicker.
+- **Test as (Character Name)** lists your characters, most recently tested first.
+
+**In game**
+- **Test Region In-Game:** the HUD and menus show.
+- The return door's prompt and door, the water's prompt, drinking and collecting, by pressing the keys.
+- Salt water gives salt water.
+- A placed item shows its prompt and can be picked up, and doesn't come back on a revisit.
+- Re-export your region: the bush's leaves aren't purple, including when it's altered.
+- The defeat screen's look and its key press, without UnityExplorer's panels covering it.
+- **Launch Game:** note the message if it fails again. It now warns if the game hasn't appeared after a minute.
+
+**Still to try**
+- Test 5: `powershell -NoProfile -ExecutionPolicy Bypass -File "T:\OutwardConstructionKit\repo\tests\run-broken-region-test.ps1"`
+- Test 6: importing both zips in a new r2modman profile, then the **Package** button.
+- Rip a new scene, to see the disk saving and the new estimate.
+
+**If the stall returns:** Unity's log now has `[OCK timing]` lines, and a line naming the focused window and selection whenever Unity stops updating for 5 seconds or more.
+
+**Known leftovers**
+- Jim of the Doors' save holds a Cooking Pot and Gaberries from testing.
+- The Ctrl+F10 presses in Test 3 placed doors for six other test regions inside the Example Region. They're in the profile's config, and placing each door elsewhere replaces them.
+- `T:\OutwardConstructionKit_Rip\Chersonese_Dungeon8` is a test rip, kept.
+- Your older rips haven't had the disk saving applied. `share-rip-files.ps1` would save an estimated 8.7 GB of 25.4 GB.
 
 ## Test 1: New region, Prop Browser, ground and water
 
