@@ -18,6 +18,7 @@ using UnityEngine.SceneManagement;
 internal static class DoorTools
 {
     private const string MARKER_NAME = "OCK Return Door";
+    private const string MARKER_SLAB = "Marker";
     private const string EXPORT_FOLDER = "Assets/OCK/_Export";
     private const string MARKER_MATERIAL = "/ReturnDoorMarker.mat";
     private const string MARKER_SHADER = "Sprites/Default"; // see-through, to show the model inside
@@ -48,6 +49,57 @@ internal static class DoorTools
         Camera.onPreCull += DrawModels;
         EditorApplication.hierarchyChanged += () => s_markers = null;
         EditorSceneManager.activeSceneChangedInEditMode += (from, to) => Refresh();
+        Selection.selectionChanged += SelectWholeMarker;
+    }
+
+    // Clicking a marker picks one of its boxes, and moving that alone would leave it apart from the door.
+    private static void SelectWholeMarker()
+    {
+        Transform selected = Selection.activeTransform;
+        if (selected != null && selected.parent != null && selected.parent.name.StartsWith(MARKER_NAME))
+            Selection.activeGameObject = selected.parent.gameObject;
+    }
+
+    // Fits the marker's slab around the door, wherever its model sits, and puts back one that's been moved on its own.
+    private static void FitMarkers()
+    {
+        Vector3 center = new Vector3(0f, s_doorSize.y / 2f, 0f);
+        Vector3 size = s_doorSize;
+        if (s_parts.Count > 0)
+        {
+            bool started = false;
+            var bounds = new Bounds();
+            foreach (ModelPart part in s_parts.Where(p => p.Mesh != null))
+            {
+                Bounds mesh = part.Mesh.bounds;
+                foreach (float x in new[] { mesh.min.x, mesh.max.x })
+                    foreach (float y in new[] { mesh.min.y, mesh.max.y })
+                        foreach (float z in new[] { mesh.min.z, mesh.max.z })
+                        {
+                            Vector3 corner = part.FromDoor.MultiplyPoint3x4(new Vector3(x, y, z));
+                            if (started)
+                                bounds.Encapsulate(corner);
+                            else
+                                bounds = new Bounds(corner, Vector3.zero);
+                            started = true;
+                        }
+            }
+            if (started)
+            {
+                center = bounds.center;
+                size = bounds.size;
+            }
+        }
+        foreach (Transform marker in s_markers.Where(m => m != null))
+        {
+            Transform slab = marker.Find(MARKER_SLAB);
+            if (slab != null)
+            {
+                slab.localPosition = center;
+                slab.localRotation = Quaternion.identity;
+                slab.localScale = size;
+            }
+        }
     }
 
     [MenuItem("Construction Kit/Add Return Door")]
@@ -63,7 +115,7 @@ internal static class DoorTools
         var root = new GameObject(MARKER_NAME);
 
         Material material = GetMaterial();
-        AddPart(root.transform, "Marker", new Vector3(0f, s_doorSize.y / 2f, 0f), s_doorSize, material);
+        AddPart(root.transform, MARKER_SLAB, new Vector3(0f, s_doorSize.y / 2f, 0f), s_doorSize, material);
         AddPart(root.transform, "Facing", new Vector3(0f, 1.3f, 0.35f), new Vector3(0.3f, 0.3f, 0.5f), material);
 
         SceneView view = SceneView.lastActiveSceneView;
@@ -252,7 +304,10 @@ internal static class DoorTools
         GameObject prefab = FindPrefab(scene, path);
         s_modelMissing = prefab == null;
         if (prefab == null)
+        {
+            FitMarkers();
             return;
+        }
 
         // As the plugin places it: its root takes the door's rotation and the model's own, whatever way it stood in its scene.
         Matrix4x4 fromDoor = Matrix4x4.TRS(offset, turn, Vector3.one * scale) * Matrix4x4.Scale(prefab.transform.localScale);
@@ -263,6 +318,7 @@ internal static class DoorTools
             if (filter != null && filter.sharedMesh != null)
                 s_parts.Add(new ModelPart { Mesh = filter.sharedMesh, Materials = renderer.sharedMaterials, FromDoor = fromDoor * (toRoot * renderer.transform.localToWorldMatrix) });
         }
+        FitMarkers();
     }
 
     private static void DrawModels(Camera camera)

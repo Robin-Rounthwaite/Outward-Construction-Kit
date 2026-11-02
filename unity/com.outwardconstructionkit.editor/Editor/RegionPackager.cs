@@ -16,7 +16,7 @@ internal static class RegionPackager
 {
     public const string DEFAULT_ICON = "Packages/com.outwardconstructionkit.editor/Tools~/default-region-icon.png";
     public const string OUTPUT_FOLDER = "Build/Upload";
-    private const string KIT_PACKAGE = "Cat_and_Community-Outward_Construction_Kit-";
+    private const string KIT_PACKAGE = "Blue_Chamber_Collective-Outward_Construction_Kit-";
     private const int MAX_DESCRIPTION = 250;
     private const int MAX_NAME = 128;
     private const int ICON_SIZE = 256;
@@ -120,7 +120,7 @@ internal static class RegionPackager
         var text = new StringBuilder();
         text.Append("# ").Append(info.DisplayName).Append("\n\n").Append(string.IsNullOrEmpty(info.About) ? info.Description : info.About).Append("\n\n");
         text.Append("## How to get there\n\nLook for its door in ").Append(LocationNames.For(info.DoorScene)).Append(".\n\n");
-        text.Append("## Requirements\n\nThis region needs the [Outward Construction Kit](https://thunderstore.io/c/outward/p/Cat_and_Community/Outward_Construction_Kit/), which r2modman installs for you. Start the game with r2modman's Start modded button.\n");
+        text.Append("## Requirements\n\nThis region needs the [Outward Construction Kit](https://thunderstore.io/c/outward/p/Blue_Chamber_Collective/Outward_Construction_Kit/), which r2modman installs for you. Start the game with r2modman's Start modded button.\n");
         return text.ToString();
     }
 

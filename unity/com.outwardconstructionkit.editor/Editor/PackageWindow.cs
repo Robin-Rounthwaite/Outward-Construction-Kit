@@ -24,7 +24,7 @@ internal class PackageWindow : EditorWindow
         string scenePath = SceneManager.GetActiveScene().path;
         if (string.IsNullOrEmpty(scenePath))
         {
-            EditorGUILayout.HelpBox("Save the scene first.", MessageType.Info);
+            KitStyles.HelpBox("Save the scene first.", MessageType.Info);
             return;
         }
 
@@ -64,7 +64,7 @@ internal class PackageWindow : EditorWindow
         EditorGUILayout.Space();
         List<string> problems = RegionPackager.Problems(info);
         foreach (string problem in problems)
-            EditorGUILayout.HelpBox(problem, MessageType.Warning);
+            KitStyles.HelpBox(problem, MessageType.Warning);
 
         using (new EditorGUI.DisabledScope(problems.Count > 0))
         {
@@ -85,10 +85,10 @@ internal class PackageWindow : EditorWindow
             }
         }
         if (m_status.Length > 0)
-            EditorGUILayout.HelpBox(m_status, MessageType.None);
+            KitStyles.HelpBox(m_status, MessageType.None);
         if (m_lastZip != null && GUILayout.Button(new GUIContent("Show Zip in Folder", "Opens the folder holding the zip you just made.")))
             EditorUtility.RevealInFinder(m_lastZip);
-        EditorGUILayout.HelpBox($"Upload it on thunderstore.io under the Outward community. The kit, version {RegionPackager.KitVersion}, needs to be on Thunderstore already, and your mod installs it for players.", MessageType.Info);
+        KitStyles.HelpBox($"Upload it on thunderstore.io under the Outward community. The kit, version {RegionPackager.KitVersion}, needs to be on Thunderstore already, and your mod installs it for players.", MessageType.Info);
         EditorGUILayout.EndScrollView();
     }
 }

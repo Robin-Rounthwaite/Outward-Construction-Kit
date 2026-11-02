@@ -114,7 +114,7 @@ internal class FirstStepsWindow : EditorWindow
         }
 
         if (m_message.Length > 0)
-            EditorGUILayout.HelpBox(m_message, MessageType.None);
+            KitStyles.HelpBox(m_message, MessageType.None);
     }
 
     // Says whether to draw the step's controls, which wait until the steps before it are done.
@@ -122,7 +122,7 @@ internal class FirstStepsWindow : EditorWindow
     {
         EditorGUILayout.Space();
         EditorGUILayout.LabelField($"{number}. {title}{(done ? "  (done)" : "")}", EditorStyles.boldLabel);
-        EditorGUILayout.LabelField(help, EditorStyles.wordWrappedMiniLabel);
+        EditorGUILayout.LabelField(help, KitStyles.WrappedNote);
         return ready;
     }
 }

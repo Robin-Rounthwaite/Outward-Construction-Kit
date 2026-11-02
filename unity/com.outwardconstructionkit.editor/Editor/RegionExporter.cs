@@ -225,8 +225,14 @@ internal static class RegionExporter
 
     public static bool HasSpawnPoint(Scene scene)
     {
+        return FirstSpawnPoint(scene) != null;
+    }
+
+    /// <summary>Where players arrive, or null if the scene has nowhere yet.</summary>
+    public static GameObject FirstSpawnPoint(Scene scene)
+    {
         GameObject spawns = scene.GetRootGameObjects().FirstOrDefault(r => r.name == SPAWN_ROOT);
-        return spawns != null && spawns.transform.childCount > 0;
+        return spawns != null && spawns.transform.childCount > 0 ? spawns.transform.GetChild(0).gameObject : null;
     }
 
     /// <summary>Adds where players arrive, for a scene that didn't start from New Region.</summary>

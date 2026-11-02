@@ -19,7 +19,11 @@ internal static class GroundTools
 {
     private const string REGIONS_FOLDER = "Assets/Regions";
     private const string GROUND_SCENE = "Monsoon"; // its materials are known to load all the textures below
-    private const float GROUND_SIZE = 200f;
+    private const float DEFAULT_GROUND_SIZE = 200f;
+    private const float METRES_PER_HEIGHT_CELL = 200f / 256f;
+    private const float PAINT_CELLS_PER_METRE = 512f / 200f;
+    private const int MAX_PAINT_RESOLUTION = 2048;
+    public const string DEFAULT_START_TEXTURE = "tex_env_masterGroundGrassFull";
     private const float GROUND_HEIGHT = 60f;
     private const float GROUND_DEPTH = 10f; // room below y = 0 for valleys and lake beds
     private const float EDGE_THICKNESS = 2f;
@@ -32,6 +36,7 @@ internal static class GroundTools
 
     /// <summary>The types of water in the game. The first is what water is unless chosen otherwise.</summary>
     public static readonly string[] WaterTypes = { "Clean", "Fresh", "Salt", "Rancid", "Magic", "Pure", "Healing" };
+    private const string NEXT_WATER_TYPE_PREF = "OCK.NextWaterType";
     private const float WATER_BELOW_GROUND = 0.5f;
     private const float GROUND_SEARCH_HEIGHT = 50f;
     private const float GROUND_SEARCH_DISTANCE = 5000f;
@@ -56,9 +61,7 @@ internal static class GroundTools
     [MenuItem("Construction Kit/Add Ground")]
     public static void AddGroundFromMenu()
     {
-        Terrain ground = AddGround();
-        if (ground != null)
-            Selection.activeGameObject = ground.gameObject;
+        AddGroundWindow.Open(null);
     }
 
     [MenuItem("Construction Kit/Add Water")]
@@ -68,7 +71,7 @@ internal static class GroundTools
     }
 
     /// <summary>Replaces the starter room's floor and walls with a flat, grassy terrain at y = 0.</summary>
-    public static Terrain AddGround()
+    public static Terrain AddGround(float size = DEFAULT_GROUND_SIZE, string startScene = null, string startTexture = null)
     {
         Scene scene = SceneManager.GetActiveScene();
         if (string.IsNullOrEmpty(scene.path))
@@ -88,10 +91,10 @@ internal static class GroundTools
 
         var data = new TerrainData
         {
-            heightmapResolution = 257,
-            alphamapResolution = 512,
+            heightmapResolution = Mathf.ClosestPowerOfTwo(Mathf.RoundToInt(size / METRES_PER_HEIGHT_CELL)) + 1,
+            alphamapResolution = Mathf.Min(MAX_PAINT_RESOLUTION, Mathf.ClosestPowerOfTwo(Mathf.RoundToInt(size * PAINT_CELLS_PER_METRE))),
             baseMapResolution = 512,
-            size = new Vector3(GROUND_SIZE, GROUND_HEIGHT, GROUND_SIZE),
+            size = new Vector3(size, GROUND_HEIGHT, size),
         };
         data.SetDetailResolution(0, 8); // no painted grass tufts, so no memory for them
         data.terrainLayers = s_layers.Select(GetLayer).ToArray();
@@ -114,7 +117,7 @@ internal static class GroundTools
 
         GameObject root = Terrain.CreateTerrainGameObject(data);
         root.name = "Ground";
-        root.transform.position = new Vector3(-GROUND_SIZE / 2f, -GROUND_DEPTH, -GROUND_SIZE / 2f);
+        root.transform.position = new Vector3(-size / 2f, -GROUND_DEPTH, -size / 2f);
         GameObjectUtility.SetStaticEditorFlags(root, StaticEditorFlags.NavigationStatic);
         var terrain = root.GetComponent<Terrain>();
         // Named outright, so it's in the bundle rather than depending on what the game's build kept.
@@ -123,24 +126,39 @@ internal static class GroundTools
 
         foreach (GameObject box in scene.GetRootGameObjects().Where(r => s_starterBoxes.Contains(r.name)))
             Undo.DestroyObjectImmediate(box);
-        AddEdges(root.transform);
+        AddEdges(root.transform, size);
+        if (startTexture != null)
+            StartWith(terrain, startScene, startTexture);
 
         EditorSceneManager.MarkSceneDirty(scene);
         return terrain;
     }
 
+    // First in the list and covering everything, with only as many others as draw in one pass.
+    private static void StartWith(Terrain terrain, string scene, string texture)
+    {
+        TerrainData data = terrain.terrainData;
+        TerrainLayer start = FindLayer(terrain, texture) ?? AddLayer(terrain, scene, texture);
+        data.terrainLayers = new[] { start }.Concat(data.terrainLayers.Where(l => l != start)).Take(s_layers.Length).ToArray();
+        var paint = new float[data.alphamapHeight, data.alphamapWidth, data.terrainLayers.Length];
+        for (int z = 0; z < data.alphamapHeight; z++)
+            for (int x = 0; x < data.alphamapWidth; x++)
+                paint[z, x, 0] = 1f;
+        data.SetAlphamaps(0, 0, paint);
+    }
+
     // Invisible walls, or players walk off the side of the terrain and fall forever.
-    private static void AddEdges(Transform ground)
+    private static void AddEdges(Transform ground, float size)
     {
         var edges = new GameObject("Ground_Edges").transform;
         edges.SetParent(ground, false);
-        float middle = GROUND_SIZE / 2f;
+        float middle = size / 2f;
         float y = GROUND_HEIGHT / 2f;
-        float length = GROUND_SIZE + EDGE_THICKNESS * 2f;
+        float length = size + EDGE_THICKNESS * 2f;
         AddEdge(edges, new Vector3(middle, y, -EDGE_THICKNESS / 2f), new Vector3(length, GROUND_HEIGHT * 2f, EDGE_THICKNESS));
-        AddEdge(edges, new Vector3(middle, y, GROUND_SIZE + EDGE_THICKNESS / 2f), new Vector3(length, GROUND_HEIGHT * 2f, EDGE_THICKNESS));
+        AddEdge(edges, new Vector3(middle, y, size + EDGE_THICKNESS / 2f), new Vector3(length, GROUND_HEIGHT * 2f, EDGE_THICKNESS));
         AddEdge(edges, new Vector3(-EDGE_THICKNESS / 2f, y, middle), new Vector3(EDGE_THICKNESS, GROUND_HEIGHT * 2f, length));
-        AddEdge(edges, new Vector3(GROUND_SIZE + EDGE_THICKNESS / 2f, y, middle), new Vector3(EDGE_THICKNESS, GROUND_HEIGHT * 2f, length));
+        AddEdge(edges, new Vector3(size + EDGE_THICKNESS / 2f, y, middle), new Vector3(EDGE_THICKNESS, GROUND_HEIGHT * 2f, length));
     }
 
     private static void AddEdge(Transform parent, Vector3 center, Vector3 size)
@@ -223,6 +241,13 @@ internal static class GroundTools
     public static bool IsWater(GameObject marker)
     {
         return marker != null && s_waterName.IsMatch(marker.name);
+    }
+
+    /// <summary>The type chosen for water not yet added.</summary>
+    public static int NextWaterType
+    {
+        get { return Mathf.Clamp(EditorPrefs.GetInt(NEXT_WATER_TYPE_PREF, 0), 0, WaterTypes.Length - 1); }
+        set { EditorPrefs.SetInt(NEXT_WATER_TYPE_PREF, value); }
     }
 
     public static int WaterTypeIndex(GameObject marker)

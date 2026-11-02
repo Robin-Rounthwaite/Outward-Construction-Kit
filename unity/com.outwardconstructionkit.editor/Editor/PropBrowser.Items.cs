@@ -32,7 +32,7 @@ internal partial class PropBrowser
     {
         if (ItemTools.Catalog().Count == 0)
         {
-            EditorGUILayout.HelpBox("The list of items comes from the game. Start it once with the kit installed, then come back here.", MessageType.Info);
+            KitStyles.HelpBox("The list of items comes from the game. Start it once with the kit installed, then come back here.", MessageType.Info);
             using (new EditorGUILayout.HorizontalScope())
             {
                 if (GUILayout.Button("Launch Game"))
@@ -46,7 +46,7 @@ internal partial class PropBrowser
             return;
         }
 
-        EditorGUILayout.LabelField($"{m_visibleItems.Count} found. Click Add for a marker, which becomes a real item players can pick up.", EditorStyles.miniLabel);
+        EditorGUILayout.LabelField($"{m_visibleItems.Count} found. Click Add for a marker, which becomes a real item players can pick up.", KitStyles.Note);
         DrawRows(m_visibleItems.Count, i =>
         {
             ItemTools.Entry item = m_visibleItems[i];
@@ -54,8 +54,8 @@ internal partial class PropBrowser
             {
                 GUILayout.Label(new GUIContent(item.Name, item.PrefabName));
                 GUILayout.FlexibleSpace();
-                GUILayout.Label(item.Id.ToString(), EditorStyles.miniLabel, GUILayout.Width(60));
-                GUILayout.Label(item.Type, EditorStyles.miniLabel, GUILayout.Width(100));
+                GUILayout.Label(item.Id.ToString(), KitStyles.Note, GUILayout.Width(60));
+                GUILayout.Label(item.Type, KitStyles.Note, GUILayout.Width(100));
                 if (GUILayout.Button(new GUIContent("Add", "Adds an orange marker at the middle of your view. In game it becomes this real item, and each character can pick it up once until the region resets."), GUILayout.Width(44)))
                     AddItem(item);
             }

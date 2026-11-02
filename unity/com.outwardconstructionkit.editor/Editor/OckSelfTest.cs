@@ -429,7 +429,7 @@ internal static class OckSelfTest
             using (var reader = new StreamReader(archive.GetEntry("manifest.json").Open()))
             {
                 string manifest = reader.ReadToEnd();
-                Check("its manifest depends on the kit", manifest.Contains("\"Cat_and_Community-Outward_Construction_Kit-" + RegionPackager.KitVersion + "\""), manifest);
+                Check("its manifest depends on the kit", manifest.Contains("\"Blue_Chamber_Collective-Outward_Construction_Kit-" + RegionPackager.KitVersion + "\""), manifest);
                 Check("its manifest escapes quotes", manifest.Contains("A \\\"quoted\\\" test."), manifest);
             }
         }
@@ -439,7 +439,24 @@ internal static class OckSelfTest
     private static void CheckGroundWaterAndDoors(RipScene first, RipScene second, string output)
     {
         const string id = "test_gamma";
+
+        Scene choices = RegionExporter.CreateStarterScene("OCK_SelfTest_ground_choices");
+        Terrain chosenGround = GroundTools.AddGround(400f, FIRST_RIP, "tex_env_masterGroundPebble");
+        Check("ground can be the size chosen", chosenGround.terrainData.size.x == 400f && Mathf.Abs(chosenGround.transform.position.x + 200f) < 0.01f, chosenGround.terrainData.size.ToString());
+        Check("bigger ground keeps its detail", chosenGround.terrainData.heightmapResolution == 513 && chosenGround.terrainData.alphamapResolution == 1024, chosenGround.terrainData.heightmapResolution + ", " + chosenGround.terrainData.alphamapResolution);
+        Check("ground starts with the texture chosen, in one drawing pass", chosenGround.terrainData.terrainLayers.Length == 4 && chosenGround.terrainData.terrainLayers[0].diffuseTexture.name == "tex_env_masterGroundPebble" && chosenGround.terrainData.GetAlphamaps(0, 0, 1, 1)[0, 0, 0] == 1f);
+        GameObject testDoor = DoorTools.Add();
+        Transform slab = testDoor.transform.Find("Marker");
+        slab.localPosition = Vector3.right * 100f;
+        DoorTools.Refresh();
+        bool modelMissing = DoorTools.ModelMissing; // asking is what brings the marker up to date
+        Check("a door marker's slab goes back to its door", Mathf.Abs(slab.localPosition.x) < 50f, slab.localPosition + (modelMissing ? ", with no model" : ""));
+        string choicesData = AssetDatabase.GetAssetPath(chosenGround.terrainData);
+        string choicesPath = choices.path;
+
         Scene scene = RegionExporter.CreateStarterScene("OCK_SelfTest_" + id);
+        AssetDatabase.DeleteAsset(choicesPath);
+        AssetDatabase.DeleteAsset(choicesData);
         string path = scene.path;
         new RegionInfo { Id = id, DisplayName = "Test Region Gamma" }.SaveFor(path);
 

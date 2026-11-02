@@ -1,6 +1,6 @@
 # Retest feedback
 
-From the retest of steps 1 to 4 on 2026-11-01. Still for a person to test: the defeat scenario, and steps 5 onward from the list at the top of `test-feedback.md`.
+From the retest of steps 1 to 4 on 2026-11-01. The action items below are built, apart from testing Paint Holes in game (9), which needs a person, and the 18-second wait (8), which hasn't returned to be measured. Still for a person to test: these changes, the defeat scenario, and steps 5 onward from the list at the top of `test-feedback.md`.
 
 ## Findings
 

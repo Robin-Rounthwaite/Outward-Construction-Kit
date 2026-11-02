@@ -57,13 +57,13 @@ internal class RipWindow : EditorWindow
     {
         if (!OckSettings.PathsConfirmed || string.IsNullOrEmpty(OckSettings.RipFolder))
         {
-            EditorGUILayout.HelpBox("First, choose a rip folder in the paths window.", MessageType.Info);
+            KitStyles.HelpBox("First, choose a rip folder in the paths window.", MessageType.Info);
             if (GUILayout.Button(new GUIContent("Set Up Paths", "Opens the window that says where the game, your mods and your rips are.")))
                 PathsWindow.Open();
             return;
         }
 
-        EditorGUILayout.HelpBox("Ripping copies a scene's models out of your own game files, for the Prop Browser to show. A scene usually takes 10 to 30 minutes. A first rip takes up to about 15 gigabytes, and later ones much less, because they share what's the same. It runs in its own window, so you can keep working, and appears in the Prop Browser when it's done.", MessageType.Info);
+        KitStyles.HelpBox("Ripping copies a scene's models out of your own game files, for the Prop Browser to show. A scene usually takes 10 to 30 minutes. A first rip takes up to about 15 gigabytes, and later ones much less, because they share what's the same. It runs in its own window, so you can keep working, and appears in the Prop Browser when it's done.", MessageType.Info);
         if (GUILayout.Button(new GUIContent("Rip All Scenes", "Rips every scene not yet ripped, one after another. It says how much that takes before starting.")))
             RipAll();
         m_search = EditorGUILayout.TextField("Search", m_search);
@@ -77,9 +77,9 @@ internal class RipWindow : EditorWindow
             {
                 EditorGUILayout.LabelField(new GUIContent(name, "The game calls this " + scene + "."));
                 if (Array.IndexOf(s_nothingToRip, scene) >= 0)
-                    EditorGUILayout.LabelField(new GUIContent("little to offer", "The game only passes through this scene, so it has almost nothing of its own."), EditorStyles.miniLabel, GUILayout.Width(70f));
+                    EditorGUILayout.LabelField(new GUIContent("little to offer", "The game only passes through this scene, so it has almost nothing of its own."), KitStyles.Note, GUILayout.Width(95f));
                 if (m_ripped.Contains(scene))
-                    EditorGUILayout.LabelField("ripped", EditorStyles.miniLabel, GUILayout.Width(60f));
+                    EditorGUILayout.LabelField("ripped", KitStyles.Note, GUILayout.Width(70f));
                 else if (GUILayout.Button(new GUIContent("Rip", "Copies this scene's models out of your own game files, in its own window, so you can keep working."), GUILayout.Width(60f)))
                     RipByName(scene);
             }

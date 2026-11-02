@@ -52,22 +52,22 @@ internal class PathsWindow : EditorWindow
     private void OnGUI()
     {
         if (Application.unityVersion != REQUIRED_UNITY)
-            EditorGUILayout.HelpBox($"This is Unity {Application.unityVersion}. Regions need {REQUIRED_UNITY} exactly, to match the game, or they may not load.", MessageType.Error);
-        EditorGUILayout.HelpBox("Please check these before confirming. Suggestions are only what could be found on this PC, and nothing here gets changed by looking.", MessageType.Info);
+            KitStyles.HelpBox($"This is Unity {Application.unityVersion}. Regions need {REQUIRED_UNITY} exactly, to match the game, or they may not load.", MessageType.Error);
+        KitStyles.HelpBox("Please check these before confirming. Suggestions are only what could be found on this PC, and nothing here gets changed by looking.", MessageType.Info);
 
         m_gameData = PathRow("Game data folder", "The Outward Definitive Edition_Data folder, inside the game's folder.", m_gameData, m_foundGameData);
         if (!PathDetector.IsGameData(m_gameData))
-            EditorGUILayout.HelpBox("This folder doesn't have the game's files in it.", MessageType.Warning);
+            KitStyles.HelpBox("This folder doesn't have the game's files in it.", MessageType.Warning);
 
         m_plugins = PathRow("BepInEx plugins folder", "Where exported regions go, so they load when you launch the game. With a mod manager, pick the profile you test with.", m_plugins, m_foundPlugins);
         if (!PathDetector.IsPluginsFolder(m_plugins))
-            EditorGUILayout.HelpBox("This should be an existing folder called plugins, inside BepInEx.", MessageType.Warning);
+            KitStyles.HelpBox("This should be an existing folder called plugins, inside BepInEx.", MessageType.Warning);
 
         m_ripFolder = PathRow("Rip folder", "An empty folder for what you rip from the game, on a drive with plenty of space and off OneDrive. A first rip takes about 15 GB.", m_ripFolder, null);
 
         m_ripper = PathRow("AssetRipper folder (optional)", "Leave empty and the kit downloads the version it's tested with, once. Only fill this in to use a copy you already have; version 2.0.0 is the tested one.", m_ripper, null);
         if (!string.IsNullOrEmpty(m_ripper) && (!Directory.Exists(m_ripper) || Directory.GetFiles(m_ripper, "AssetRipper*.exe", SearchOption.AllDirectories).Length == 0))
-            EditorGUILayout.HelpBox("There's no AssetRipper program in this folder.", MessageType.Warning);
+            KitStyles.HelpBox("There's no AssetRipper program in this folder.", MessageType.Warning);
 
         GUILayout.FlexibleSpace();
         using (new EditorGUI.DisabledScope(!PathDetector.IsGameData(m_gameData) || !PathDetector.IsPluginsFolder(m_plugins)))
@@ -91,7 +91,7 @@ internal class PathsWindow : EditorWindow
     {
         EditorGUILayout.Space();
         EditorGUILayout.LabelField(label, EditorStyles.boldLabel);
-        EditorGUILayout.LabelField(help, EditorStyles.wordWrappedMiniLabel);
+        EditorGUILayout.LabelField(help, KitStyles.WrappedNote);
         using (new EditorGUILayout.HorizontalScope())
         {
             value = EditorGUILayout.TextField(value);

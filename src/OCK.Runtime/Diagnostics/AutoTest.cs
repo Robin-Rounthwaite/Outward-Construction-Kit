@@ -43,6 +43,27 @@ namespace OutwardConstructionKit.Runtime
             return true;
         }
 
+        private static void SetMenuInput(bool on)
+        {
+            CanvasGroup menu = MenuManager.Instance.MasterCanvas;
+            menu.interactable = on;
+            menu.blocksRaycasts = on;
+        }
+
+        private class StartingNotice : MonoBehaviour
+        {
+            private const string TEXT = "Starting your test. There's no need to click anything.";
+            private const int FONT_SIZE = 30;
+            private const float HEIGHT = 80f;
+            private const float SCREEN_POSITION = 0.2f;
+
+            private void OnGUI()
+            {
+                var style = new GUIStyle(GUI.skin.box) { fontSize = FONT_SIZE, alignment = TextAnchor.MiddleCenter };
+                GUI.Box(new Rect(0f, Screen.height * SCREEN_POSITION, Screen.width, HEIGHT), TEXT, style);
+            }
+        }
+
         private static void Log(string message)
         {
             KitPlugin.Log.LogMessage("[AUTOTEST] " + message);
@@ -89,6 +110,9 @@ namespace OutwardConstructionKit.Runtime
             if (!ok)
                 yield break;
 
+            // Clicks here could interrupt the steps below, which press the menu's buttons directly.
+            SetMenuInput(false);
+            var notice = KitPlugin.Instance.gameObject.AddComponent<StartingNotice>();
             yield return new WaitForSecondsRealtime(2f);
             Log("Pressing Continue.");
             continueButton.onClick.Invoke();
@@ -98,7 +122,9 @@ namespace OutwardConstructionKit.Runtime
             string wantedId = request.Where(l => l.StartsWith(CHARACTER_ID)).Select(l => l.Substring(CHARACTER_ID.Length).Trim()).FirstOrDefault();
             string wanted = request.Where(l => l.StartsWith("character ")).Select(l => l.Substring(10).Trim()).FirstOrDefault();
             List<CharacterSaveInstanceHolder> saves = SaveManager.Instance.CharacterSaves.Where(s => s.MostRecentInstance != null).ToList();
-            CharacterSaveInstanceHolder chosen = wantedId != null ? saves.FirstOrDefault(s => s.CharacterUID == wantedId)
+            SetMenuInput(true);
+            Object.Destroy(notice);
+            CharacterSaveInstanceHolder chosen =wantedId != null ? saves.FirstOrDefault(s => s.CharacterUID == wantedId)
                 : wanted != null ? saves.FirstOrDefault(s => s.MostRecentInstance.CharSave.PSave.Name == wanted)
                 : saves.FirstOrDefault();
             if (chosen == null)

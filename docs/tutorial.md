@@ -14,7 +14,7 @@ In the browser, set **Region ID** to something short and unique, such as `yourna
 
 ## 2. Add ground
 
-On the **Ground** tab, click **Add Ground**, which replaces the room with a flat 200 by 200 m terrain. Keep it selected, and in the Inspector's Terrain component choose the **Paint Terrain** tool:
+On the **Ground** tab, click **Add Ground**, choose what ground to start with and how big it should be, and click **Add Ground** in that window. It replaces the room with a flat terrain. Keep it selected, and in the Inspector's Terrain component click the paintbrush button:
 
 - **Raise or Lower Terrain**, then drag in the Scene view to make a hill. Hold Shift to lower.
 - **Smooth Height** softens the result.
@@ -24,13 +24,15 @@ To paint with more of the game's textures, click **Add** beside one on the **Gro
 
 Keep the middle fairly flat for now, because the spawn point is there.
 
+**To get back to these tools later,** such as after adding water, click **Ground** in the Hierarchy, or **Select Ground** on the **Ground** tab. You don't need to add ground again.
+
 ## 3. Lower a hollow for water
 
 Water needs somewhere to sit. With **Raise or Lower Terrain**, hold Shift and drag in the Scene view to lower a hollow.
 
 ## 4. Add water
 
-On the **Water** tab, click **Add** beside the location whose water yours should look like. Move the blue marker into your hollow, just below the ground's level there, and scale it to fit. With the marker selected, choose its **Water type**, which is Clean unless you change it. In the game it becomes real water you can drink from and collect.
+On the **Water** tab, choose a **Water type**, then click **Add** beside the location whose water yours should look like. Move the blue marker into your hollow, just below the ground's level there, and scale it to fit. To change a water's type later, select it and use the same dropdown. In the game it becomes real water you can drink from and collect.
 
 ## 5. Add props
 
@@ -49,6 +51,8 @@ On the **Enemies** tab, add one. It stands where you put it and wakes when a pla
 ## 8. Add a return door
 
 A door back appears beside the arrival point by itself. To choose its place, click **Add Return Door** and stand the marker on the ground, with its small box on the side players walk up to.
+
+To change how doors look, select a prop in the scene and click **Use Selected Prop as Door Model**. That only sets the look, of both the entrance and return doors. It doesn't add a door. Return door markers then show the model.
 
 ## 9. Check the spawn point
 
@@ -72,6 +76,6 @@ If something's missing, look at the log. In r2modman, your profile's folder is u
 
 ## 12. Share it
 
-Back in Unity, click **Use door placed in game**, so your entrance ships with the mod, then follow [Sharing your region](making-a-region.md#sharing-your-region).
+Back in Unity, click **Use Door Placed in Game**, so your entrance ships with the mod, then follow [Sharing your region](making-a-region.md#sharing-your-region).
 
 [Making a region](making-a-region.md) goes into more detail on each of these.

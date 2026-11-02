@@ -36,7 +36,7 @@ internal partial class PropBrowser : EditorWindow
     private static readonly Dictionary<string, string> s_stamps = new Dictionary<string, string>();
     private static readonly Dictionary<string, List<string>> s_groundTextures = new Dictionary<string, List<string>>();
 
-    [SerializeField] private Tab m_tab = Tab.Props;
+    [SerializeField] private Tab m_tab = Tab.Ground; // what people need first
     [SerializeField] private string m_location;
     private Dictionary<string, string> m_ripped = new Dictionary<string, string>();
     private string[] m_sceneNames = new string[0];
@@ -300,7 +300,7 @@ internal partial class PropBrowser : EditorWindow
     {
         if (!OckSettings.PathsConfirmed)
         {
-            EditorGUILayout.HelpBox("First, the kit needs to know where the game and your mods are on this PC.", MessageType.Info);
+            KitStyles.HelpBox("First, the kit needs to know where the game and your mods are on this PC.", MessageType.Info);
             if (GUILayout.Button(new GUIContent("Set Up Paths", "Opens the window that says where the game, your mods and your rips are.")))
                 PathsWindow.Open();
             return;
@@ -309,7 +309,7 @@ internal partial class PropBrowser : EditorWindow
         DrawStatus();
         if (m_sceneNames.Length == 0)
         {
-            EditorGUILayout.HelpBox("No ripped scenes found. Rip one, or set the rip folder to the folder holding your AssetRipper exports.", MessageType.Info);
+            KitStyles.HelpBox("No ripped scenes found. Rip one, or set the rip folder to the folder holding your AssetRipper exports.", MessageType.Info);
             if (GUILayout.Button(new GUIContent("Rip a Scene", "Copies a scene's models out of your own game files, for this window to show.")))
                 RipWindow.Open();
             return;
@@ -320,7 +320,7 @@ internal partial class PropBrowser : EditorWindow
         if (EditorGUI.EndChangeCheck())
             UpdateCategories();
 
-        EditorGUILayout.LabelField(s_nextSteps[(int)m_tab], EditorStyles.wordWrappedMiniLabel);
+        EditorGUILayout.LabelField(s_nextSteps[(int)m_tab], KitStyles.WrappedNote);
         DrawFilters();
         switch (m_tab)
         {
@@ -437,7 +437,7 @@ internal partial class PropBrowser : EditorWindow
             return;
         using (new EditorGUILayout.HorizontalScope())
         {
-            EditorGUILayout.LabelField($"{m_visible.Count} found. Click Add, or drag a name into the Scene view.", EditorStyles.miniLabel);
+            EditorGUILayout.LabelField($"{m_visible.Count} found. Click Add, or drag a name into the Scene view.", KitStyles.Note);
             m_showPaths = EditorGUILayout.ToggleLeft("Paths", m_showPaths, GUILayout.Width(60));
         }
     }
@@ -445,14 +445,16 @@ internal partial class PropBrowser : EditorWindow
     private void DrawWaterTab()
     {
         bool waterSelected = GroundTools.IsWater(Selection.activeGameObject);
-        using (new EditorGUI.DisabledScope(!waterSelected))
+        int waterType = waterSelected ? GroundTools.WaterTypeIndex(Selection.activeGameObject) : GroundTools.NextWaterType;
+        int chosenType = EditorGUILayout.Popup(new GUIContent("Water type", "What players get from drinking this water or filling a waterskin with it."), waterType, GroundTools.WaterTypes);
+        if (chosenType != waterType)
         {
-            int waterType = waterSelected ? GroundTools.WaterTypeIndex(Selection.activeGameObject) : 0;
-            int chosenType = EditorGUILayout.Popup(new GUIContent("Water type", "What players get from drinking this water or filling a waterskin with it."), waterType, GroundTools.WaterTypes);
-            if (waterSelected && chosenType != waterType)
+            if (waterSelected)
                 GroundTools.SetWaterType(Selection.activeGameObject, chosenType);
+            else
+                GroundTools.NextWaterType = chosenType;
         }
-        EditorGUILayout.LabelField(waterSelected ? "Choose this water's type. How it looks comes from its location, and doesn't change with its type." : "Select water in your scene to set its type. How water looks comes from the location below.", EditorStyles.wordWrappedMiniLabel);
+        EditorGUILayout.LabelField(waterSelected ? "This is the selected water's type. How it looks comes from its location, and doesn't change with its type." : "The next water you add will be this type. How water looks comes from the location below.", KitStyles.WrappedNote);
 
         DrawRows(m_visibleWater.Count, i =>
         {
@@ -462,10 +464,12 @@ internal partial class PropBrowser : EditorWindow
                 GUILayout.Label(new GUIContent("Looks like the water in " + LocationNames.For(scene.SceneName), "Only its look comes from there. Its type is set above."));
                 GUILayout.FlexibleSpace();
                 if (!scene.HasWaterSource)
-                    GUILayout.Label(new GUIContent("can't be drunk", "This location has no water source to copy, so players can't drink from this water or fill a waterskin."), EditorStyles.miniLabel, GUILayout.Width(80));
+                    GUILayout.Label(new GUIContent("can't be drunk", "This location has no water source to copy, so players can't drink from this water or fill a waterskin."), KitStyles.Note, GUILayout.Width(100));
                 if (GUILayout.Button(new GUIContent("Add", "Adds a marker at the middle of your view, to move and scale. In game it becomes water that looks like this location's."), GUILayout.Width(44)))
                 {
-                    Selection.activeGameObject = GroundTools.AddWater(scene.SceneName);
+                    GameObject water = GroundTools.AddWater(scene.SceneName);
+                    GroundTools.SetWaterType(water, GroundTools.NextWaterType);
+                    Selection.activeGameObject = water;
                     Say("Water added", "Water added at the middle of your view. Move the blue marker into a hollow in your ground, just below ground level, and scale it to fit. In game it's replaced by real water at that height and size.");
                 }
             }
@@ -475,13 +479,17 @@ internal partial class PropBrowser : EditorWindow
     private void DrawGroundTab()
     {
         Terrain ground = UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Terrain>(true)).FirstOrDefault();
-        if (ground == null && GUILayout.Button(new GUIContent("Add Ground", "Replaces the starter room with a terrain. Sculpt and paint it with the Terrain component's tools in the Inspector.")))
+        if (ground == null && GUILayout.Button(new GUIContent("Add Ground", "Asks what ground to start with and how big, then replaces the starter room with it. Sculpt and paint it with the Terrain component's tools in the Inspector.")))
         {
-            GroundTools.AddGroundFromMenu();
-            Say("Ground added", "Ground added and selected. In the Inspector on the right, click the paintbrush button, then use the dropdown just under it: Raise or Lower Terrain and Smooth Height for hills, Paint Texture for grass, dirt, sand and rock.");
+            AddGroundWindow.Open(() => Say("Ground added", "Ground added and selected. In the Inspector on the right, click the paintbrush button, then use the dropdown just under it: Raise or Lower Terrain and Smooth Height for hills, Paint Texture for its textures."));
             GUIUtility.ExitGUI();
         }
-        EditorGUILayout.LabelField(ground == null ? "Add ground first, then its textures." : $"{m_visibleTextures.Count} textures to add to your ground's Paint Texture layers.", EditorStyles.miniLabel);
+        if (ground != null && GUILayout.Button(new GUIContent("Select Ground", "Selects your ground, so the Inspector shows its sculpting and painting tools again. Clicking Ground in the Hierarchy does the same.")))
+        {
+            Selection.activeGameObject = ground.gameObject;
+            Say("Ground selected", "Ground selected. In the Inspector on the right, click the paintbrush button, then use the dropdown just under it: Raise or Lower Terrain changes altitude, and Paint Texture paints.");
+        }
+        EditorGUILayout.LabelField(ground == null ? "Add ground first, then its textures." : $"{m_visibleTextures.Count} textures to add to your ground's Paint Texture layers.", KitStyles.Note);
         if (!s_layerPreviewsChecked)
         {
             s_layerPreviewsChecked = true;
@@ -496,11 +504,11 @@ internal partial class PropBrowser : EditorWindow
                 GUILayout.Label(texture.Key);
                 GUILayout.FlexibleSpace();
                 if (m_location == ALL_LOCATIONS)
-                    GUILayout.Label(new GUIContent(LocationNames.RegionsOf(m_textureLocations[texture.Key]), string.Join(", ", m_textureLocations[texture.Key].Select(LocationNames.For).ToArray())), EditorStyles.miniLabel, GUILayout.Width(150));
+                    GUILayout.Label(new GUIContent(LocationNames.RegionsOf(m_textureLocations[texture.Key]), string.Join(", ", m_textureLocations[texture.Key].Select(LocationNames.For).ToArray())), KitStyles.Note, GUILayout.Width(150));
                 TerrainLayer added = ground != null ? GroundTools.FindLayer(ground, texture.Key) : null;
                 if (added != null)
                 {
-                    GUILayout.Label(new GUIContent("added", "Your ground already has this texture."), EditorStyles.miniLabel, GUILayout.Width(36));
+                    GUILayout.Label(new GUIContent("added", "Your ground already has this texture."), KitStyles.Note, GUILayout.Width(50));
                     if (GUILayout.Button(new GUIContent("Paint", "Selects your ground, with its Paint Texture tool on and this texture chosen."), GUILayout.Width(44)))
                         SayReadyToPaint(ground, added, "Ready to paint");
                     return;
@@ -547,10 +555,10 @@ internal partial class PropBrowser : EditorWindow
         GUILayout.Label(new GUIContent(label, prop.Node.ScenePath));
         GUILayout.FlexibleSpace();
         if (!prop.IsEnemy && prop.Node.SelfAndDescendants().Any(n => n.IsInteractive))
-            GUILayout.Label(new GUIContent("decoration", "Players can use this in its own scene, but in a region it's only for show."), EditorStyles.miniLabel, GUILayout.Width(60));
+            GUILayout.Label(new GUIContent("decoration", "Players can use this in its own scene, but in a region it's only for show."), KitStyles.Note, GUILayout.Width(75));
         if (m_location == ALL_LOCATIONS)
-            GUILayout.Label(new GUIContent(LocationNames.RegionsOf(prop.Locations), string.Join(", ", (prop.Locations ?? new List<string>()).Select(LocationNames.For).ToArray())), EditorStyles.miniLabel, GUILayout.Width(150));
-        GUILayout.Label(prop.Category, EditorStyles.miniLabel, GUILayout.Width(80));
+            GUILayout.Label(new GUIContent(LocationNames.RegionsOf(prop.Locations), string.Join(", ", (prop.Locations ?? new List<string>()).Select(LocationNames.For).ToArray())), KitStyles.Note, GUILayout.Width(150));
+        GUILayout.Label(prop.Category, KitStyles.Note, GUILayout.Width(100));
         if (GUILayout.Button(new GUIContent("Add", "Adds this at the middle of your view. The first use copies its model from the rip, which takes a moment. You can also drag its name into the Scene view."), GUILayout.Width(44)))
             PlaceAtViewCentre(prop);
         EditorGUILayout.EndHorizontal();

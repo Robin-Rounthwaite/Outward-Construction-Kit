@@ -34,11 +34,13 @@ To try the zip first, use **Settings > Import local mod** in r2modman. Remove yo
 
 Export works out where enemies can walk from the ground and props in your scene. Unity calls this a NavMesh. To place an enemy, add it from the **Enemies** tab: it shows as its real model in a default pose, or a red capsule if the model isn't in the rip. Enemies are always references, built from the player's own game files and given their own identity.
 
-Your entrance door ships with the region too: after placing it in game with **Ctrl+F10**, click **Use door placed in game** in the Prop Browser, then export. A door a player places themselves overrides the shipped one.
+Your entrance door ships with the region too: after placing it in game with **Ctrl+F10**, click **Use Door Placed in Game** in the Prop Browser, then export. A door a player places themselves overrides the shipped one.
 
 ## Ground and water
 
 **Add Ground** on the Prop Browser's **Ground** tab (or the Construction Kit menu) replaces the starter room with a flat 200 by 200 m terrain at height 0, with invisible walls around its edge. It's Unity's own Terrain, so select it and use the Inspector's Paint Terrain tool: **Raise or Lower Terrain** and **Smooth Height** make hills and hollows, and **Paint Texture** paints the four layers: grass, dirt, sand and rock. Move the spawn point and props to sit on the shapes you make. Heights and paint ship in the mod, and vanilla textures are references, so they add almost nothing to it. A layer using your own texture ships that texture.
+
+**Paint Holes**, among the Terrain's paintbrush tools, cuts see-through, walk-through holes in the ground, such as for cave entrances. Whether holes survive export hasn't been tested yet.
 
 To paint with more of the game's ground, click **Add** beside a texture on the **Ground** tab. The texture joins the Terrain's Paint Texture layers, and ships as a reference. More than four layers costs the game an extra drawing pass, so keep to what you need.
 
