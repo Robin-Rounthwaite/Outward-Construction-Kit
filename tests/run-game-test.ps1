@@ -39,6 +39,12 @@ With Visit: goes to the water and a return door, and uses them through the game'
 .PARAMETER Visit
 A region to go straight to and stay in, as the Test Region button does. Leaves the game open.
 
+.PARAMETER StartAt
+With Visit: where in the region to begin, as x,y,z, as the Test from Here button asks.
+
+.PARAMETER AuthorHelp
+With Visit: shows the help line for region authors, as Unity's Test and Launch buttons do.
+
 .PARAMETER TimeoutSeconds
 How long to wait before stopping the game and reporting that it hung.
 #>
@@ -52,6 +58,8 @@ param(
     [switch]$KillEnemies,
     [switch]$ForceReset,
     [switch]$TryTalking,
+    [string]$StartAt,
+    [switch]$AuthorHelp,
     [string]$StartIn,
     [string]$Visit,
     [switch]$TryUsing,
@@ -88,6 +96,8 @@ if ($Visit) {
     # What the Unity kit's Test Region button asks for.
     $request = @("character $Character", "visit $Visit")
     if ($TryUsing) { $request += 'trydoor' }
+    if ($StartAt) { $request += "startat $StartAt" }
+    if ($AuthorHelp) { Set-Content -Path (Join-Path $bepinex 'OCK_AuthorSession.txt') -Value '' }
     $Stay = $true
 }
 if ($Stay) { $request += 'stay' }
