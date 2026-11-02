@@ -20,12 +20,38 @@ Regions are made in Unity 2020.3.26f1, with the free starter project and guides 
 
 ![A region being built in Unity, with a stone bridge and the kit's Prop Browser](https://raw.githubusercontent.com/Robin-Rounthwaite/Outward-Construction-Kit/main/docs/images/building-in-unity.webp)
 
+## Planned features
+
+Not promises. Roughly in the order we mean to get to them.
+
+- Quests in the game's quest log, given by characters you place, in their own window.
+- Quest rewards: the game's items and skills, and flags.
+- Extra dialogue for the game's existing NPCs.
+- Sending an existing NPC somewhere else on a cue.
+- Quests that change who's hostile.
+- Merchants, with your own stock list.
+- Placed characters walking between set points by time of day, with animations.
+- Choosing a placed character's appearance and gear.
+- More props that work, such as doors and ladders.
+- Animation options for NPCs, plus sound effects and other special effects.
+- Your own models and textures in a region.
+- Environment settings in Unity: sky, weather, ambient audio and lighting.
+- A region map and loading screen.
+- Connected and multi-part regions.
+- Opening the game's existing worldspaces in Unity for editing.
+- Patrols, squads and spawn areas for enemies, and items and loot.
+- More than four ground textures at once, grass and ground clutter, and distant scenery at region edges.
+- Baked lighting and performance tools, and lighting in Unity that matches the game.
+- Previews in the Prop Browser, and more filters, including dungeons or exteriors only.
+- Making a new test character from the character dropdown.
+- Co-op testing, both splitscreen and online.
+
 ## Current limitations
 
 - Co-op hasn't been tested yet.
 - Only Outward: Definitive Edition on Windows is supported.
-- Props are decoration for now: chests and gathering spots don't work. Items placed from the Items tab are real, and can be picked up.
-- Dying in a region always returns you to where you entered it. There are no defeat scenarios yet.
+- Props other than chests and gathering spots are decoration for now.
+- Characters can talk, but there are no quests or merchants yet.
 - A game update can stop a region's references from matching. The game then shows a notice on screen, and the log has the details.
 
 ## Screenshots

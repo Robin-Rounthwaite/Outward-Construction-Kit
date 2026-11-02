@@ -56,19 +56,25 @@ A toolkit for adding new regions to Outward: Definitive Edition, built from the 
 
 ## Planned features
 
-Not promises, and in no fixed order.
+Not promises. Roughly in the order we mean to get to them.
 
-- Quest givers, then merchants.
-- Telling NPCs where to walk and when, for quests or daily schedules, with animations.
-- Animation options for NPCs, plus sound effects and other special effects.
-- New quests with item or skill rewards and flags, able to change who's hostile, in their own window.
+- Quests in the game's quest log, given by characters you place, in their own window.
+- Quest rewards: the game's items and skills, and flags.
+- Extra dialogue for the game's existing NPCs.
+- Sending an existing NPC somewhere else on a cue.
+- Quests that change who's hostile.
+- Merchants, with your own stock list.
+- Placed characters walking between set points by time of day, with animations.
+- Choosing a placed character's appearance and gear.
 - More props that work, such as doors and ladders.
-- Opening the game's existing worldspaces in Unity for editing.
-- Connected and multi-part regions.
-- Patrols, squads and spawn areas for enemies, and items and loot.
+- Animation options for NPCs, plus sound effects and other special effects.
+- Your own models and textures in a region.
 - Environment settings in Unity: sky, weather, ambient audio and lighting.
 - A region map and loading screen.
-- Distant scenery at region edges, and grass and ground clutter.
+- Connected and multi-part regions.
+- Opening the game's existing worldspaces in Unity for editing.
+- Patrols, squads and spawn areas for enemies, and items and loot.
+- More than four ground textures at once, grass and ground clutter, and distant scenery at region edges.
 - Baked lighting and performance tools, and lighting in Unity that matches the game.
 - Previews in the Prop Browser, and more filters, including dungeons or exteriors only.
 - Making a new test character from the character dropdown.
