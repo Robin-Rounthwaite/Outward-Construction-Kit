@@ -10,6 +10,8 @@ A toolkit for adding new regions to Outward: Definitive Edition, built from the 
 - **To make a region:** follow [Getting started](docs/getting-started.md), then [Your first region](docs/tutorial.md).
 - **To work on the kit itself:** see [Working on the kit](#working-on-the-kit).
 
+**Tell us where the guides lose you.** If you ever feel stuck, or even briefly confused, let Cat know in the Catalysten-Workshop, so they can be made clearer.
+
 ## Features
 
 **Building in Unity**
@@ -17,6 +19,7 @@ A toolkit for adding new regions to Outward: Definitive Edition, built from the 
 - Browse what you've ripped in the Prop Browser, by tab (Enemies, Water, Ground, Props and Items), location, category and name.
 - Add things with a click, or drag them into the scene.
 - Sculpt terrain, and paint it with the game's ground textures.
+- Place any of the game's items from its full list, which players can pick up in the game.
 - Add water that looks like any ripped location's, and set what type it is: Clean, Fresh, Salt, Rancid, Magic, Pure or Healing.
 - Place the game's enemies, which fight as they do in the game.
 - Move, rotate and evenly scale props, and alter them further if you need to.
@@ -45,11 +48,6 @@ A toolkit for adding new regions to Outward: Definitive Edition, built from the 
 
 Not promises, and in no fixed order.
 
-**For the beta**
-- Filling the Items tab with the game's full item list.
-- Items that can be placed and picked up.
-
-**Afterwards**
 - Talking NPCs, then quest givers, then merchants, with dialogue written by modders.
 - Telling NPCs where to walk and when, for quests or daily schedules, with animations.
 - Animation options for NPCs, plus sound effects and other special effects.
@@ -71,7 +69,7 @@ Not promises, and in no fixed order.
 ## Current limitations
 
 - Co-op hasn't been tested yet.
-- Props and items are decoration for now: chests, gathering spots and pick-ups don't work.
+- Props are decoration for now: chests and gathering spots don't work.
 - No talking characters or quests yet.
 - Dying in a region always returns you to where you entered it.
 - A game update can stop a region's references from matching.

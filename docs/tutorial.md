@@ -2,6 +2,8 @@
 
 This builds a small region and walks into it in the game. It assumes you've finished [Getting started](getting-started.md) and ripped **Monsoon**, whose textures the ground uses. If you also rip **Chersonese**, you'll have hyenas to add.
 
+**Tell us where this guide loses you.** If you ever feel stuck, or even briefly confused, let Cat know in the Catalysten-Workshop, so it can be made clearer.
+
 Before starting, you can run **Construction Kit > Create Example Region** to see a finished one. Click **Test Region In-Game** to visit it. Its entrance is already placed, in Cierzo, near where you arrive from the first spawn point.
 
 ## 1. Make the scene
@@ -16,49 +18,59 @@ On the **Ground** tab, click **Add Ground**, which replaces the room with a flat
 
 - **Raise or Lower Terrain**, then drag in the Scene view to make a hill. Hold Shift to lower.
 - **Smooth Height** softens the result.
-- **Paint Texture** paints the four starting layers: grass, dirt, sand and rock. The **Ground** tab adds more of the game's textures.
+- **Paint Texture** paints the four starting layers: grass, dirt, sand and rock.
+
+To paint with more of the game's textures, click **Add** beside one on the **Ground** tab. That selects your ground, turns on **Paint Texture** and chooses the new texture, ready to paint. A texture already added has a **Paint** button instead.
 
 Keep the middle fairly flat for now, because the spawn point is there.
 
-## 3. Add water
+## 3. Lower a hollow for water
 
-Lower a hollow somewhere. On the **Water** tab, click **Add** beside a location, whose water yours will look like, and move the blue marker to just below the ground's level there. Scale it to fit. In the game it becomes real water you can drink from.
+Water needs somewhere to sit. With **Raise or Lower Terrain**, hold Shift and drag in the Scene view to lower a hollow.
 
-## 4. Add props
+## 4. Add water
+
+On the **Water** tab, click **Add** beside the location whose water yours should look like. Move the blue marker into your hollow, just below the ground's level there, and scale it to fit. With the marker selected, choose its **Water type**, which is Clean unless you change it. In the game it becomes real water you can drink from and collect.
+
+## 5. Add props
 
 On the **Props** tab, pick a location and category, then click **Add** beside a prop, or drag its name into the Scene view. Move, rotate and scale it with Unity's usual tools. All of that stays a reference to the player's own game files. Stretching it unevenly, or changing it in other ways, makes export embed a copy of its art in your mod.
 
 Props are decoration for now: chests and gathering spots won't work in the game.
 
-## 5. Add an enemy
+## 6. Add an item
+
+The **Items** tab lists the game's items, once the game has run with the kit at least once. Click **Add** beside one, and move the orange marker to where it should lie. In the game it's the real item, which players can pick up.
+
+## 7. Add an enemy
 
 On the **Enemies** tab, add one. It stands where you put it and wakes when a player comes near. Start with something weak, because you'll be testing with your own character.
 
-## 6. Add a return door
+## 8. Add a return door
 
 A door back appears beside the arrival point by itself. To choose its place, click **Add Return Door** and stand the marker on the ground, with its small box on the side players walk up to.
 
-## 7. Check the spawn point
+## 9. Check the spawn point
 
 Select `SpawnPointManager/Spawn0` in the Hierarchy and make sure it sits just above the ground. Save the scene.
 
-## 8. Export
+## 10. Export
 
 Click **Export Region**. The message at the top of the browser's tools says what was exported and where. It should say no props were embedded, unless you meant them to be.
 
-## 9. Visit it
+## 11. Visit it
 
-Click **Test Region In-Game** in the browser, which exports your region again, starts the game with your mods, loads your character and takes you straight there. It's normal play from then on, so your character takes damage and saves as usual. Name the character to use in the box beside the button, or leave it empty for the first one the game lists.
+Click **Test Region In-Game** in the browser, which exports your region again, starts the game with your mods, loads your character and takes you straight there. It's normal play from then on, so your character takes damage and saves as usual. Choose the character in **Test as (Character Name)**. A character kept just for testing is safest.
 
 To see the way in that players will use, click **Launch Game** instead, or start the game from the profile you chose with r2modman's **Start modded**. Then, in a town or anywhere else outdoors:
 
-1. Press **Ctrl+F8** until your region is the one chosen. The screen shows its name.
-2. Press **Ctrl+F10** to place its door in front of you.
+1. Press **Ctrl+F8** until your region is the one chosen. The screen shows its name. This chooses a region, not what its door looks like.
+2. Press **Ctrl+F10** to place its door in front of you. Check the name first, because this places a door for whichever region is chosen, wherever you're standing.
 3. Walk up and use the door. You get a loading screen, then your region.
 
 If something's missing, look at the log. In r2modman, your profile's folder is under **Settings > Browse profile folder**, and the log is `BepInEx\LogOutput.log` inside it. Search it for your region's ID and for `[Error`. For a checklist of each region in the log, as `[CHECK]` lines, set `SelfCheck = true` under `[Dev]` in `BepInEx\config\catalysten.outwardconstructionkit.cfg` in the same folder.
 
-## 10. Share it
+## 12. Share it
 
 Back in Unity, click **Use door placed in game**, so your entrance ships with the mod, then follow [Sharing your region](making-a-region.md#sharing-your-region).
 
